@@ -1,0 +1,67 @@
+DO THIS TASK AND NOTHING ELSE
+
+Title: First Prompt — Scaffold Teammato (Replit v3)
+
+Goal: Bootstrap the Teammato project in Replit with the correct stack, folder structure, and environment wiring for a Slack-first anonymous feedback tool. This replaces the previous Lovable setup.
+
+Scope:
+
+1) Project stack:
+- Frontend: Vite + React + TypeScript + Tailwind
+- Backend: Supabase (Postgres + Auth + Edge Functions + RLS)
+- Billing: Stripe
+- Messaging integration: Slack (OAuth v2, Slash Command, Events API)
+- Logging: Shared structured logger with redaction
+
+2) Repo structure:
+- `/src` → React frontend
+  - `/pages/public` → Landing, Pricing, FAQ, Contact, Privacy, Trust, Terms
+  - `/pages/admin` → GetStarted, SlackSettings, BillingSettings, Analytics, Export, Retention
+  - `/pages` → PostInstall, NoOrg, Auth
+  - `/lib` → `appEnv.ts`, `slackInstall.ts`
+- `/supabase/functions` → Edge Functions
+  - `slack/command`, `slack/oauth`, `slack/events`, `slack_digest_now`
+  - `submit_feedback`, `submit_comment`, `moderation_actions`
+  - `digest_cron`, `analytics_backfill`, `analytics_daily_cron`
+  - `billing_portal`, `stripe_webhook`
+  - `export_admin`, `retention_purge_cron`, `org_delete_request`, `seed_topics`
+  - `health_config`
+  - `_shared/logger.ts` (structured logger)
+
+3) Environment strategy:
+- Edge secrets (server-only): `APP_ENV`, `SLACK_CLIENT_ID(_TEST)`, `SLACK_CLIENT_SECRET(_TEST)`, `SLACK_SIGNING_SECRET(_TEST)`, `SLACK_REDIRECT_URI(_TEST)`, `STRIPE_SECRET_KEY(_TEST)`, `STRIPE_WEBHOOK_SECRET(_TEST)`, `STRIPE_PRICE_ID_PRO(_TEST)`, `STRIPE_PRICE_ID_PRO_ANNUAL(_TEST)`
+- Frontend env (public via Vite): `VITE_PUBLIC_APP_ENV`, `VITE_PUBLIC_SLACK_CLIENT_ID(_TEST)`, `VITE_PUBLIC_SLACK_REDIRECT_URI(_TEST)`
+- Helper `appEnv.ts` to read env values safely
+- Unified Slack authorize URL builder in `slackInstall.ts`
+
+4) Initial routes:
+- `/` → landing (with “Add to Slack” CTA using env-aware builder)
+- `/pricing`, `/faq`, `/contact`, `/privacy`, `/trust`, `/terms`
+- `/post-install` → Slack onboarding bridge
+- `/no-org` → fallback for signed-in users without org
+- `/auth` → Supabase magic link login (secondary path)
+- `/admin/*` → gated by org binding and role
+
+5) Database schema:
+- Create tables: `orgs`, `users`, `topics`, `threads`, `comments`, `reactions`, `moderation_flags`, `analytics_daily`, `audit_admin`, `slack_teams`, `slack_settings`
+- Add RLS with `current_org_id()`
+- Add k-anonymity secure views: `v_thread_participants`, `v_threads`, `v_comments`
+
+6) Onboarding UX:
+- Primary CTA: “Add to Slack” → Slack OAuth
+- `/slack/oauth` edge function: auto-provision org on first install; create `slack_teams` row; map installer as owner; redirect to `/post-install`
+- `/post-install`: “Connected to Slack ✔” + links to Slack settings, sample digest, help/about text, optional email linking
+- `/no-org`: “Add to Slack” (primary), “Create Workspace” (secondary)
+
+Constraints:
+- Do not add schema fields beyond those listed.
+- Do not expose secrets to the client; only `VITE_PUBLIC_*` are public.
+- Do not skip structured logging (must use `_shared/logger.ts`).
+
+Acceptance:
+- Project scaffolded with directories, env helpers, and placeholder pages/files for all listed routes and functions.
+- `/post-install` and `/no-org` exist as React pages with placeholder text.
+- Slack OAuth handler stub created in `supabase/functions/slack/oauth/index.ts` with auto-provisioning comments.
+- Logger stub in `_shared/logger.ts` present with `createEdgeLogger`.
+
+DO NOT CHANGE EDIT MODIFY OR ALTER ANYTHING THAT IS NOT EXPLICITLY REQUIRED FOR THIS SCOPE
