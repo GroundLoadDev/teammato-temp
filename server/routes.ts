@@ -188,8 +188,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(401).json({ error: 'Request timestamp too old' });
     }
 
-    // Compute expected signature
-    const rawBody = JSON.stringify(req.body);
+    // Get raw body string for signature verification
+    const rawBody = (req.body as Buffer).toString('utf8');
     const sigBasestring = `v0:${slackTimestamp}:${rawBody}`;
     const expectedSignature = 'v0=' + crypto
       .createHmac('sha256', SLACK_SIGNING_SECRET!)
@@ -201,8 +201,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(401).json({ error: 'Invalid signature' });
     }
 
-    // Signature verified, process the command
-    const { text, user_id, team_id } = req.body;
+    // Signature verified, parse the form data
+    const params = new URLSearchParams(rawBody);
+    const text = params.get('text') || '';
+    const user_id = params.get('user_id') || '';
+    const team_id = params.get('team_id') || '';
     
     // TODO: Parse feedback text, create thread, handle k-anonymity
     

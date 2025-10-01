@@ -3,6 +3,10 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
+
+// Capture raw body for Slack signature verification
+app.use('/api/slack/command', express.raw({ type: 'application/x-www-form-urlencoded' }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
