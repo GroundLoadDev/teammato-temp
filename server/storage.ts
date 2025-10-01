@@ -61,6 +61,19 @@ export interface IStorage {
     readyThreads: number;
   }>;
   getRecentThreads(orgId: string, limit: number): Promise<Array<FeedbackThread & { topicName: string | null }>>;
+  
+  // Analytics
+  getTopicActivity(orgId: string): Promise<Array<{
+    topicId: string;
+    topicName: string;
+    threadCount: number;
+    itemCount: number;
+  }>>;
+  getWeeklyActivityTrend(orgId: string, days: number): Promise<Array<{
+    date: string;
+    count: number;
+  }>>;
+  getUniqueParticipantCount(orgId: string): Promise<number>;
 }
 
 export class PgStorage implements IStorage {
@@ -287,6 +300,63 @@ export class PgStorage implements IStorage {
       .limit(limit);
     
     return result;
+  }
+
+  // Analytics
+  async getTopicActivity(orgId: string): Promise<Array<{
+    topicId: string;
+    topicName: string;
+    threadCount: number;
+    itemCount: number;
+  }>> {
+    const result = await db.select({
+      topicId: topics.id,
+      topicName: topics.name,
+      threadCount: sqlOperator<number>`count(distinct ${feedbackThreads.id})::int`,
+      itemCount: sqlOperator<number>`count(${feedbackItems.id})::int`,
+    })
+      .from(topics)
+      .leftJoin(feedbackThreads, and(
+        eq(feedbackThreads.topicId, topics.id),
+        eq(feedbackThreads.orgId, orgId)
+      ))
+      .leftJoin(feedbackItems, eq(feedbackItems.threadId, feedbackThreads.id))
+      .where(eq(topics.orgId, orgId))
+      .groupBy(topics.id, topics.name)
+      .orderBy(sqlOperator`count(distinct ${feedbackThreads.id}) DESC`);
+    
+    return result;
+  }
+
+  async getWeeklyActivityTrend(orgId: string, days: number = 7): Promise<Array<{
+    date: string;
+    count: number;
+  }>> {
+    const result = await db.select({
+      date: sqlOperator<string>`date(${feedbackItems.createdAt})`,
+      count: sqlOperator<number>`count(*)::int`,
+    })
+      .from(feedbackItems)
+      .innerJoin(feedbackThreads, eq(feedbackItems.threadId, feedbackThreads.id))
+      .where(and(
+        eq(feedbackThreads.orgId, orgId),
+        sqlOperator`${feedbackItems.createdAt} >= current_date - interval '${days} days'`
+      ))
+      .groupBy(sqlOperator`date(${feedbackItems.createdAt})`)
+      .orderBy(sqlOperator`date(${feedbackItems.createdAt}) ASC`);
+    
+    return result;
+  }
+
+  async getUniqueParticipantCount(orgId: string): Promise<number> {
+    const result = await db.select({
+      count: sqlOperator<number>`count(distinct ${feedbackItems.slackUserId})::int`,
+    })
+      .from(feedbackItems)
+      .innerJoin(feedbackThreads, eq(feedbackItems.threadId, feedbackThreads.id))
+      .where(eq(feedbackThreads.orgId, orgId));
+    
+    return result[0]?.count || 0;
   }
 }
 

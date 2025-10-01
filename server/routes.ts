@@ -2,6 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import crypto from "crypto";
+import { z } from "zod";
 import "./types"; // Load session type extensions
 
 // Slack OAuth configuration
@@ -146,6 +147,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Slack status error:', error);
       res.status(500).json({ error: 'Failed to fetch Slack status' });
+    }
+  });
+
+  // Analytics API (admin-only)
+  app.get('/api/analytics/topic-activity', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const activity = await storage.getTopicActivity(orgId);
+      res.json(activity);
+    } catch (error) {
+      console.error('Topic activity error:', error);
+      res.status(500).json({ error: 'Failed to fetch topic activity' });
+    }
+  });
+
+  app.get('/api/analytics/weekly-trend', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const days = parseInt(req.query.days as string) || 7;
+      const trend = await storage.getWeeklyActivityTrend(orgId, days);
+      res.json(trend);
+    } catch (error) {
+      console.error('Weekly trend error:', error);
+      res.status(500).json({ error: 'Failed to fetch weekly trend' });
+    }
+  });
+
+  app.get('/api/analytics/participant-count', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const count = await storage.getUniqueParticipantCount(orgId);
+      res.json({ count });
+    } catch (error) {
+      console.error('Participant count error:', error);
+      res.status(500).json({ error: 'Failed to fetch participant count' });
+    }
+  });
+
+  // Slack Settings API (admin-only)
+  app.get('/api/slack-settings', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const settings = await storage.getSlackSettings(orgId);
+      res.json(settings || { orgId, digestChannel: null, digestEnabled: false });
+    } catch (error) {
+      console.error('Get Slack settings error:', error);
+      res.status(500).json({ error: 'Failed to fetch Slack settings' });
+    }
+  });
+
+  app.post('/api/slack-settings', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      
+      // Validate request body
+      const bodySchema = z.object({
+        digestChannel: z.string().nullable().optional(),
+        digestEnabled: z.boolean().optional(),
+      });
+      
+      const result = bodySchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: 'Invalid request body', details: result.error });
+      }
+      
+      const { digestChannel, digestEnabled } = result.data;
+      
+      const settings = await storage.upsertSlackSettings({
+        orgId,
+        digestChannel: digestChannel || null,
+        digestEnabled: digestEnabled || false,
+      });
+      
+      res.json(settings);
+    } catch (error) {
+      console.error('Update Slack settings error:', error);
+      res.status(500).json({ error: 'Failed to update Slack settings' });
     }
   });
 
