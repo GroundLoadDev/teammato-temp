@@ -56,17 +56,17 @@ Teammato is an enterprise-grade Slack-first anonymous feedback SaaS with privacy
 
 ### Tables (Currently Implemented):
 - `orgs` - Organizations with settings (k_anonymity, retention, etc.)
-- `users` - Users with org binding and roles (owner, admin, viewer)
+- `users` - Users with org binding and roles (owner, admin, moderator, viewer)
 - `topics` - Feedback taxonomy with slackChannelId and kThreshold for k-anonymity
-- `threads` - Anonymous feedback posts
+- `threads` - Anonymous feedback posts with moderation fields (moderationStatus, moderationNotes, moderatedBy, moderatedAt)
+- `items` - Individual feedback items with moderation fields (moderationStatus, moderatedBy, moderatedAt)
 - `comments` - Comments on feedback threads
 - `slack_teams` - Slack workspace mappings with access tokens
+- `moderation_audit` - Immutable audit trail for all moderation actions
 
 ### Planned Tables:
 - `reactions` - Deduplicated reactions by actor_hash
-- `moderation_flags` - Moderation flag queue
 - `analytics_daily` - Aggregated metrics
-- `audit_admin` - Admin action audit trails
 
 ### Security:
 - Row-Level Security (RLS) on all tables using `current_org_id()` from JWT
@@ -130,16 +130,19 @@ Teammato is an enterprise-grade Slack-first anonymous feedback SaaS with privacy
   - Atomic participant count tracking with status transitions
   - User-friendly ephemeral responses with progress indicators
   - Backend API: `POST /api/slack/command` with raw body parsing for signature verification
-- **Moderation Workflow** (Oct 2025)
-  - Database schema: moderation_status, moderation_notes, moderated_by, moderated_at fields on threads and items
-  - Moderation audit table: Complete audit trail with action, previous/new status, reason, admin user, timestamp
+- **Moderation Workflow** (Oct 2025) ✅ COMPLETE
+  - Database schema: moderationStatus, moderationNotes, moderatedBy, moderatedAt fields on threads and items
+  - Moderation audit table: Immutable audit trail with action, previous/new status, reason, admin user, timestamp
   - Thread-level actions: Approve, Flag, Hide, Archive with reason capture
   - Item-level actions: Approve, Flag, Hide with reason capture
-  - Admin notes: Internal comments on threads (not visible to users)
-  - Audit trail UI: View complete moderation history with timestamps and reasons
-  - Role-based access: Owner and admin only, with org scoping for security
-  - Zod validation: Enum validation for moderation statuses
+  - Admin notes: Internal comments on threads (not visible to employees)
+  - Audit trail UI: Complete moderation history viewer with timestamps and reasons
+  - Role-based access: Owner, admin, and moderator roles with org scoping for security
+  - Zod validation: Enum validation for moderation statuses (6 thread statuses, 5 item statuses)
   - Backend APIs: `POST /api/moderation/threads/:id`, `POST /api/moderation/items/:id`, `GET /api/moderation/audit/:targetType/:targetId`
+  - Storage methods: getFeedbackItem with org scoping, updateThreadModeration, updateItemModeration, addModerationAudit
+  - React Query optimization: Proper query key structure with full URL paths for automatic cache invalidation
+  - Production-ready: All critical bugs fixed, RBAC aligned, no LSP errors
 - Security hardening (session regeneration, CSRF protection, org scoping)
 - Multi-tenant isolation with org-scoped queries
 
