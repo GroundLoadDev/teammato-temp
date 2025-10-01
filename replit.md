@@ -108,24 +108,32 @@ Teammato is an enterprise-grade Slack-first anonymous feedback SaaS with privacy
   - Per-topic k-anonymity thresholds (kThreshold)
   - Real-time duplicate validation
 - Feedback Management page with moderation tools
-- **Analytics Page** (New - Oct 2025)
+- **Analytics Page** (Oct 2025)
   - Real-time metrics: Total Threads, Total Feedback, Unique Participants, Ready to View
   - Topic activity breakdown with visualization
   - Weekly activity trends (7-day chart)
   - Privacy-preserving aggregates (no PII exposed)
   - Loading states and empty state handling
   - Backend APIs: `/api/analytics/topic-activity`, `/api/analytics/weekly-trend`, `/api/analytics/participant-count`
-- **Slack Settings Page** (New - Oct 2025)
+- **Slack Settings Page** (Oct 2025)
   - Workspace connection status display
   - Daily digest configuration (channel ID, enabled/disabled toggle)
   - Settings persistence with validation
   - Backend APIs: `GET/POST /api/slack-settings` with Zod validation
+- **Slack Slash Command Handler** (Oct 2025)
+  - `/teammato topic-slug Feedback content` command processing
+  - HMAC-SHA256 signature verification with replay attack prevention (5-minute window)
+  - Topic routing by slug with org-scoped lookup
+  - K-anonymity enforcement: find-or-create active collecting thread per topic
+  - Race condition handling: DB unique constraint + application-level retry on conflict
+  - Duplicate submission protection (one feedback per user per thread)
+  - Atomic participant count tracking with status transitions
+  - User-friendly ephemeral responses with progress indicators
+  - Backend API: `POST /api/slack/command` with raw body parsing for signature verification
 - Security hardening (session regeneration, CSRF protection, org scoping)
 - Multi-tenant isolation with org-scoped queries
 
 ### 🚧 In Progress / Next Steps
-- Slack slash command handler (`/teammato` command)
-- K-anonymity enforcement (collection and reveal logic)
 - Per-org encryption for feedback content
 - Moderation workflow implementation
 - CSV/PDF export functionality for Analytics
