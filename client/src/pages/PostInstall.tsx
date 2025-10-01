@@ -1,8 +1,63 @@
 import { Button } from "@/components/ui/button";
-import { Check, Slack, Settings, BarChart } from "lucide-react";
+import { Check, Slack, Settings, BarChart, XCircle } from "lucide-react";
 import { Link } from "wouter";
+import { useEffect, useState } from "react";
 
 export default function PostInstall() {
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [orgName, setOrgName] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string>('');
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const success = params.get('success');
+    const error = params.get('error');
+    const org = params.get('org');
+
+    if (success === 'true') {
+      setStatus('success');
+      setOrgName(org || 'your workspace');
+    } else if (error) {
+      setStatus('error');
+      setErrorMessage(error === 'access_denied' ? 'Installation was cancelled' : `Error: ${error}`);
+    } else {
+      setStatus('error');
+      setErrorMessage('Unknown installation status');
+    }
+  }, []);
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Setting up your workspace...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <XCircle className="w-8 h-8 text-destructive" />
+          </div>
+          <h1 className="text-3xl font-semibold mb-2" data-testid="text-error-title">
+            Installation Failed
+          </h1>
+          <p className="text-muted-foreground mb-6" data-testid="text-error-message">
+            {errorMessage}
+          </p>
+          <Button asChild data-testid="button-retry">
+            <Link href="/">Try Again</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="max-w-2xl w-full text-center">
@@ -14,7 +69,7 @@ export default function PostInstall() {
             Connected to Slack ✓
           </h1>
           <p className="text-muted-foreground" data-testid="text-success-subtitle">
-            Your organization has been successfully set up with Teammato
+            {orgName} has been successfully set up with Teammato
           </p>
         </div>
 

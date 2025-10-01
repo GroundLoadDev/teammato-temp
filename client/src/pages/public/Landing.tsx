@@ -1,11 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { buildSlackAuthorizeUrl } from "@/lib/slackInstall";
 import { Shield, Lock, BarChart3, Users } from "lucide-react";
 import { SiSlack } from "react-icons/si";
 
 export default function Landing() {
   const handleAddToSlack = () => {
-    window.location.href = buildSlackAuthorizeUrl();
+    window.location.href = '/api/slack/install';
   };
 
   return (
