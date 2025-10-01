@@ -108,6 +108,18 @@ Teammato is an enterprise-grade Slack-first anonymous feedback SaaS with privacy
   - Per-topic k-anonymity thresholds (kThreshold)
   - Real-time duplicate validation
 - Feedback Management page with moderation tools
+- **Analytics Page** (New - Oct 2025)
+  - Real-time metrics: Total Threads, Total Feedback, Unique Participants, Ready to View
+  - Topic activity breakdown with visualization
+  - Weekly activity trends (7-day chart)
+  - Privacy-preserving aggregates (no PII exposed)
+  - Loading states and empty state handling
+  - Backend APIs: `/api/analytics/topic-activity`, `/api/analytics/weekly-trend`, `/api/analytics/participant-count`
+- **Slack Settings Page** (New - Oct 2025)
+  - Workspace connection status display
+  - Daily digest configuration (channel ID, enabled/disabled toggle)
+  - Settings persistence with validation
+  - Backend APIs: `GET/POST /api/slack-settings` with Zod validation
 - Security hardening (session regeneration, CSRF protection, org scoping)
 - Multi-tenant isolation with org-scoped queries
 
@@ -116,8 +128,8 @@ Teammato is an enterprise-grade Slack-first anonymous feedback SaaS with privacy
 - K-anonymity enforcement (collection and reveal logic)
 - Per-org encryption for feedback content
 - Moderation workflow implementation
-- Analytics data collection and visualization
-- Digest notifications to Slack channels
+- CSV/PDF export functionality for Analytics
+- Digest notifications to Slack channels (settings page complete, cron job pending)
 - User invitation and management
 - Billing integration with Stripe
 - Public landing pages and marketing content
