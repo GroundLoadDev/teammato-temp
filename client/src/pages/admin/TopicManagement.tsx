@@ -168,6 +168,18 @@ export default function TopicManagement() {
     });
   };
 
+  // Check if slug already exists (excluding current topic when editing)
+  const isSlugDuplicate = (slug: string): boolean => {
+    if (!topics || !slug) return false;
+    const normalizedSlug = slug.toLowerCase().trim();
+    return topics.some(topic => 
+      topic.slug === normalizedSlug && 
+      (!editingTopic || topic.id !== editingTopic.id)
+    );
+  };
+
+  const isDuplicateSlug = isSlugDuplicate(formData.slug);
+
   return (
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
@@ -290,10 +302,17 @@ export default function TopicManagement() {
                 onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
                 placeholder="e.g., product-feedback"
                 data-testid="input-slug"
+                className={isDuplicateSlug ? "border-destructive" : ""}
               />
-              <p className="text-xs text-muted-foreground">
-                Auto-generated from name, can be customized
-              </p>
+              {isDuplicateSlug ? (
+                <p className="text-xs text-destructive" data-testid="text-duplicate-error">
+                  This topic slug already exists. Please choose a different name.
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Auto-generated from name, can be customized
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="slackChannelId">Slack Channel ID (optional)</Label>
@@ -343,7 +362,7 @@ export default function TopicManagement() {
               </Button>
               <Button
                 type="submit"
-                disabled={createMutation.isPending}
+                disabled={createMutation.isPending || isDuplicateSlug}
                 data-testid="button-submit"
               >
                 Create Topic
@@ -378,7 +397,17 @@ export default function TopicManagement() {
                 onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
                 placeholder="e.g., product-feedback"
                 data-testid="input-edit-slug"
+                className={isDuplicateSlug ? "border-destructive" : ""}
               />
+              {isDuplicateSlug ? (
+                <p className="text-xs text-destructive" data-testid="text-edit-duplicate-error">
+                  This topic slug already exists. Please choose a different slug.
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  URL-friendly identifier for this topic
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-slackChannelId">Slack Channel ID (optional)</Label>
@@ -428,7 +457,7 @@ export default function TopicManagement() {
               </Button>
               <Button
                 type="submit"
-                disabled={updateMutation.isPending}
+                disabled={updateMutation.isPending || isDuplicateSlug}
                 data-testid="button-edit-submit"
               >
                 Update Topic
