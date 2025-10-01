@@ -325,6 +325,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Slack Slash Command - Submit anonymous feedback
+  app.post('/api/slack/command', async (req, res) => {
+    try {
+      // Verify Slack signature
+      if (!verifySlackSignature(req)) {
+        console.error('Invalid Slack signature');
+        return res.status(401).json({ error: 'Invalid signature' });
+      }
+
+      // Parse form-urlencoded body (Slack sends this format)
+      const body = new URLSearchParams((req as any).rawBody);
+      const teamId = body.get('team_id');
+      const userId = body.get('user_id');
+      const text = body.get('text')?.trim();
+
+      if (!teamId || !userId) {
+        return res.json({
+          response_type: 'ephemeral',
+          text: '❌ Missing required parameters from Slack.',
+        });
+      }
+
+      // Look up org from Slack team
+      const slackTeam = await storage.getSlackTeamByTeamId(teamId);
+      if (!slackTeam) {
+        return res.json({
+          response_type: 'ephemeral',
+          text: '❌ Your Slack workspace is not connected. Please install the Teammato app first.',
+        });
+      }
+
+      const orgId = slackTeam.orgId;
+
+      // Parse command: /teammato <topic-slug> <message>
+      if (!text) {
+        return res.json({
+          response_type: 'ephemeral',
+          text: '❌ Usage: `/teammato <topic> <your feedback>`\n\nExample: `/teammato product-feedback The new UI is confusing`',
+        });
+      }
+
+      const parts = text.split(/\s+/);
+      if (parts.length < 2) {
+        return res.json({
+          response_type: 'ephemeral',
+          text: '❌ Please provide both a topic and your feedback.\n\nExample: `/teammato product-feedback The new UI is confusing`',
+        });
+      }
+
+      const topicSlug = parts[0];
+      const message = parts.slice(1).join(' ');
+
+      // Find topic
+      const topic = await storage.getTopicBySlug(topicSlug, orgId);
+      if (!topic) {
+        return res.json({
+          response_type: 'ephemeral',
+          text: `❌ Topic "${topicSlug}" not found. Please check with your admin for available topics.`,
+        });
+      }
+
+      if (!topic.isActive) {
+        return res.json({
+          response_type: 'ephemeral',
+          text: `❌ Topic "${topicSlug}" is currently inactive.`,
+        });
+      }
+
+      // Find or create active "collecting" thread for this topic
+      let thread = await storage.getActiveCollectingThread(topic.id, orgId);
+      
+      if (!thread) {
+        // Create a new collecting thread
+        thread = await storage.createFeedbackThread({
+          orgId,
+          topicId: topic.id,
+          title: `${topic.name} Feedback`,
+          status: 'collecting',
+          kThreshold: topic.kThreshold,
+          participantCount: 0,
+          slackChannelId: topic.slackChannelId || null,
+          slackMessageTs: null,
+        });
+      }
+
+      // Try to insert feedback item (will fail if user already submitted to this thread)
+      try {
+        await storage.createFeedbackItem({
+          threadId: thread.id,
+          orgId,
+          slackUserId: userId,
+          content: message,
+          status: 'pending',
+          moderatorId: null,
+          moderatedAt: null,
+        });
+
+        // Get unique participants to update count
+        const participants = await storage.getUniqueParticipants(thread.id);
+        await storage.updateThreadParticipantCount(thread.id, participants.length);
+
+        // Check if k-threshold is reached
+        if (participants.length >= thread.kThreshold && thread.status === 'collecting') {
+          // Transition to ready status
+          await storage.updateThreadStatus(thread.id, 'ready');
+          
+          // TODO: Post aggregated feedback to Slack channel
+          console.log(`Thread ${thread.id} reached k-anonymity threshold (${participants.length}/${thread.kThreshold})`);
+        }
+
+        return res.json({
+          response_type: 'ephemeral',
+          text: `✅ Your anonymous feedback has been submitted to **${topic.name}**.\n\nYour feedback will be revealed once enough participants have contributed to maintain anonymity.`,
+        });
+
+      } catch (error: any) {
+        // Check for duplicate submission
+        if (error.code === '23505') { // Postgres unique violation
+          return res.json({
+            response_type: 'ephemeral',
+            text: `ℹ️ You've already submitted feedback to this **${topic.name}** thread. Each person can only submit once per collection period.`,
+          });
+        }
+        throw error;
+      }
+
+    } catch (error) {
+      console.error('Slack command error:', error);
+      return res.json({
+        response_type: 'ephemeral',
+        text: '❌ An error occurred while processing your feedback. Please try again.',
+      });
+    }
+  });
+
   // Topic Management API (admin-only)
   app.get('/api/topics', requireRole('owner', 'admin'), async (req, res) => {
     try {

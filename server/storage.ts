@@ -36,6 +36,7 @@ export interface IStorage {
   // Topics
   getTopics(orgId: string): Promise<Topic[]>;
   getTopic(id: string, orgId: string): Promise<Topic | undefined>;
+  getTopicBySlug(slug: string, orgId: string): Promise<Topic | undefined>;
   createTopic(topic: InsertTopic): Promise<Topic>;
   updateTopic(id: string, topic: Partial<InsertTopic>, orgId: string): Promise<Topic | undefined>;
   deleteTopic(id: string, orgId: string): Promise<void>;
@@ -44,6 +45,7 @@ export interface IStorage {
   createFeedbackThread(thread: InsertFeedbackThread): Promise<FeedbackThread>;
   getFeedbackThread(id: string): Promise<FeedbackThread | undefined>;
   getFeedbackThreads(orgId: string): Promise<FeedbackThread[]>;
+  getActiveCollectingThread(topicId: string, orgId: string): Promise<FeedbackThread | undefined>;
   updateThreadParticipantCount(threadId: string, count: number): Promise<void>;
   updateThreadStatus(threadId: string, status: string): Promise<void>;
   
@@ -180,6 +182,13 @@ export class PgStorage implements IStorage {
     return result[0];
   }
 
+  async getTopicBySlug(slug: string, orgId: string): Promise<Topic | undefined> {
+    const result = await db.select().from(topics)
+      .where(and(eq(topics.slug, slug), eq(topics.orgId, orgId)))
+      .limit(1);
+    return result[0];
+  }
+
   async deleteTopic(id: string, orgId: string): Promise<void> {
     await db.delete(topics)
       .where(and(eq(topics.id, id), eq(topics.orgId, orgId)));
@@ -198,6 +207,18 @@ export class PgStorage implements IStorage {
 
   async getFeedbackThreads(orgId: string): Promise<FeedbackThread[]> {
     return await db.select().from(feedbackThreads).where(eq(feedbackThreads.orgId, orgId));
+  }
+
+  async getActiveCollectingThread(topicId: string, orgId: string): Promise<FeedbackThread | undefined> {
+    const result = await db.select().from(feedbackThreads)
+      .where(and(
+        eq(feedbackThreads.topicId, topicId),
+        eq(feedbackThreads.orgId, orgId),
+        eq(feedbackThreads.status, 'collecting')
+      ))
+      .orderBy(sqlOperator`${feedbackThreads.createdAt} DESC`)
+      .limit(1);
+    return result[0];
   }
 
   async updateThreadParticipantCount(threadId: string, count: number): Promise<void> {
