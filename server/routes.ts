@@ -328,17 +328,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Zod validation schemas for moderation
+  const threadModerationSchema = z.object({
+    moderationStatus: z.enum(['auto_approved', 'pending_review', 'flagged', 'approved', 'hidden', 'archived']),
+    notes: z.string().optional(),
+    reason: z.string().optional(),
+  });
+
+  const itemModerationSchema = z.object({
+    moderationStatus: z.enum(['auto_approved', 'pending_review', 'flagged', 'approved', 'hidden']),
+    notes: z.string().optional(),
+    reason: z.string().optional(),
+  });
+
   // Moderation - Update thread moderation status
-  app.post('/api/moderation/threads/:id', requireRole('owner', 'admin'), async (req, res) => {
+  app.post('/api/moderation/threads/:id', requireRole('owner', 'admin', 'moderator'), async (req, res) => {
     try {
-      const { moderationStatus, notes, reason } = req.body;
+      const validation = threadModerationSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: 'Invalid request body', details: validation.error });
+      }
+
+      const { moderationStatus, notes, reason } = validation.data;
       const threadId = req.params.id;
       const moderatorId = req.session.userId!;
       const orgId = req.session.orgId!;
-      
-      if (!moderationStatus || !['auto_approved', 'pending_review', 'flagged', 'approved', 'hidden', 'archived'].includes(moderationStatus)) {
-        return res.status(400).json({ error: 'Invalid moderation status' });
-      }
       
       // Get current thread to log previous status
       const currentThread = await storage.getFeedbackThread(threadId);
@@ -379,22 +393,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Moderation - Update item moderation status
-  app.post('/api/moderation/items/:id', requireRole('owner', 'admin'), async (req, res) => {
+  app.post('/api/moderation/items/:id', requireRole('owner', 'admin', 'moderator'), async (req, res) => {
     try {
-      const { moderationStatus, notes, reason } = req.body;
+      const validation = itemModerationSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: 'Invalid request body', details: validation.error });
+      }
+
+      const { moderationStatus, notes, reason } = validation.data;
       const itemId = req.params.id;
       const moderatorId = req.session.userId!;
       const orgId = req.session.orgId!;
       
-      if (!moderationStatus || !['auto_approved', 'pending_review', 'flagged', 'approved', 'hidden'].includes(moderationStatus)) {
-        return res.status(400).json({ error: 'Invalid moderation status' });
-      }
-      
       // Get current item to log previous status and verify org
-      const currentItems = await storage.getFeedbackItemsByThread('');
-      const currentItem = currentItems.find(i => i.id === itemId);
+      const currentItem = await storage.getFeedbackItem(itemId, orgId);
       
-      if (!currentItem || currentItem.orgId !== orgId) {
+      if (!currentItem) {
         return res.status(404).json({ error: 'Item not found or access denied' });
       }
       
@@ -427,7 +441,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Moderation - Get audit trail
-  app.get('/api/moderation/audit/:targetType/:targetId', requireRole('owner', 'admin'), async (req, res) => {
+  app.get('/api/moderation/audit/:targetType/:targetId', requireRole('owner', 'admin', 'moderator'), async (req, res) => {
     try {
       const { targetType, targetId } = req.params;
       const orgId = req.session.orgId!;

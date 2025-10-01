@@ -130,12 +130,21 @@ Teammato is an enterprise-grade Slack-first anonymous feedback SaaS with privacy
   - Atomic participant count tracking with status transitions
   - User-friendly ephemeral responses with progress indicators
   - Backend API: `POST /api/slack/command` with raw body parsing for signature verification
+- **Moderation Workflow** (Oct 2025)
+  - Database schema: moderation_status, moderation_notes, moderated_by, moderated_at fields on threads and items
+  - Moderation audit table: Complete audit trail with action, previous/new status, reason, admin user, timestamp
+  - Thread-level actions: Approve, Flag, Hide, Archive with reason capture
+  - Item-level actions: Approve, Flag, Hide with reason capture
+  - Admin notes: Internal comments on threads (not visible to users)
+  - Audit trail UI: View complete moderation history with timestamps and reasons
+  - Role-based access: Owner and admin only, with org scoping for security
+  - Zod validation: Enum validation for moderation statuses
+  - Backend APIs: `POST /api/moderation/threads/:id`, `POST /api/moderation/items/:id`, `GET /api/moderation/audit/:targetType/:targetId`
 - Security hardening (session regeneration, CSRF protection, org scoping)
 - Multi-tenant isolation with org-scoped queries
 
 ### 🚧 In Progress / Next Steps
 - Per-org encryption for feedback content
-- Moderation workflow implementation
 - CSV/PDF export functionality for Analytics
 - Digest notifications to Slack channels (settings page complete, cron job pending)
 - User invitation and management

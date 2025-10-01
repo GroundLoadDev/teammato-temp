@@ -52,6 +52,7 @@ export interface IStorage {
   
   // Feedback Items
   createFeedbackItem(item: InsertFeedbackItem): Promise<FeedbackItem>;
+  getFeedbackItem(itemId: string, orgId: string): Promise<FeedbackItem | undefined>;
   getFeedbackItemsByThread(threadId: string): Promise<FeedbackItem[]>;
   getUniqueParticipants(threadId: string): Promise<string[]>;
   updateFeedbackItemStatus(itemId: string, status: string, moderatorId: string, orgId: string): Promise<void>;
@@ -255,6 +256,16 @@ export class PgStorage implements IStorage {
   // Feedback Items
   async createFeedbackItem(insertItem: InsertFeedbackItem): Promise<FeedbackItem> {
     const result = await db.insert(feedbackItems).values(insertItem).returning();
+    return result[0];
+  }
+
+  async getFeedbackItem(itemId: string, orgId: string): Promise<FeedbackItem | undefined> {
+    const result = await db.select().from(feedbackItems)
+      .where(and(
+        eq(feedbackItems.id, itemId),
+        eq(feedbackItems.orgId, orgId)
+      ))
+      .limit(1);
     return result[0];
   }
 
