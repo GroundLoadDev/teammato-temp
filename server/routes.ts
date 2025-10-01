@@ -58,6 +58,46 @@ function requireRole(...roles: string[]) {
   };
 }
 
+// Slack signature verification
+function verifySlackSignature(req: Request): boolean {
+  if (!SLACK_SIGNING_SECRET) {
+    console.error('SLACK_SIGNING_SECRET not configured');
+    return false;
+  }
+
+  const slackSignature = req.headers['x-slack-signature'] as string;
+  const timestamp = req.headers['x-slack-request-timestamp'] as string;
+  const body = (req as any).rawBody || '';
+
+  if (!slackSignature || !timestamp) {
+    return false;
+  }
+
+  // Prevent replay attacks - reject requests older than 5 minutes
+  const currentTime = Math.floor(Date.now() / 1000);
+  if (Math.abs(currentTime - parseInt(timestamp)) > 300) {
+    console.warn('Slack request timestamp too old');
+    return false;
+  }
+
+  // Compute signature
+  const sigBasestring = `v0:${timestamp}:${body}`;
+  const mySignature = 'v0=' + crypto
+    .createHmac('sha256', SLACK_SIGNING_SECRET)
+    .update(sigBasestring)
+    .digest('hex');
+
+  // Compare signatures using timing-safe comparison
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(mySignature, 'utf8'),
+      Buffer.from(slackSignature, 'utf8')
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   
   // Auth API
