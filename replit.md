@@ -7,10 +7,10 @@ Teammato is an enterprise-grade Slack-first anonymous feedback SaaS with privacy
 ## Tech Stack
 
 - **Frontend**: React + TypeScript + Vite + Tailwind CSS
-- **Backend**: Supabase (PostgreSQL + Auth + Edge Functions + RLS)
+- **Backend**: Express + PostgreSQL (Neon) with Drizzle ORM
 - **Billing**: Stripe
 - **Integration**: Slack (OAuth v2, Slash Commands, Events API)
-- **Logging**: Structured logger with redaction
+- **Session Management**: express-session with MemoryStore (dev) / Redis (prod)
 
 ## Project Structure
 
@@ -54,18 +54,19 @@ Teammato is an enterprise-grade Slack-first anonymous feedback SaaS with privacy
 
 ## Database Schema
 
-### Tables (9 total):
+### Tables (Currently Implemented):
 - `orgs` - Organizations with settings (k_anonymity, retention, etc.)
-- `users` - App shadow of Supabase auth with org binding and roles
-- `topics` - Feedback taxonomy
-- `threads` - Anonymous posts (encrypted)
-- `comments` - Anonymous comments (encrypted)
-- `reactions` - Deduplicated by actor_hash
-- `moderation_flags` - Flag queue
-- `analytics_daily` - Aggregated metrics only
-- `audit_admin` - Admin actions (no poster identity)
-- `slack_teams` - Slack workspace mappings
-- `slack_settings` - Slack configuration per org
+- `users` - Users with org binding and roles (owner, admin, viewer)
+- `topics` - Feedback taxonomy with slackChannelId and kThreshold for k-anonymity
+- `threads` - Anonymous feedback posts
+- `comments` - Comments on feedback threads
+- `slack_teams` - Slack workspace mappings with access tokens
+
+### Planned Tables:
+- `reactions` - Deduplicated reactions by actor_hash
+- `moderation_flags` - Moderation flag queue
+- `analytics_daily` - Aggregated metrics
+- `audit_admin` - Admin action audit trails
 
 ### Security:
 - Row-Level Security (RLS) on all tables using `current_org_id()` from JWT
@@ -74,13 +75,17 @@ Teammato is an enterprise-grade Slack-first anonymous feedback SaaS with privacy
 - Pseudonymous handles (no real names in content tables)
 - No IP/UA logging in content
 
-## Onboarding Flow
+## Authentication & Onboarding Flow
 
-1. User clicks "Add to Slack" on landing page
-2. Slack OAuth → `/slack/oauth` Edge Function
-3. Auto-provision: Create org → slack_teams → map installer as owner
-4. Redirect to `/post-install` with success message
-5. User configures settings, topics, and invites admins
+1. User clicks "Sign In with Slack" on homepage (/)
+2. Frontend redirects to `/api/slack/install`
+3. Backend redirects to Slack OAuth with CSRF protection
+4. User authorizes in Slack workspace
+5. Slack OAuth callback → `/api/slack/oauth`
+6. Backend auto-provisions: Create org → slack_teams → user as owner
+7. Backend creates session (userId, orgId, role)
+8. Redirect to `/admin/get-started`
+9. User configures topics, invites admins, sets up moderation
 
 ## Key Features
 
@@ -91,21 +96,28 @@ Teammato is an enterprise-grade Slack-first anonymous feedback SaaS with privacy
 - **Analytics**: Privacy-preserving aggregates, CSV/PDF export
 - **Compliance**: GDPR/CCPA ready, retention policies, legal hold
 
-## Next Steps
+## Implementation Status
 
-This scaffold provides:
-- ✅ Complete folder structure
-- ✅ All 17 Edge Function stubs with structured logging
-- ✅ Database schema with RLS and k-anonymity views
-- ✅ Environment helpers (appEnv.ts, slackInstall.ts)
-- ✅ All public, auth, and admin pages
-- ✅ Slack OAuth auto-provisioning stub
+### ✅ Completed (Phase 1 MVP)
+- Admin authentication system with session-based auth
+- Slack OAuth flow (install, callback, auto-provisioning)
+- Role-based access control (owner, admin, viewer)
+- Admin Dashboard with real-time org stats
+- Topic Management with CRUD operations
+  - Slack channel mapping (slackChannelId)
+  - Per-topic k-anonymity thresholds (kThreshold)
+  - Real-time duplicate validation
+- Feedback Management page with moderation tools
+- Security hardening (session regeneration, CSRF protection, org scoping)
+- Multi-tenant isolation with org-scoped queries
 
-To implement:
-- [ ] Complete Edge Function logic (encryption, JWT validation, etc.)
-- [ ] Wire up Supabase client in frontend
-- [ ] Implement actual Slack OAuth exchange
-- [ ] Add per-org encryption with AEAD
-- [ ] Build moderation queue UI
-- [ ] Implement analytics dashboard with real data
-- [ ] Add OIDC SSO integration
+### 🚧 In Progress / Next Steps
+- Slack slash command handler (`/teammato` command)
+- K-anonymity enforcement (collection and reveal logic)
+- Per-org encryption for feedback content
+- Moderation workflow implementation
+- Analytics data collection and visualization
+- Digest notifications to Slack channels
+- User invitation and management
+- Billing integration with Stripe
+- Public landing pages and marketing content
