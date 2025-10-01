@@ -48,6 +48,15 @@ export interface IStorage {
   createFeedbackItem(item: InsertFeedbackItem): Promise<FeedbackItem>;
   getFeedbackItemsByThread(threadId: string): Promise<FeedbackItem[]>;
   getUniqueParticipants(threadId: string): Promise<string[]>;
+  
+  // Dashboard Stats
+  getOrgStats(orgId: string): Promise<{
+    totalThreads: number;
+    totalFeedbackItems: number;
+    totalTopics: number;
+    readyThreads: number;
+  }>;
+  getRecentThreads(orgId: string, limit: number): Promise<Array<FeedbackThread & { topicName: string | null }>>;
 }
 
 export class PgStorage implements IStorage {
@@ -183,6 +192,63 @@ export class PgStorage implements IStorage {
       .where(eq(feedbackItems.threadId, threadId));
     
     return result.map(r => r.slackUserId);
+  }
+
+  // Dashboard Stats
+  async getOrgStats(orgId: string): Promise<{
+    totalThreads: number;
+    totalFeedbackItems: number;
+    totalTopics: number;
+    readyThreads: number;
+  }> {
+    const [threadsResult, itemsResult, topicsResult, readyResult] = await Promise.all([
+      db.select({ count: sqlOperator<number>`count(*)::int` })
+        .from(feedbackThreads)
+        .where(eq(feedbackThreads.orgId, orgId)),
+      db.select({ count: sqlOperator<number>`count(*)::int` })
+        .from(feedbackItems)
+        .innerJoin(feedbackThreads, eq(feedbackItems.threadId, feedbackThreads.id))
+        .where(eq(feedbackThreads.orgId, orgId)),
+      db.select({ count: sqlOperator<number>`count(*)::int` })
+        .from(topics)
+        .where(eq(topics.orgId, orgId)),
+      db.select({ count: sqlOperator<number>`count(*)::int` })
+        .from(feedbackThreads)
+        .where(and(
+          eq(feedbackThreads.orgId, orgId),
+          eq(feedbackThreads.status, 'ready')
+        )),
+    ]);
+
+    return {
+      totalThreads: threadsResult[0]?.count || 0,
+      totalFeedbackItems: itemsResult[0]?.count || 0,
+      totalTopics: topicsResult[0]?.count || 0,
+      readyThreads: readyResult[0]?.count || 0,
+    };
+  }
+
+  async getRecentThreads(orgId: string, limit: number): Promise<Array<FeedbackThread & { topicName: string | null }>> {
+    const result = await db.select({
+      id: feedbackThreads.id,
+      orgId: feedbackThreads.orgId,
+      topicId: feedbackThreads.topicId,
+      title: feedbackThreads.title,
+      status: feedbackThreads.status,
+      kThreshold: feedbackThreads.kThreshold,
+      participantCount: feedbackThreads.participantCount,
+      slackMessageTs: feedbackThreads.slackMessageTs,
+      slackChannelId: feedbackThreads.slackChannelId,
+      createdAt: feedbackThreads.createdAt,
+      topicName: topics.name,
+    })
+      .from(feedbackThreads)
+      .leftJoin(topics, eq(feedbackThreads.topicId, topics.id))
+      .where(eq(feedbackThreads.orgId, orgId))
+      .orderBy(sqlOperator`${feedbackThreads.createdAt} DESC`)
+      .limit(limit);
+    
+    return result;
   }
 }
 

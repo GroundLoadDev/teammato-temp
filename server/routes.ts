@@ -100,6 +100,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     });
   });
+
+  // Dashboard API
+  app.get('/api/dashboard/stats', requireAuth, async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const stats = await storage.getOrgStats(orgId);
+      res.json(stats);
+    } catch (error) {
+      console.error('Dashboard stats error:', error);
+      res.status(500).json({ error: 'Failed to fetch stats' });
+    }
+  });
+
+  app.get('/api/dashboard/recent-threads', requireAuth, async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      let limit = parseInt(req.query.limit as string) || 5;
+      
+      // Validate and clamp limit
+      limit = Math.max(1, Math.min(50, limit));
+      
+      const threads = await storage.getRecentThreads(orgId, limit);
+      res.json(threads);
+    } catch (error) {
+      console.error('Recent threads error:', error);
+      res.status(500).json({ error: 'Failed to fetch recent threads' });
+    }
+  });
+
+  app.get('/api/dashboard/slack-status', requireAuth, async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const slackTeam = await storage.getSlackTeamByOrgId(orgId);
+      
+      if (!slackTeam) {
+        return res.json({ connected: false });
+      }
+
+      res.json({
+        connected: true,
+        teamId: slackTeam.teamId,
+        botUserId: slackTeam.botUserId,
+      });
+    } catch (error) {
+      console.error('Slack status error:', error);
+      res.status(500).json({ error: 'Failed to fetch Slack status' });
+    }
+  });
   
   // Slack OAuth - Initiate install
   app.get('/api/slack/install', (req, res) => {
