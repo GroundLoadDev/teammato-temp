@@ -99,8 +99,8 @@ export default function PostInstall() {
           <h3 className="font-semibold mb-3">Next Steps</h3>
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li>• Use <code className="bg-muted px-1 rounded">/teammato</code> command in Slack to submit feedback</li>
-            <li>• Optionally link your email for magic link auth</li>
-            <li>• Configure topics and moderation settings in admin panel</li>
+            <li>• Configure topics and k-anonymity thresholds in admin panel</li>
+            <li>• Set up moderation workflows and notification channels</li>
             <li>• Invite team admins and moderators</li>
           </ul>
         </div>
