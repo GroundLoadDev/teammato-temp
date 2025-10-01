@@ -20,6 +20,7 @@ export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string, orgId: string): Promise<User | undefined>;
+  getUserBySlackId(slackUserId: string, orgId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   
   // Slack Teams
@@ -70,6 +71,13 @@ export class PgStorage implements IStorage {
   async getUserByEmail(email: string, orgId: string): Promise<User | undefined> {
     const result = await db.select().from(users)
       .where(and(eq(users.email, email), eq(users.orgId, orgId)))
+      .limit(1);
+    return result[0];
+  }
+
+  async getUserBySlackId(slackUserId: string, orgId: string): Promise<User | undefined> {
+    const result = await db.select().from(users)
+      .where(and(eq(users.slackUserId, slackUserId), eq(users.orgId, orgId)))
       .limit(1);
     return result[0];
   }

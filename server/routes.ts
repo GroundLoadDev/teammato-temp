@@ -1,7 +1,8 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import crypto from "crypto";
+import "./types"; // Load session type extensions
 
 // Slack OAuth configuration
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
@@ -33,7 +34,72 @@ const USER_SCOPES = [
 // In-memory state storage (TODO: use Redis/session store in production)
 const oauthStates = new Map<string, number>();
 
+// Auth middleware
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+}
+
+// Role-based access control middleware
+function requireRole(...roles: string[]) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.session.userId || !req.session.role) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    if (!roles.includes(req.session.role)) {
+      return res.status(403).json({ error: 'Forbidden - insufficient permissions' });
+    }
+    
+    next();
+  };
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // Auth API
+  app.get('/api/auth/me', async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        req.session.destroy(() => {});
+        return res.status(401).json({ error: 'User not found' });
+      }
+
+      const org = await storage.getOrg(user.orgId);
+      
+      res.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          orgId: user.orgId,
+        },
+        org: org ? {
+          id: org.id,
+          name: org.name,
+        } : null,
+      });
+    } catch (error) {
+      console.error('Get current user error:', error);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+
+  app.post('/api/auth/logout', (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ error: 'Logout failed' });
+      }
+      res.json({ success: true });
+    });
+  });
   
   // Slack OAuth - Initiate install
   app.get('/api/slack/install', (req, res) => {
@@ -130,11 +196,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingTeam = await storage.getSlackTeamByTeamId(team.id);
 
       let orgId: string;
+      let user;
 
       if (existingTeam) {
         // Reinstall: update access token
         await storage.updateSlackTeamToken(team.id, access_token);
         orgId = existingTeam.orgId;
+        
+        // Get or create user
+        let existingUser = await storage.getUserBySlackId(authed_user.id, existingTeam.orgId);
+        
+        if (!existingUser && installerEmail) {
+          // New user in existing org - create as admin
+          existingUser = await storage.createUser({
+            orgId: existingTeam.orgId,
+            slackUserId: authed_user.id,
+            email: installerEmail,
+            role: 'admin',
+          });
+        }
+        
+        user = existingUser;
       } else {
         // First install: auto-provision org
         const newOrg = await storage.createOrg({
@@ -154,7 +236,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Create user record for installer as owner
         if (installerEmail && authed_user.id) {
-          await storage.createUser({
+          user = await storage.createUser({
             orgId: newOrg.id,
             slackUserId: authed_user.id,
             email: installerEmail,
@@ -163,8 +245,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Redirect to post-install success page
-      res.redirect(`/post-install?success=true&org=${encodeURIComponent(team.name)}`);
+      // Create session for the installer with session regeneration
+      if (user) {
+        req.session.regenerate((err) => {
+          if (err) {
+            console.error('Session regeneration error:', err);
+            return res.redirect('/post-install?error=session_error');
+          }
+          
+          req.session.userId = user.id;
+          req.session.orgId = user.orgId;
+          req.session.role = user.role;
+          
+          req.session.save((err) => {
+            if (err) {
+              console.error('Session save error:', err);
+            }
+            // Redirect to admin dashboard
+            res.redirect(`/admin/get-started`);
+          });
+        });
+      } else {
+        res.redirect('/post-install?error=user_creation_failed');
+      }
 
     } catch (error) {
       console.error('OAuth callback error:', error);
