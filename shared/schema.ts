@@ -70,6 +70,10 @@ export const feedbackThreads = pgTable("feedback_threads", {
   participantCount: integer("participant_count").notNull().default(0),
   slackMessageTs: text("slack_message_ts"),
   slackChannelId: text("slack_channel_id"),
+  moderationStatus: text("moderation_status").notNull().default('auto_approved'),
+  moderationNotes: text("moderation_notes"),
+  moderatedBy: uuid("moderated_by").references(() => users.id, { onDelete: 'set null' }),
+  moderatedAt: timestamp("moderated_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -80,12 +84,27 @@ export const feedbackItems = pgTable("feedback_items", {
   slackUserId: text("slack_user_id").notNull(),
   content: text("content").notNull(),
   status: text("status").notNull().default('pending'),
+  moderationStatus: text("moderation_status").notNull().default('auto_approved'),
+  moderationNotes: text("moderation_notes"),
   moderatorId: uuid("moderator_id").references(() => users.id, { onDelete: 'set null' }),
   moderatedAt: timestamp("moderated_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => ({
   uniqueParticipation: unique().on(table.threadId, table.slackUserId),
 }));
+
+export const moderationAudit = pgTable("moderation_audit", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: uuid("org_id").notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+  targetType: text("target_type").notNull(),
+  targetId: uuid("target_id").notNull(),
+  action: text("action").notNull(),
+  previousStatus: text("previous_status"),
+  newStatus: text("new_status"),
+  reason: text("reason"),
+  adminUserId: uuid("admin_user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
 
 // Insert schemas
 export const insertOrgSchema = createInsertSchema(orgs).omit({ id: true, createdAt: true });
@@ -95,6 +114,7 @@ export const insertSlackSettingsSchema = createInsertSchema(slackSettings).omit(
 export const insertTopicSchema = createInsertSchema(topics).omit({ id: true });
 export const insertFeedbackThreadSchema = createInsertSchema(feedbackThreads).omit({ id: true, createdAt: true });
 export const insertFeedbackItemSchema = createInsertSchema(feedbackItems).omit({ id: true, createdAt: true });
+export const insertModerationAuditSchema = createInsertSchema(moderationAudit).omit({ id: true, createdAt: true });
 
 // Types
 export type Org = typeof orgs.$inferSelect;
@@ -117,3 +137,6 @@ export type InsertFeedbackThread = z.infer<typeof insertFeedbackThreadSchema>;
 
 export type FeedbackItem = typeof feedbackItems.$inferSelect;
 export type InsertFeedbackItem = z.infer<typeof insertFeedbackItemSchema>;
+
+export type ModerationAudit = typeof moderationAudit.$inferSelect;
+export type InsertModerationAudit = z.infer<typeof insertModerationAuditSchema>;
