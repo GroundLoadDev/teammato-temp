@@ -328,6 +328,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Moderation - Update thread moderation status
+  app.post('/api/moderation/threads/:id', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const { moderationStatus, notes, reason } = req.body;
+      const threadId = req.params.id;
+      const moderatorId = req.session.userId!;
+      const orgId = req.session.orgId!;
+      
+      if (!moderationStatus || !['auto_approved', 'pending_review', 'flagged', 'approved', 'hidden', 'archived'].includes(moderationStatus)) {
+        return res.status(400).json({ error: 'Invalid moderation status' });
+      }
+      
+      // Get current thread to log previous status
+      const currentThread = await storage.getFeedbackThread(threadId);
+      if (!currentThread) {
+        return res.status(404).json({ error: 'Thread not found' });
+      }
+      
+      if (currentThread.orgId !== orgId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      
+      // Update thread moderation status
+      const updatedThread = await storage.updateThreadModerationStatus(
+        threadId, 
+        moderationStatus, 
+        moderatorId, 
+        orgId, 
+        notes
+      );
+      
+      // Create audit trail
+      await storage.createModerationAudit({
+        orgId,
+        targetType: 'thread',
+        targetId: threadId,
+        action: moderationStatus,
+        previousStatus: currentThread.moderationStatus,
+        newStatus: moderationStatus,
+        reason,
+        adminUserId: moderatorId,
+      });
+      
+      res.json(updatedThread);
+    } catch (error) {
+      console.error('Moderate thread error:', error);
+      res.status(500).json({ error: 'Failed to moderate thread' });
+    }
+  });
+
+  // Moderation - Update item moderation status
+  app.post('/api/moderation/items/:id', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const { moderationStatus, notes, reason } = req.body;
+      const itemId = req.params.id;
+      const moderatorId = req.session.userId!;
+      const orgId = req.session.orgId!;
+      
+      if (!moderationStatus || !['auto_approved', 'pending_review', 'flagged', 'approved', 'hidden'].includes(moderationStatus)) {
+        return res.status(400).json({ error: 'Invalid moderation status' });
+      }
+      
+      // Get current item to log previous status and verify org
+      const currentItems = await storage.getFeedbackItemsByThread('');
+      const currentItem = currentItems.find(i => i.id === itemId);
+      
+      if (!currentItem || currentItem.orgId !== orgId) {
+        return res.status(404).json({ error: 'Item not found or access denied' });
+      }
+      
+      // Update item moderation status
+      const updatedItem = await storage.updateItemModerationStatus(
+        itemId, 
+        moderationStatus, 
+        moderatorId, 
+        orgId, 
+        notes
+      );
+      
+      // Create audit trail
+      await storage.createModerationAudit({
+        orgId,
+        targetType: 'item',
+        targetId: itemId,
+        action: moderationStatus,
+        previousStatus: currentItem.moderationStatus,
+        newStatus: moderationStatus,
+        reason,
+        adminUserId: moderatorId,
+      });
+      
+      res.json(updatedItem);
+    } catch (error) {
+      console.error('Moderate item error:', error);
+      res.status(500).json({ error: 'Failed to moderate item' });
+    }
+  });
+
+  // Moderation - Get audit trail
+  app.get('/api/moderation/audit/:targetType/:targetId', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const { targetType, targetId } = req.params;
+      const orgId = req.session.orgId!;
+      
+      if (!['thread', 'item'].includes(targetType)) {
+        return res.status(400).json({ error: 'Invalid target type' });
+      }
+      
+      const audit = await storage.getModerationAudit(targetType, targetId, orgId);
+      res.json(audit);
+    } catch (error) {
+      console.error('Get audit error:', error);
+      res.status(500).json({ error: 'Failed to fetch audit trail' });
+    }
+  });
+
   // Slack Slash Command - Submit anonymous feedback
   app.post('/api/slack/command', async (req, res) => {
     try {
