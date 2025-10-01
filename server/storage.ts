@@ -2,14 +2,15 @@ import { eq, and, sql as sqlOperator } from "drizzle-orm";
 import { db } from "./db";
 import { 
   orgs, users, slackTeams, slackSettings, topics,
-  feedbackThreads, feedbackItems,
+  feedbackThreads, feedbackItems, moderationAudit,
   type Org, type InsertOrg,
   type User, type InsertUser,
   type SlackTeam, type InsertSlackTeam,
   type SlackSettings, type InsertSlackSettings,
   type Topic, type InsertTopic,
   type FeedbackThread, type InsertFeedbackThread,
-  type FeedbackItem, type InsertFeedbackItem
+  type FeedbackItem, type InsertFeedbackItem,
+  type ModerationAudit, type InsertModerationAudit
 } from "@shared/schema";
 
 export interface IStorage {
@@ -76,6 +77,24 @@ export interface IStorage {
     count: number;
   }>>;
   getUniqueParticipantCount(orgId: string): Promise<number>;
+  
+  // Moderation
+  updateThreadModerationStatus(
+    threadId: string, 
+    moderationStatus: string, 
+    moderatedBy: string, 
+    orgId: string, 
+    notes?: string
+  ): Promise<FeedbackThread | undefined>;
+  updateItemModerationStatus(
+    itemId: string, 
+    moderationStatus: string, 
+    moderatedBy: string, 
+    orgId: string, 
+    notes?: string
+  ): Promise<FeedbackItem | undefined>;
+  createModerationAudit(audit: InsertModerationAudit): Promise<ModerationAudit>;
+  getModerationAudit(targetType: string, targetId: string, orgId: string): Promise<ModerationAudit[]>;
 }
 
 export class PgStorage implements IStorage {
@@ -311,6 +330,10 @@ export class PgStorage implements IStorage {
       participantCount: feedbackThreads.participantCount,
       slackMessageTs: feedbackThreads.slackMessageTs,
       slackChannelId: feedbackThreads.slackChannelId,
+      moderationStatus: feedbackThreads.moderationStatus,
+      moderationNotes: feedbackThreads.moderationNotes,
+      moderatedBy: feedbackThreads.moderatedBy,
+      moderatedAt: feedbackThreads.moderatedAt,
       createdAt: feedbackThreads.createdAt,
       topicName: topics.name,
     })
@@ -378,6 +401,81 @@ export class PgStorage implements IStorage {
       .where(eq(feedbackThreads.orgId, orgId));
     
     return result[0]?.count || 0;
+  }
+  
+  // Moderation
+  async updateThreadModerationStatus(
+    threadId: string, 
+    moderationStatus: string, 
+    moderatedBy: string, 
+    orgId: string, 
+    notes?: string
+  ): Promise<FeedbackThread | undefined> {
+    const updateData: any = {
+      moderationStatus,
+      moderatedBy,
+      moderatedAt: new Date(),
+    };
+    
+    if (notes !== undefined) {
+      updateData.moderationNotes = notes;
+    }
+    
+    const result = await db.update(feedbackThreads)
+      .set(updateData)
+      .where(and(
+        eq(feedbackThreads.id, threadId),
+        eq(feedbackThreads.orgId, orgId)
+      ))
+      .returning();
+    
+    return result[0];
+  }
+  
+  async updateItemModerationStatus(
+    itemId: string, 
+    moderationStatus: string, 
+    moderatedBy: string, 
+    orgId: string, 
+    notes?: string
+  ): Promise<FeedbackItem | undefined> {
+    const updateData: any = {
+      moderationStatus,
+      moderatorId: moderatedBy,
+      moderatedAt: new Date(),
+    };
+    
+    if (notes !== undefined) {
+      updateData.moderationNotes = notes;
+    }
+    
+    const result = await db.update(feedbackItems)
+      .set(updateData)
+      .where(and(
+        eq(feedbackItems.id, itemId),
+        eq(feedbackItems.orgId, orgId)
+      ))
+      .returning();
+    
+    return result[0];
+  }
+  
+  async createModerationAudit(audit: InsertModerationAudit): Promise<ModerationAudit> {
+    const result = await db.insert(moderationAudit).values(audit).returning();
+    return result[0];
+  }
+  
+  async getModerationAudit(targetType: string, targetId: string, orgId: string): Promise<ModerationAudit[]> {
+    const result = await db.select()
+      .from(moderationAudit)
+      .where(and(
+        eq(moderationAudit.targetType, targetType),
+        eq(moderationAudit.targetId, targetId),
+        eq(moderationAudit.orgId, orgId)
+      ))
+      .orderBy(sqlOperator`${moderationAudit.createdAt} DESC`);
+    
+    return result;
   }
 }
 
