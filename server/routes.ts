@@ -207,12 +207,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const user_id = params.get('user_id') || '';
     const team_id = params.get('team_id') || '';
     
-    // TODO: Parse feedback text, create thread, handle k-anonymity
-    
-    res.json({
-      response_type: 'ephemeral',
-      text: `Thanks for your feedback! We'll review it and it will be visible to others once we have enough participants for privacy.`
-    });
+    if (!text.trim()) {
+      return res.json({
+        response_type: 'ephemeral',
+        text: 'Please provide your feedback after the command. Example: `/teammato This is my feedback`'
+      });
+    }
+
+    try {
+      // Get Slack team to find orgId
+      const slackTeam = await storage.getSlackTeamByTeamId(team_id);
+      if (!slackTeam) {
+        return res.json({
+          response_type: 'ephemeral',
+          text: 'Your workspace is not connected. Please reinstall the Teammato app.'
+        });
+      }
+
+      // Get org to access k-anonymity settings
+      const org = await storage.getOrg(slackTeam.orgId);
+      if (!org) {
+        return res.json({
+          response_type: 'ephemeral',
+          text: 'Organization not found. Please contact support.'
+        });
+      }
+
+      const kThreshold = (org.settings as any)?.k_anonymity || 5;
+
+      // Parse topic from text (format: "topic: feedback" or just "feedback")
+      let topicId: string | undefined;
+      let feedbackContent = text.trim();
+      const topicMatch = text.match(/^(\w+):\s*(.+)$/);
+      
+      if (topicMatch) {
+        const topicSlug = topicMatch[1].toLowerCase();
+        const topics = await storage.getTopics(slackTeam.orgId);
+        const topic = topics.find(t => t.slug.toLowerCase() === topicSlug);
+        if (topic) {
+          topicId = topic.id;
+          feedbackContent = topicMatch[2].trim();
+        }
+      }
+
+      // Find or create thread for this topic
+      // For MVP: One active thread per topic (or general if no topic)
+      const allThreads = await storage.getFeedbackThreads(slackTeam.orgId);
+      let thread = allThreads.find(t => 
+        t.status === 'collecting' && 
+        ((topicId && t.topicId === topicId) || (!topicId && !t.topicId))
+      );
+
+      if (!thread) {
+        // Create new thread
+        const title = topicId 
+          ? `Feedback Thread ${new Date().toLocaleDateString()}`
+          : `General Feedback ${new Date().toLocaleDateString()}`;
+        
+        thread = await storage.createFeedbackThread({
+          orgId: slackTeam.orgId,
+          topicId: topicId || null,
+          title,
+          kThreshold: kThreshold,
+          participantCount: 0,
+          status: 'collecting',
+        });
+      }
+
+      // Check if user already contributed to this thread
+      const participants = await storage.getUniqueParticipants(thread.id);
+      if (participants.includes(user_id)) {
+        return res.json({
+          response_type: 'ephemeral',
+          text: `You've already submitted feedback for this topic. Each person can contribute once per thread.`
+        });
+      }
+
+      // Create feedback item
+      await storage.createFeedbackItem({
+        threadId: thread.id,
+        orgId: slackTeam.orgId,
+        slackUserId: user_id,
+        content: feedbackContent,
+        status: 'pending',
+      });
+
+      // Update participant count
+      const newCount = participants.length + 1;
+      await storage.updateThreadParticipantCount(thread.id, newCount);
+
+      // Check if k-threshold is met
+      if (newCount >= kThreshold) {
+        await storage.updateThreadStatus(thread.id, 'ready');
+        res.json({
+          response_type: 'ephemeral',
+          text: `✓ Your feedback has been submitted! The thread now has ${newCount} participants and is ready for review. (${newCount}/${kThreshold})`
+        });
+      } else {
+        res.json({
+          response_type: 'ephemeral',
+          text: `✓ Your feedback has been submitted! It will be visible to others once ${kThreshold} people have contributed. (${newCount}/${kThreshold} so far)`
+        });
+      }
+
+    } catch (error) {
+      console.error('Slash command error:', error);
+      res.json({
+        response_type: 'ephemeral',
+        text: 'Sorry, there was an error processing your feedback. Please try again.'
+      });
+    }
   });
 
   const httpServer = createServer(app);

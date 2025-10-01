@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, jsonb, boolean, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, jsonb, boolean, uuid, integer, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -56,12 +56,41 @@ export const topics = pgTable("topics", {
   isActive: boolean("is_active").notNull().default(true),
 });
 
+export const feedbackThreads = pgTable("feedback_threads", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: uuid("org_id").notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+  topicId: uuid("topic_id").references(() => topics.id, { onDelete: 'set null' }),
+  title: text("title").notNull(),
+  status: text("status").notNull().default('collecting'),
+  kThreshold: integer("k_threshold").notNull().default(5),
+  participantCount: integer("participant_count").notNull().default(0),
+  slackMessageTs: text("slack_message_ts"),
+  slackChannelId: text("slack_channel_id"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const feedbackItems = pgTable("feedback_items", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  threadId: uuid("thread_id").notNull().references(() => feedbackThreads.id, { onDelete: 'cascade' }),
+  orgId: uuid("org_id").notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+  slackUserId: text("slack_user_id").notNull(),
+  content: text("content").notNull(),
+  status: text("status").notNull().default('pending'),
+  moderatorId: uuid("moderator_id").references(() => users.id, { onDelete: 'set null' }),
+  moderatedAt: timestamp("moderated_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  uniqueParticipation: unique().on(table.threadId, table.slackUserId),
+}));
+
 // Insert schemas
 export const insertOrgSchema = createInsertSchema(orgs).omit({ id: true, createdAt: true });
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertSlackTeamSchema = createInsertSchema(slackTeams).omit({ id: true, createdAt: true });
 export const insertSlackSettingsSchema = createInsertSchema(slackSettings).omit({ id: true, createdAt: true });
 export const insertTopicSchema = createInsertSchema(topics).omit({ id: true });
+export const insertFeedbackThreadSchema = createInsertSchema(feedbackThreads).omit({ id: true, createdAt: true });
+export const insertFeedbackItemSchema = createInsertSchema(feedbackItems).omit({ id: true, createdAt: true });
 
 // Types
 export type Org = typeof orgs.$inferSelect;
@@ -78,3 +107,9 @@ export type InsertSlackSettings = z.infer<typeof insertSlackSettingsSchema>;
 
 export type Topic = typeof topics.$inferSelect;
 export type InsertTopic = z.infer<typeof insertTopicSchema>;
+
+export type FeedbackThread = typeof feedbackThreads.$inferSelect;
+export type InsertFeedbackThread = z.infer<typeof insertFeedbackThreadSchema>;
+
+export type FeedbackItem = typeof feedbackItems.$inferSelect;
+export type InsertFeedbackItem = z.infer<typeof insertFeedbackItemSchema>;

@@ -1,12 +1,15 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql as sqlOperator } from "drizzle-orm";
 import { db } from "./db";
 import { 
   orgs, users, slackTeams, slackSettings, topics,
+  feedbackThreads, feedbackItems,
   type Org, type InsertOrg,
   type User, type InsertUser,
   type SlackTeam, type InsertSlackTeam,
   type SlackSettings, type InsertSlackSettings,
-  type Topic, type InsertTopic
+  type Topic, type InsertTopic,
+  type FeedbackThread, type InsertFeedbackThread,
+  type FeedbackItem, type InsertFeedbackItem
 } from "@shared/schema";
 
 export interface IStorage {
@@ -32,6 +35,18 @@ export interface IStorage {
   // Topics
   getTopics(orgId: string): Promise<Topic[]>;
   createTopic(topic: InsertTopic): Promise<Topic>;
+  
+  // Feedback Threads
+  createFeedbackThread(thread: InsertFeedbackThread): Promise<FeedbackThread>;
+  getFeedbackThread(id: string): Promise<FeedbackThread | undefined>;
+  getFeedbackThreads(orgId: string): Promise<FeedbackThread[]>;
+  updateThreadParticipantCount(threadId: string, count: number): Promise<void>;
+  updateThreadStatus(threadId: string, status: string): Promise<void>;
+  
+  // Feedback Items
+  createFeedbackItem(item: InsertFeedbackItem): Promise<FeedbackItem>;
+  getFeedbackItemsByThread(threadId: string): Promise<FeedbackItem[]>;
+  getUniqueParticipants(threadId: string): Promise<string[]>;
 }
 
 export class PgStorage implements IStorage {
@@ -114,6 +129,52 @@ export class PgStorage implements IStorage {
   async createTopic(insertTopic: InsertTopic): Promise<Topic> {
     const result = await db.insert(topics).values(insertTopic).returning();
     return result[0];
+  }
+
+  // Feedback Threads
+  async createFeedbackThread(insertThread: InsertFeedbackThread): Promise<FeedbackThread> {
+    const result = await db.insert(feedbackThreads).values(insertThread).returning();
+    return result[0];
+  }
+
+  async getFeedbackThread(id: string): Promise<FeedbackThread | undefined> {
+    const result = await db.select().from(feedbackThreads).where(eq(feedbackThreads.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getFeedbackThreads(orgId: string): Promise<FeedbackThread[]> {
+    return await db.select().from(feedbackThreads).where(eq(feedbackThreads.orgId, orgId));
+  }
+
+  async updateThreadParticipantCount(threadId: string, count: number): Promise<void> {
+    await db.update(feedbackThreads)
+      .set({ participantCount: count })
+      .where(eq(feedbackThreads.id, threadId));
+  }
+
+  async updateThreadStatus(threadId: string, status: string): Promise<void> {
+    await db.update(feedbackThreads)
+      .set({ status })
+      .where(eq(feedbackThreads.id, threadId));
+  }
+
+  // Feedback Items
+  async createFeedbackItem(insertItem: InsertFeedbackItem): Promise<FeedbackItem> {
+    const result = await db.insert(feedbackItems).values(insertItem).returning();
+    return result[0];
+  }
+
+  async getFeedbackItemsByThread(threadId: string): Promise<FeedbackItem[]> {
+    return await db.select().from(feedbackItems).where(eq(feedbackItems.threadId, threadId));
+  }
+
+  async getUniqueParticipants(threadId: string): Promise<string[]> {
+    const result = await db
+      .selectDistinct({ slackUserId: feedbackItems.slackUserId })
+      .from(feedbackItems)
+      .where(eq(feedbackItems.threadId, threadId));
+    
+    return result.map(r => r.slackUserId);
   }
 }
 
