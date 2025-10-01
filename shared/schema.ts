@@ -53,8 +53,12 @@ export const topics = pgTable("topics", {
   orgId: uuid("org_id").notNull().references(() => orgs.id, { onDelete: 'cascade' }),
   name: text("name").notNull(),
   slug: text("slug").notNull(),
+  slackChannelId: text("slack_channel_id"),
+  kThreshold: integer("k_threshold").notNull().default(5),
   isActive: boolean("is_active").notNull().default(true),
-});
+}, (table) => ({
+  uniqueSlug: unique().on(table.orgId, table.slug),
+}));
 
 export const feedbackThreads = pgTable("feedback_threads", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),

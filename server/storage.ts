@@ -35,7 +35,10 @@ export interface IStorage {
   
   // Topics
   getTopics(orgId: string): Promise<Topic[]>;
+  getTopic(id: string, orgId: string): Promise<Topic | undefined>;
   createTopic(topic: InsertTopic): Promise<Topic>;
+  updateTopic(id: string, topic: Partial<InsertTopic>, orgId: string): Promise<Topic | undefined>;
+  deleteTopic(id: string, orgId: string): Promise<void>;
   
   // Feedback Threads
   createFeedbackThread(thread: InsertFeedbackThread): Promise<FeedbackThread>;
@@ -144,9 +147,29 @@ export class PgStorage implements IStorage {
     return await db.select().from(topics).where(eq(topics.orgId, orgId));
   }
 
+  async getTopic(id: string, orgId: string): Promise<Topic | undefined> {
+    const result = await db.select().from(topics)
+      .where(and(eq(topics.id, id), eq(topics.orgId, orgId)))
+      .limit(1);
+    return result[0];
+  }
+
   async createTopic(insertTopic: InsertTopic): Promise<Topic> {
     const result = await db.insert(topics).values(insertTopic).returning();
     return result[0];
+  }
+
+  async updateTopic(id: string, updateData: Partial<InsertTopic>, orgId: string): Promise<Topic | undefined> {
+    const result = await db.update(topics)
+      .set(updateData)
+      .where(and(eq(topics.id, id), eq(topics.orgId, orgId)))
+      .returning();
+    return result[0];
+  }
+
+  async deleteTopic(id: string, orgId: string): Promise<void> {
+    await db.delete(topics)
+      .where(and(eq(topics.id, id), eq(topics.orgId, orgId)));
   }
 
   // Feedback Threads

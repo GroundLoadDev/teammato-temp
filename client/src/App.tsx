@@ -23,6 +23,7 @@ import Auth from "@/pages/Auth";
 // Admin pages
 import GetStarted from "@/pages/admin/GetStarted";
 import FeedbackManagement from "@/pages/admin/FeedbackManagement";
+import TopicManagement from "@/pages/admin/TopicManagement";
 import SlackSettings from "@/pages/admin/SlackSettings";
 import BillingSettings from "@/pages/admin/BillingSettings";
 import Analytics from "@/pages/admin/Analytics";
@@ -49,6 +50,7 @@ function Router() {
       {/* Admin pages */}
       <Route path="/admin/get-started" component={GetStarted} />
       <Route path="/admin/feedback" component={FeedbackManagement} />
+      <Route path="/admin/topics" component={TopicManagement} />
       <Route path="/admin/slack-settings" component={SlackSettings} />
       <Route path="/admin/billing" component={BillingSettings} />
       <Route path="/admin/analytics" component={Analytics} />

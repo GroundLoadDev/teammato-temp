@@ -206,6 +206,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to moderate item' });
     }
   });
+
+  // Topic Management API (admin-only)
+  app.get('/api/topics', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const topicsList = await storage.getTopics(orgId);
+      res.json(topicsList);
+    } catch (error) {
+      console.error('Get topics error:', error);
+      res.status(500).json({ error: 'Failed to fetch topics' });
+    }
+  });
+
+  app.get('/api/topics/:id', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const topic = await storage.getTopic(req.params.id, orgId);
+      
+      if (!topic) {
+        return res.status(404).json({ error: 'Topic not found' });
+      }
+      
+      res.json(topic);
+    } catch (error) {
+      console.error('Get topic error:', error);
+      res.status(500).json({ error: 'Failed to fetch topic' });
+    }
+  });
+
+  app.post('/api/topics', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const { name, slug, slackChannelId, kThreshold, isActive } = req.body;
+      
+      if (!name || !slug) {
+        return res.status(400).json({ error: 'Name and slug are required' });
+      }
+      
+      const topic = await storage.createTopic({
+        orgId,
+        name,
+        slug: slug.toLowerCase().trim(),
+        slackChannelId: slackChannelId || null,
+        kThreshold: kThreshold !== undefined ? parseInt(kThreshold) : 5,
+        isActive: isActive !== undefined ? isActive : true,
+      });
+      
+      res.json(topic);
+    } catch (error) {
+      console.error('Create topic error:', error);
+      res.status(500).json({ error: 'Failed to create topic' });
+    }
+  });
+
+  app.patch('/api/topics/:id', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const { name, slug, slackChannelId, kThreshold, isActive } = req.body;
+      
+      const updateData: Partial<{ name: string; slug: string; slackChannelId: string | null; kThreshold: number; isActive: boolean }> = {};
+      if (name !== undefined) updateData.name = name;
+      if (slug !== undefined) updateData.slug = slug.toLowerCase().trim();
+      if (slackChannelId !== undefined) updateData.slackChannelId = slackChannelId || null;
+      if (kThreshold !== undefined) updateData.kThreshold = parseInt(kThreshold);
+      if (isActive !== undefined) updateData.isActive = isActive;
+      
+      const topic = await storage.updateTopic(req.params.id, updateData, orgId);
+      
+      if (!topic) {
+        return res.status(404).json({ error: 'Topic not found' });
+      }
+      
+      res.json(topic);
+    } catch (error) {
+      console.error('Update topic error:', error);
+      res.status(500).json({ error: 'Failed to update topic' });
+    }
+  });
+
+  app.delete('/api/topics/:id', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      await storage.deleteTopic(req.params.id, orgId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Delete topic error:', error);
+      res.status(500).json({ error: 'Failed to delete topic' });
+    }
+  });
   
   // Slack OAuth - Initiate install
   app.get('/api/slack/install', (req, res) => {
