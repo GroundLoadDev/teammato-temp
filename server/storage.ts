@@ -48,6 +48,7 @@ export interface IStorage {
   createFeedbackItem(item: InsertFeedbackItem): Promise<FeedbackItem>;
   getFeedbackItemsByThread(threadId: string): Promise<FeedbackItem[]>;
   getUniqueParticipants(threadId: string): Promise<string[]>;
+  updateFeedbackItemStatus(itemId: string, status: string, moderatorId: string, orgId: string): Promise<void>;
   
   // Dashboard Stats
   getOrgStats(orgId: string): Promise<{
@@ -192,6 +193,20 @@ export class PgStorage implements IStorage {
       .where(eq(feedbackItems.threadId, threadId));
     
     return result.map(r => r.slackUserId);
+  }
+
+  async updateFeedbackItemStatus(itemId: string, status: string, moderatorId: string, orgId: string): Promise<void> {
+    // Update with org verification via join
+    await db.update(feedbackItems)
+      .set({ 
+        status, 
+        moderatorId, 
+        moderatedAt: new Date() 
+      })
+      .where(and(
+        eq(feedbackItems.id, itemId),
+        eq(feedbackItems.orgId, orgId)
+      ));
   }
 
   // Dashboard Stats

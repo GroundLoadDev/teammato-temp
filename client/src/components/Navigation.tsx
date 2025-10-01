@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Home, Settings, BarChart, Download, Clock, Slack, FileText } from "lucide-react";
+import { Home, Settings, BarChart, Download, Clock, Slack, FileText, MessageSquare } from "lucide-react";
 
 export function Navigation() {
   const [location] = useLocation();
@@ -18,7 +18,8 @@ export function Navigation() {
   ];
 
   const adminLinks = [
-    { href: "/admin/get-started", label: "Get Started", icon: Home },
+    { href: "/admin/get-started", label: "Dashboard", icon: Home },
+    { href: "/admin/feedback", label: "Feedback", icon: MessageSquare },
     { href: "/admin/slack-settings", label: "Slack", icon: Slack },
     { href: "/admin/billing", label: "Billing", icon: FileText },
     { href: "/admin/analytics", label: "Analytics", icon: BarChart },

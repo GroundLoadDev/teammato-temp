@@ -148,6 +148,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to fetch Slack status' });
     }
   });
+
+  // Feedback Management API (moderator-only)
+  app.get('/api/feedback/threads', requireRole('owner', 'admin', 'moderator'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const threads = await storage.getFeedbackThreads(orgId);
+      res.json(threads);
+    } catch (error) {
+      console.error('Get threads error:', error);
+      res.status(500).json({ error: 'Failed to fetch threads' });
+    }
+  });
+
+  app.get('/api/feedback/threads/:id', requireRole('owner', 'admin', 'moderator'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const thread = await storage.getFeedbackThread(req.params.id);
+      
+      if (!thread) {
+        return res.status(404).json({ error: 'Thread not found' });
+      }
+      
+      // Verify thread belongs to user's org
+      if (thread.orgId !== orgId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      
+      const items = await storage.getFeedbackItemsByThread(thread.id);
+      
+      res.json({
+        ...thread,
+        items,
+      });
+    } catch (error) {
+      console.error('Get thread error:', error);
+      res.status(500).json({ error: 'Failed to fetch thread' });
+    }
+  });
+
+  app.post('/api/feedback/items/:id/moderate', requireRole('owner', 'admin', 'moderator'), async (req, res) => {
+    try {
+      const { status } = req.body;
+      const itemId = req.params.id;
+      const moderatorId = req.session.userId!;
+      const orgId = req.session.orgId!;
+      
+      if (!status || !['approved', 'hidden', 'removed', 'pending'].includes(status)) {
+        return res.status(400).json({ error: 'Invalid status' });
+      }
+      
+      // Update with org scoping for security
+      await storage.updateFeedbackItemStatus(itemId, status, moderatorId, orgId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Moderate item error:', error);
+      res.status(500).json({ error: 'Failed to moderate item' });
+    }
+  });
   
   // Slack OAuth - Initiate install
   app.get('/api/slack/install', (req, res) => {
