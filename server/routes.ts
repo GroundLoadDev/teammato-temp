@@ -254,8 +254,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.json(topic);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Create topic error:', error);
+      
+      // Check for unique constraint violation on slug
+      if (error.code === '23505' && error.constraint?.includes('slug')) {
+        const slugValue = req.body.slug?.toLowerCase().trim() || 'this';
+        return res.status(409).json({ 
+          error: `A topic with the slug "${slugValue}" already exists. Please choose a different name or slug.` 
+        });
+      }
+      
       res.status(500).json({ error: 'Failed to create topic' });
     }
   });

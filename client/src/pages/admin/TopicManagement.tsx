@@ -56,10 +56,11 @@ export default function TopicManagement() {
         description: "The topic has been created successfully.",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      const errorMessage = error?.message || "Failed to create topic. Please try again.";
       toast({
         title: "Error",
-        description: "Failed to create topic. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -78,10 +79,11 @@ export default function TopicManagement() {
         description: "The topic has been updated successfully.",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      const errorMessage = error?.message || "Failed to update topic. Please try again.";
       toast({
         title: "Error",
-        description: "Failed to update topic. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     },
