@@ -174,12 +174,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Slack slash command handler
   app.post('/api/slack/command', async (req, res) => {
-    // TODO: Verify Slack signature using SLACK_SIGNING_SECRET
-    // TODO: Parse command and respond
+    // Verify Slack request signature
+    const slackSignature = req.headers['x-slack-signature'] as string;
+    const slackTimestamp = req.headers['x-slack-request-timestamp'] as string;
+    
+    if (!slackSignature || !slackTimestamp) {
+      return res.status(401).json({ error: 'Missing Slack signature headers' });
+    }
+
+    // Prevent replay attacks - reject requests older than 5 minutes
+    const currentTime = Math.floor(Date.now() / 1000);
+    if (Math.abs(currentTime - parseInt(slackTimestamp)) > 60 * 5) {
+      return res.status(401).json({ error: 'Request timestamp too old' });
+    }
+
+    // Compute expected signature
+    const rawBody = JSON.stringify(req.body);
+    const sigBasestring = `v0:${slackTimestamp}:${rawBody}`;
+    const expectedSignature = 'v0=' + crypto
+      .createHmac('sha256', SLACK_SIGNING_SECRET!)
+      .update(sigBasestring)
+      .digest('hex');
+
+    // Constant-time comparison to prevent timing attacks
+    if (!crypto.timingSafeEqual(Buffer.from(slackSignature), Buffer.from(expectedSignature))) {
+      return res.status(401).json({ error: 'Invalid signature' });
+    }
+
+    // Signature verified, process the command
+    const { text, user_id, team_id } = req.body;
+    
+    // TODO: Parse feedback text, create thread, handle k-anonymity
     
     res.json({
       response_type: 'ephemeral',
-      text: 'Slack command handler - coming soon!'
+      text: `Thanks for your feedback! We'll review it and it will be visible to others once we have enough participants for privacy.`
     });
   });
 
