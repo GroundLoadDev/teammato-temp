@@ -113,3 +113,52 @@ export async function sendTopicOwnerReminder(
     console.error('Failed to send topic owner reminder:', error);
   }
 }
+
+export async function postActionNotesToChannel(
+  accessToken: string,
+  channelId: string,
+  topicName: string,
+  actionNotes: string
+): Promise<void> {
+  const client = new WebClient(accessToken);
+
+  const message = {
+    channel: channelId,
+    text: `✅ Action Update: ${topicName}`,
+    blocks: [
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `📢 *You Said / We Did: ${topicName}*`
+        }
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: actionNotes
+        }
+      },
+      {
+        type: 'divider'
+      },
+      {
+        type: 'context',
+        elements: [
+          {
+            type: 'mrkdwn',
+            text: '💬 Thank you for your feedback. Your voice matters and drives positive change.'
+          }
+        ]
+      }
+    ]
+  };
+
+  try {
+    await client.chat.postMessage(message);
+  } catch (error) {
+    console.error('Failed to post action notes:', error);
+    throw error; // Re-throw so caller knows it failed
+  }
+}

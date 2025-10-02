@@ -5,7 +5,7 @@ import crypto from "crypto";
 import { z } from "zod";
 import "./types"; // Load session type extensions
 import { filterAnonymousFeedback } from "./utils/contentFilter";
-import { sendContributionReceipt } from "./utils/slackMessaging";
+import { sendContributionReceipt, postActionNotesToChannel } from "./utils/slackMessaging";
 
 // Slack OAuth configuration
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
@@ -513,7 +513,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const expiryInfo = t.expiresAt 
               ? ` (expires ${new Date(t.expiresAt).toLocaleDateString()})`
               : '';
-            return `• \`${t.slug}\` - ${t.name}${expiryInfo}`;
+            const statusIcon = t.status === 'collecting' ? '📝' : 
+                              t.status === 'in_review' ? '👀' :
+                              t.status === 'action_decided' ? '✅' : '🎯';
+            return `• ${statusIcon} \`${t.slug}\` - ${t.name}${expiryInfo}`;
           })
           .join('\n');
         
@@ -721,19 +724,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/topics/:id', requireRole('owner', 'admin'), async (req, res) => {
     try {
       const orgId = req.session.orgId!;
-      const { name, slug, slackChannelId, kThreshold, isActive } = req.body;
+      const { name, slug, slackChannelId, kThreshold, isActive, status, actionNotes, expiresAt, windowDays, ownerId } = req.body;
       
-      const updateData: Partial<{ name: string; slug: string; slackChannelId: string | null; kThreshold: number; isActive: boolean }> = {};
+      // Get current topic state to check for status change
+      const currentTopic = await storage.getTopic(req.params.id, orgId);
+      if (!currentTopic) {
+        return res.status(404).json({ error: 'Topic not found' });
+      }
+      
+      const updateData: any = {};
       if (name !== undefined) updateData.name = name;
       if (slug !== undefined) updateData.slug = slug.toLowerCase().trim();
       if (slackChannelId !== undefined) updateData.slackChannelId = slackChannelId || null;
       if (kThreshold !== undefined) updateData.kThreshold = parseInt(kThreshold);
       if (isActive !== undefined) updateData.isActive = isActive;
+      if (status !== undefined) updateData.status = status;
+      if (actionNotes !== undefined) updateData.actionNotes = actionNotes;
+      if (expiresAt !== undefined) updateData.expiresAt = expiresAt;
+      if (windowDays !== undefined) updateData.windowDays = parseInt(windowDays);
+      if (ownerId !== undefined) updateData.ownerId = ownerId;
       
       const topic = await storage.updateTopic(req.params.id, updateData, orgId);
       
       if (!topic) {
         return res.status(404).json({ error: 'Topic not found' });
+      }
+      
+      // Auto-post action notes when status changes to 'actioned'
+      if (status === 'actioned' && actionNotes && topic.slackChannelId) {
+        const slackTeam = await storage.getSlackTeamByOrgId(orgId);
+        if (slackTeam) {
+          postActionNotesToChannel(slackTeam.accessToken, topic.slackChannelId, topic.name, actionNotes)
+            .catch(err => console.error('Failed to post action notes:', err));
+        }
       }
       
       res.json(topic);

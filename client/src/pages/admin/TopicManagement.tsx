@@ -24,6 +24,12 @@ interface Topic {
   slackChannelId: string | null;
   kThreshold: number;
   isActive: boolean;
+  expiresAt: string | null;
+  windowDays: number;
+  status: string;
+  ownerId: string | null;
+  actionNotes: string | null;
+  createdAt: string;
 }
 
 export default function TopicManagement() {
