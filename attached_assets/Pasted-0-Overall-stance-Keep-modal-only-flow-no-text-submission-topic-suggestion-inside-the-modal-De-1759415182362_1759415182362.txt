@@ -1,0 +1,158 @@
+0) Overall stance
+
+Keep modal-only flow (no text submission), topic suggestion inside the modal.
+
+Defer advanced/privacy bells & whistles (noise, jitter, heavy NLP) to later phases.
+
+1) Database schema
+
+Your draft: add situation, behavior, impact to items; new topic_suggestions table.
+
+Change now (simplify & keep privacy):
+
+items:
+
+Keep: behavior TEXT NOT NULL, impact TEXT NOT NULL.
+
+Change: store coarsened situation only → situation_coarse VARCHAR(120) (e.g., “Week 38 sprint demo”).
+Drop raw situation for now—saves crypto/TTL work.
+
+Add (tiny but valuable): submitter_hash VARCHAR(64) (salted, rotating) for rate-limit/duplicate checks and receipts.
+
+Optional (cheap): created_at_day DATE for easy cohorting/release.
+
+topic_suggestions:
+
+Keep: id, org_id, suggested_by, title, status, created_at.
+
+Add (cheap future-proof): index (org_id, status, created_at).
+
+Defer: encrypted raw fields, merge/cluster IDs, upvotes.
+
+2) Slash command behavior
+
+Your draft: reject if text present.
+
+Change now (UX win, same scope):
+
+Prefill, don’t reject. If /teammato <topic-slug> some text is used, open the modal with Behavior prefilled from “some text.” No text is ever submitted without the modal.
+Copy: “I prefilled the form—you’ll submit when you hit Submit Feedback.”
+
+3) Slack modal content
+
+Your draft: header shows {X days remaining} · {k} participants needed.
+
+Change now (privacy + simplicity):
+
+Show only the deadline (“Closes in X days”).
+
+Remove “{k} participants needed}” (avoid triangulation, saves state logic).
+
+Keep fields exactly as drafted:
+
+Suggest a new topic (checkbox → short title)
+
+Situation (Optional) short text (10–300 chars)
+
+Behavior (Required, 20–800)
+
+Impact (Required, 15–500)
+
+Copy tweaks (cheap):
+
+Situation helper: “If safe, when/where (e.g., ‘Sprint demo, week 38’). We coarsen details before release.”
+
+Behavior helper: “What specifically occurred? Observable actions only.”
+
+Impact helper: “How did this affect work or people?”
+
+4) Validation flow
+
+Your draft: in-modal checks + server-side validateSBI + filterAnonymousFeedback.
+
+Change now (lighter validation):
+
+Keep in-modal: required fields, min lengths, block @mentions/emails (simple regex).
+
+Server-side: minimal only—rate-limit per submitter_hash & topic/day; duplicate suppression (same hash + near-identical text).
+Defer heavy NLP/toxicity pipelines to v0.2+.
+
+Inline error copy for @: “To protect anonymity, avoid naming people. Describe the behavior instead.”
+
+5) Backend implementation
+
+Your draft: /api/slack/modal-submit, reuse k-anonymity, dupes, receipts; store SBI; suggestions → admin queue.
+
+Keep, with two small tweaks:
+
+Receipts: return a short hash only (no timestamp in the DM).
+
+K-gate: enforce at release time; don’t display live counts in the modal.
+
+6) Admin & release workflow
+
+Change now (simplify):
+
+Admin UI (minimal):
+
+Topics list with state: collecting | reviewing | actioned.
+
+Open/close topic; text box for “You said / We did” note on close.
+
+Suggestions queue: approve/reject only (no clustering/merge).
+
+Release: weekly or at topic close—aggregate themes; no exact counts, or show simple buckets (e.g., “a handful / many”) if you must show magnitude.
+
+Defer: owner SLA nudges, escalation, auto-promote topics, DP noise, jittered release times.
+
+7) Task breakdown (updated & trimmed)
+
+DB migrations
+
+items: add behavior, impact, situation_coarse, submitter_hash, created_at_day.
+
+topic_suggestions: as above + index.
+
+Slash command
+
+Always views.open. If text args present → prefill Behavior.
+
+Modal JSON
+
+Fields as above; no “k needed” line; show “Closes in X days.”
+
+Submission handler
+
+Validate required fields + @/email block.
+
+Coarsen situation server-side; compute submitter_hash; dedupe/rate-limit.
+
+Persist; return receipt hash.
+
+Admin endpoints/UI
+
+Topics: state toggle, “We did” note.
+
+Suggestions: list + approve/reject.
+
+Testing
+
+Modal open→submit flow; prefill path; validation errors; dedupe; rate-limit; topic close & summary.
+
+Estimated complexity: Low-Medium (≈5–6 tasks)—you’ve removed text parsing, live k-count display, heavy validation, clustering, and advanced privacy ops.
+
+Final “as-built” spec (cut-through)
+
+Entry: /teammato <topic-slug> [optional text] → modal opens (prefilled if text present).
+
+Fields: Suggest topic (checkbox + title), Situation (optional), Behavior (req), Impact (req).
+
+Validation: Required + length; block @/emails; server rate-limit & dedupe.
+
+Storage: No raw situation; store situation_coarse, behavior, impact, submitter_hash, created_at_day.
+
+Privacy: No live k counter; release only at close/weekly in aggregate.
+
+Admin: Minimal queue for suggestions; topic state & close-out note; simple aggregated summary generation.
+
+Receipts: Short hash DM; no timestamps.
