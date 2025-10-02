@@ -62,7 +62,7 @@ export default function TopicManagement() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: { name: string; slug: string; description?: string; windowDays: number; isActive: boolean }) => {
+    mutationFn: async (data: { name: string; slug: string; description?: string; slackChannelId?: string; kThreshold: number; windowDays: number; isActive: boolean }) => {
       return apiRequest('POST', '/api/topics', data);
     },
     onSuccess: () => {

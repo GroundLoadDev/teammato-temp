@@ -932,19 +932,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/topics', requireRole('owner', 'admin'), async (req, res) => {
     try {
       const orgId = req.session.orgId!;
-      const { name, slug, slackChannelId, kThreshold, isActive } = req.body;
+      const userId = req.session.userId!;
+      const { name, slug, description, slackChannelId, kThreshold, isActive, windowDays } = req.body;
       
       if (!name || !slug) {
         return res.status(400).json({ error: 'Name and slug are required' });
       }
       
+      // Calculate expiresAt based on windowDays
+      const windowDaysValue = windowDays !== undefined ? parseInt(windowDays) : 21;
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + windowDaysValue);
+      
       const topic = await storage.createTopic({
         orgId,
         name,
         slug: slug.toLowerCase().trim(),
+        description: description || null,
         slackChannelId: slackChannelId || null,
         kThreshold: kThreshold !== undefined ? parseInt(kThreshold) : 5,
         isActive: isActive !== undefined ? isActive : true,
+        windowDays: windowDaysValue,
+        expiresAt,
+        ownerId: userId,
       });
       
       res.json(topic);
