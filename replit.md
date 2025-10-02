@@ -174,6 +174,18 @@ Teammato is an enterprise-grade Slack-first anonymous feedback SaaS with privacy
   - Status transition validation: Server-side enforcement of allowed state changes
   - K-anonymity enforcement: Blocks actioning topics until participant threshold met
   - Backend APIs: Enhanced `PATCH /api/topics/:id` with status, actionNotes, participant count validation
+- **General Feedback with Rolling Instances** (Oct 2025) ✅ COMPLETE
+  - Schema: parentTopicId, isParent, instanceIdentifier, windowStart, windowEnd fields support parent/instance relationships
+  - Auto-routing: `/teammato <free text>` routes to current General feedback instance
+  - Parent topic creation: System auto-creates parent topic (isParent=true, slug="general-feedback") on first use
+  - Instance management: getCurrentGeneralFeedbackInstance() gets or creates current weekly instance
+  - Week-based instances: instanceIdentifier format "YYYY-Www" (e.g., "2025-W41") using ISO week numbers
+  - Instance rotation cron: Hourly job checks for expired instances, creates next weekly instance
+  - Modal prefill: Free text from command prefills Behavior field in SBI modal
+  - Admin UI filtering: TopicManagement.tsx filters out parent topics (isParent=true), shows instance badges
+  - K-anonymity preservation: Each instance has own kThreshold (typically 5), maintains privacy across time windows
+  - Storage methods: getOrCreateParentTopic, getCurrentGeneralFeedbackInstance, createGeneralFeedbackInstance, getExpiredInstances
+  - Week calculation helpers: getISOWeekNumber, formatWeekIdentifier in server/cron/topicExpiry.ts
 - Security hardening (session regeneration, CSRF protection, org scoping)
 - Multi-tenant isolation with org-scoped queries
 
