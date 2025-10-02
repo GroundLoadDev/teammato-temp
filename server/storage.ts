@@ -41,6 +41,7 @@ export interface IStorage {
   createTopic(topic: InsertTopic): Promise<Topic>;
   updateTopic(id: string, topic: Partial<InsertTopic>, orgId: string): Promise<Topic | undefined>;
   deleteTopic(id: string, orgId: string): Promise<void>;
+  getExpiredTopics(): Promise<Topic[]>;
   
   // Feedback Threads
   createFeedbackThread(thread: InsertFeedbackThread): Promise<FeedbackThread>;
@@ -212,6 +213,16 @@ export class PgStorage implements IStorage {
   async deleteTopic(id: string, orgId: string): Promise<void> {
     await db.delete(topics)
       .where(and(eq(topics.id, id), eq(topics.orgId, orgId)));
+  }
+
+  async getExpiredTopics(): Promise<Topic[]> {
+    const now = new Date();
+    return await db.select().from(topics)
+      .where(and(
+        eq(topics.isActive, true),
+        eq(topics.status, 'collecting'),
+        sqlOperator`${topics.expiresAt} <= ${now}`
+      ));
   }
 
   // Feedback Threads

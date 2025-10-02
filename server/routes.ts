@@ -4,6 +4,8 @@ import { storage } from "./storage";
 import crypto from "crypto";
 import { z } from "zod";
 import "./types"; // Load session type extensions
+import { filterAnonymousFeedback } from "./utils/contentFilter";
+import { sendContributionReceipt } from "./utils/slackMessaging";
 
 // Slack OAuth configuration
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
@@ -493,11 +495,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const orgId = slackTeam.orgId;
 
-      // Parse command: /teammato <topic-slug> <message>
-      if (!text) {
+      // Handle special commands
+      if (!text || text === 'list' || text === 'help') {
+        // Get active topics for this org
+        const topics = await storage.getTopics(orgId);
+        const activeTopics = topics.filter(t => t.isActive);
+        
+        if (activeTopics.length === 0) {
+          return res.json({
+            response_type: 'ephemeral',
+            text: '📋 No active topics available.\n\nPlease contact your admin to set up feedback topics.',
+          });
+        }
+        
+        const topicList = activeTopics
+          .map(t => {
+            const expiryInfo = t.expiresAt 
+              ? ` (expires ${new Date(t.expiresAt).toLocaleDateString()})`
+              : '';
+            return `• \`${t.slug}\` - ${t.name}${expiryInfo}`;
+          })
+          .join('\n');
+        
         return res.json({
           response_type: 'ephemeral',
-          text: '❌ Usage: `/teammato <topic> <your feedback>`\n\nExample: `/teammato product-feedback The new UI is confusing`',
+          text: `📋 *Available Topics*\n\n${topicList}\n\n💡 *How to submit:*\n\`/teammato <topic-slug> <your feedback>\`\n\nExample: \`/teammato product-feedback The new UI is confusing\``,
         });
       }
 
@@ -511,6 +533,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const topicSlug = parts[0];
       const message = parts.slice(1).join(' ');
+
+      // Filter for @mentions and PII
+      const filterResult = filterAnonymousFeedback(message);
+      if (!filterResult.isValid) {
+        return res.json({
+          response_type: 'ephemeral',
+          text: `❌ ${filterResult.error}`,
+        });
+      }
 
       // Find topic
       const topic = await storage.getTopicBySlug(topicSlug, orgId);
@@ -582,9 +613,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Thread ${thread.id} reached k-anonymity threshold (${participants.length}/${thread.kThreshold})`);
         }
 
+        // Send contribution receipt DM
+        sendContributionReceipt(slackTeam.accessToken, userId, topic.id, topic.name)
+          .catch(err => console.error('Failed to send receipt:', err));
+
+        // Calculate days until expiry
+        let expiryMessage = '';
+        if (topic.expiresAt) {
+          const now = new Date();
+          const expiresAt = new Date(topic.expiresAt);
+          const daysLeft = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (daysLeft > 0) {
+            expiryMessage = `\n\n⏰ This topic closes in ${daysLeft} day${daysLeft === 1 ? '' : 's'}.`;
+          } else if (daysLeft === 0) {
+            expiryMessage = '\n\n⏰ This topic closes today!';
+          }
+        }
+
         return res.json({
           response_type: 'ephemeral',
-          text: `✅ Your anonymous feedback has been submitted to **${topic.name}**.\n\nYour feedback will be revealed once enough participants have contributed to maintain anonymity.`,
+          text: `✅ Your anonymous feedback has been submitted to **${topic.name}**.${expiryMessage}\n\nCheck your DMs for a private receipt. Your feedback will be revealed once enough participants have contributed to maintain anonymity.`,
         });
 
       } catch (error: any) {
