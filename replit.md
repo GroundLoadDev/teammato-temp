@@ -186,11 +186,27 @@ Teammato is an enterprise-grade Slack-first anonymous feedback SaaS with privacy
   - K-anonymity preservation: Each instance has own kThreshold (typically 5), maintains privacy across time windows
   - Storage methods: getOrCreateParentTopic, getCurrentGeneralFeedbackInstance, createGeneralFeedbackInstance, getExpiredInstances
   - Week calculation helpers: getISOWeekNumber, formatWeekIdentifier in server/cron/topicExpiry.ts
+- **Topic Suggestions Admin UI** (Oct 2025) ✅ COMPLETE
+  - Admin page at `/admin/topic-suggestions` for democratic feedback workflow
+  - Approve/reject UI for user-suggested topics with toast feedback
+  - Auto-creates topics from approved suggestions with suggested title
+  - Separate sections: Pending Suggestions and Reviewed Suggestions
+  - Backend APIs: `GET /api/topic-suggestions`, `PATCH /api/topic-suggestions/:id`
+  - Storage methods: getTopicSuggestions, updateTopicSuggestionStatus
+  - Navigation integration with Lightbulb icon
+- **Topic Management Reorganization** (Oct 2025) ✅ COMPLETE
+  - Categorized topics into three sections: Created Topics, Weekly Topics, Archived Topics
+  - "Created Topics" shows custom feedback campaigns (not instances, not parent)
+  - "Weekly Topics" displays rolling General Feedback instances with instance badges
+  - "Archived Topics" with pagination (6 per page) for archived/actioned topics
+  - Added 'archived' status to topic lifecycle with validation and transition rules
+  - Backend API: `GET /api/topics/categorized` returns organized topic categories
+  - Storage method: getCategorizedTopics() for efficient category retrieval
+  - Prevents UI clutter as orgs scale with many topics and instances
 - Security hardening (session regeneration, CSRF protection, org scoping)
 - Multi-tenant isolation with org-scoped queries
 
 ### 🚧 In Progress / Next Steps
-- **Topic Suggestions Admin UI** - Admin page to approve/reject user-suggested topics
 - **Web Portal** - Public /topics page for browsing available feedback campaigns
 - Per-org encryption for feedback content
 - CSV/PDF export functionality for Analytics
