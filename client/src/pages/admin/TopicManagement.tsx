@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import {
@@ -16,6 +17,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Topic {
   id: string;
@@ -40,7 +48,9 @@ export default function TopicManagement() {
     slug: '', 
     slackChannelId: '', 
     kThreshold: 5, 
-    isActive: true 
+    isActive: true,
+    status: 'collecting',
+    actionNotes: ''
   });
   const { toast } = useToast();
 
@@ -56,7 +66,7 @@ export default function TopicManagement() {
       queryClient.invalidateQueries({ queryKey: ['/api/topics'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       setIsCreateDialogOpen(false);
-      setFormData({ name: '', slug: '', slackChannelId: '', kThreshold: 5, isActive: true });
+      setFormData({ name: '', slug: '', slackChannelId: '', kThreshold: 5, isActive: true, status: 'collecting', actionNotes: '' });
       toast({
         title: "Topic created",
         description: "The topic has been created successfully.",
@@ -79,7 +89,7 @@ export default function TopicManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/topics'] });
       setEditingTopic(null);
-      setFormData({ name: '', slug: '', slackChannelId: '', kThreshold: 5, isActive: true });
+      setFormData({ name: '', slug: '', slackChannelId: '', kThreshold: 5, isActive: true, status: 'collecting', actionNotes: '' });
       toast({
         title: "Topic updated",
         description: "The topic has been updated successfully.",
@@ -139,6 +149,17 @@ export default function TopicManagement() {
       });
       return;
     }
+    
+    // Validate action notes when marking as actioned
+    if (formData.status === 'actioned' && !formData.actionNotes?.trim()) {
+      toast({
+        title: "Validation error",
+        description: "Action notes are required when marking a topic as actioned.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     updateMutation.mutate({ id: editingTopic.id, data: formData });
   };
 
@@ -149,7 +170,9 @@ export default function TopicManagement() {
       slug: topic.slug, 
       slackChannelId: topic.slackChannelId || '', 
       kThreshold: topic.kThreshold, 
-      isActive: topic.isActive 
+      isActive: topic.isActive,
+      status: topic.status,
+      actionNotes: topic.actionNotes || ''
     });
   };
 
@@ -452,6 +475,44 @@ export default function TopicManagement() {
               />
               <Label htmlFor="edit-isActive">Active</Label>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-status">Topic Status</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value) => setFormData({ ...formData, status: value })}
+              >
+                <SelectTrigger data-testid="select-edit-status">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="collecting">Collecting</SelectItem>
+                  <SelectItem value="in_review">In Review</SelectItem>
+                  <SelectItem value="action_decided">Action Decided</SelectItem>
+                  <SelectItem value="actioned">Actioned</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Current lifecycle stage of this feedback topic
+              </p>
+            </div>
+            {(formData.status === 'action_decided' || formData.status === 'actioned') && (
+              <div className="space-y-2">
+                <Label htmlFor="edit-actionNotes">Action Notes (You said / We did)</Label>
+                <Textarea
+                  id="edit-actionNotes"
+                  value={formData.actionNotes}
+                  onChange={(e) => setFormData({ ...formData, actionNotes: e.target.value })}
+                  placeholder="Summarize the action taken in response to this feedback..."
+                  rows={4}
+                  data-testid="textarea-edit-action-notes"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {formData.status === 'actioned' 
+                    ? 'These action notes will be posted to the Slack channel when saved' 
+                    : 'Draft your action notes here before marking as actioned'}
+                </p>
+              </div>
+            )}
             <DialogFooter>
               <Button
                 type="button"

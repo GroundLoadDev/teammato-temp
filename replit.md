@@ -57,12 +57,13 @@ Teammato is an enterprise-grade Slack-first anonymous feedback SaaS with privacy
 ### Tables (Currently Implemented):
 - `orgs` - Organizations with settings (k_anonymity, retention, etc.)
 - `users` - Users with org binding and roles (owner, admin, moderator, viewer)
-- `topics` - Feedback taxonomy with slackChannelId and kThreshold for k-anonymity
+- `topics` - **Time-boxed feedback campaigns** with expiresAt, windowDays, status (collecting/in_review/action_decided/actioned), ownerId, actionNotes for transparent action loops
 - `threads` - Anonymous feedback posts with moderation fields (moderationStatus, moderationNotes, moderatedBy, moderatedAt)
 - `items` - Individual feedback items with moderation fields (moderationStatus, moderatedBy, moderatedAt)
 - `comments` - Comments on feedback threads
 - `slack_teams` - Slack workspace mappings with access tokens
 - `moderation_audit` - Immutable audit trail for all moderation actions
+- `slack_settings` - Per-org Slack configuration (digest channel, enabled status)
 
 ### Planned Tables:
 - `reactions` - Deduplicated reactions by actor_hash
@@ -143,10 +144,24 @@ Teammato is an enterprise-grade Slack-first anonymous feedback SaaS with privacy
   - Storage methods: getFeedbackItem with org scoping, updateThreadModeration, updateItemModeration, addModerationAudit
   - React Query optimization: Proper query key structure with full URL paths for automatic cache invalidation
   - Production-ready: All critical bugs fixed, RBAC aligned, no LSP errors
+- **Time-Boxed Topics & Action Loop** (Oct 2025) ✅ COMPLETE Phase 1 & 2
+  - Topic lifecycle: expiresAt, windowDays, status (collecting → in_review → action_decided → actioned)
+  - PII/@mention blocking filter to protect k-anonymity (`server/utils/contentFilter.ts`)
+  - Contribution receipts: DM users with hash + anti-retaliation policy link after submission
+  - `/teammato list` command: Shows active topics with expiry dates and status icons
+  - Topic countdown display in Slack responses when submitting feedback
+  - Auto-lock cron job: Hourly task locks expired topics, sends owner reminders (`server/cron/topicExpiry.ts`)
+  - Auto-post "You said / We did": Posts action notes to Slack when topic marked as actioned
+  - Status transition validation: Server-side enforcement of allowed state changes
+  - K-anonymity enforcement: Blocks actioning topics until participant threshold met
+  - Backend APIs: Enhanced `PATCH /api/topics/:id` with status, actionNotes, participant count validation
 - Security hardening (session regeneration, CSRF protection, org scoping)
 - Multi-tenant isolation with org-scoped queries
 
 ### 🚧 In Progress / Next Steps
+- **SBI Feedback Modal** (Phase 1.2) - Slack Block Kit modal with Situation, Behavior, Impact fields
+- **Web Portal** (Phase 2.1) - Public /topics page for browsing available feedback campaigns
+- **Admin UI Updates** (Phase 2.2) - Topic status management and action notes publishing in admin panel
 - Per-org encryption for feedback content
 - CSV/PDF export functionality for Analytics
 - Digest notifications to Slack channels (settings page complete, cron job pending)
