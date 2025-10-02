@@ -1,4 +1,4 @@
-import type { Topic } from "@shared/schema";
+import type { Topic, User } from "@shared/schema";
 
 export interface ModalMetadata {
   topicId: string;
@@ -7,7 +7,19 @@ export interface ModalMetadata {
   prefillBehavior?: string;
 }
 
-export function buildFeedbackModal(topic: Topic, metadata: ModalMetadata) {
+export interface ModalOptions {
+  showTopicSuggestions?: boolean;
+  ownerName?: string;
+  topicDescription?: string;
+}
+
+export function buildFeedbackModal(
+  topic: Topic, 
+  metadata: ModalMetadata,
+  options: ModalOptions = {}
+) {
+  const { showTopicSuggestions = false, ownerName, topicDescription } = options;
+
   const daysLeft = topic.expiresAt 
     ? Math.ceil((new Date(topic.expiresAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
     : null;
@@ -16,18 +28,45 @@ export function buildFeedbackModal(topic: Topic, metadata: ModalMetadata) {
     ? `Closes in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`
     : topic.expiresAt ? 'Closed' : 'Open-ended';
 
+  const statusEmoji = {
+    collecting: '📝',
+    in_review: '👀',
+    action_decided: '✅',
+    actioned: '🎯'
+  }[topic.status] || '📝';
+
+  const statusText = {
+    collecting: 'Collecting feedback',
+    in_review: 'Under review',
+    action_decided: 'Action decided',
+    actioned: 'Completed'
+  }[topic.status] || 'Collecting feedback';
+
+  let headerText = `*${topic.name}*\n`;
+  if (ownerName) {
+    headerText += `Created by: ${ownerName}\n`;
+  }
+  if (topicDescription) {
+    headerText += `${topicDescription}\n`;
+  }
+  headerText += `${statusEmoji} ${statusText} • ${expiryText}`;
+
   const blocks: any[] = [
     {
       type: "section",
       text: {
         type: "mrkdwn",
-        text: `*${topic.name}*\n${expiryText}`
+        text: headerText
       }
     },
     {
       type: "divider"
     },
-    {
+  ];
+
+  // Only show topic suggestions if enabled
+  if (showTopicSuggestions) {
+    blocks.push({
       type: "input",
       block_id: "suggest_topic_block",
       optional: true,
@@ -44,7 +83,11 @@ export function buildFeedbackModal(topic: Topic, metadata: ModalMetadata) {
           text: "New topic title (leave blank to submit feedback on current topic)"
         }
       }
-    },
+    });
+  }
+
+  // Add SBI fields
+  blocks.push(
     {
       type: "input",
       block_id: "situation_block",
@@ -70,14 +113,16 @@ export function buildFeedbackModal(topic: Topic, metadata: ModalMetadata) {
     {
       type: "input",
       block_id: "behavior_block",
-      optional: true,
+      optional: showTopicSuggestions,
       label: {
         type: "plain_text",
-        text: "Behavior (Required for feedback)"
+        text: showTopicSuggestions ? "Behavior (Required for feedback)" : "Behavior"
       },
       hint: {
         type: "plain_text",
-        text: "What specifically occurred? Observable actions only. Skip if suggesting a topic."
+        text: showTopicSuggestions 
+          ? "What specifically occurred? Observable actions only. Skip if suggesting a topic." 
+          : "What specifically occurred? Observable actions only."
       },
       element: {
         type: "plain_text_input",
@@ -94,14 +139,16 @@ export function buildFeedbackModal(topic: Topic, metadata: ModalMetadata) {
     {
       type: "input",
       block_id: "impact_block",
-      optional: true,
+      optional: showTopicSuggestions,
       label: {
         type: "plain_text",
-        text: "Impact (Required for feedback)"
+        text: showTopicSuggestions ? "Impact (Required for feedback)" : "Impact"
       },
       hint: {
         type: "plain_text",
-        text: "How did this affect work or people? Skip if suggesting a topic."
+        text: showTopicSuggestions 
+          ? "How did this affect work or people? Skip if suggesting a topic." 
+          : "How did this affect work or people?"
       },
       element: {
         type: "plain_text_input",
@@ -114,7 +161,7 @@ export function buildFeedbackModal(topic: Topic, metadata: ModalMetadata) {
         }
       }
     }
-  ];
+  );
 
   return {
     type: "modal",
