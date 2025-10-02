@@ -134,6 +134,21 @@ export const topicSuggestions = pgTable("topic_suggestions", {
   orgStatusIndex: unique().on(table.orgId, table.status, table.createdAt),
 }));
 
+export const invitations = pgTable("invitations", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: uuid("org_id").notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+  slackUserId: text("slack_user_id").notNull(),
+  slackHandle: text("slack_handle").notNull(),
+  email: text("email"),
+  role: text("role").notNull(),
+  invitedBy: uuid("invited_by").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  status: text("status").notNull().default('pending'),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+}, (table) => ({
+  uniquePendingInvite: unique().on(table.orgId, table.slackUserId, table.status),
+}));
+
 // Insert schemas
 export const insertOrgSchema = createInsertSchema(orgs).omit({ id: true, createdAt: true });
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
@@ -144,6 +159,7 @@ export const insertFeedbackThreadSchema = createInsertSchema(feedbackThreads).om
 export const insertFeedbackItemSchema = createInsertSchema(feedbackItems).omit({ id: true, createdAt: true });
 export const insertModerationAuditSchema = createInsertSchema(moderationAudit).omit({ id: true, createdAt: true });
 export const insertTopicSuggestionSchema = createInsertSchema(topicSuggestions).omit({ id: true, createdAt: true });
+export const insertInvitationSchema = createInsertSchema(invitations).omit({ id: true, createdAt: true });
 
 // Types
 export type Org = typeof orgs.$inferSelect;
@@ -172,6 +188,9 @@ export type InsertModerationAudit = z.infer<typeof insertModerationAuditSchema>;
 
 export type TopicSuggestion = typeof topicSuggestions.$inferSelect;
 export type InsertTopicSuggestion = z.infer<typeof insertTopicSuggestionSchema>;
+
+export type Invitation = typeof invitations.$inferSelect;
+export type InsertInvitation = z.infer<typeof insertInvitationSchema>;
 
 // Topic Status Enum
 export const TOPIC_STATUS = {
