@@ -1,0 +1,137 @@
+Who’s the primary buyer?
+
+Primary economic buyer: Head of People / HR Director at 100–2,000-person orgs.
+
+KPI-minded (retention, engagement, ER issues, manager quality).
+
+Needs anonymous intake that employees actually use, without adding a new system.
+
+Core champions / co-buyers:
+
+Engineering/Product leaders (want fast, actionable signal in Slack).
+
+CISO/Security (privacy & compliance gatekeeper).
+
+Legal/Compliance (serious concerns routing).
+
+Influencers: Exec assistants, ERGs, IC “culture carriers,” and RevOps/IT (implementation friction).
+
+The #1 problem Teammato solves (that others don’t)
+
+**It makes safe-to-say feedback actually happen in the flow of work—**by combining Slack-native capture, light SBI guidance, and enforceable anonymity (k-anonymous aggregation + pseudonymous handles + data minimization).
+Competitors do long surveys, portals, or “anonymous DMs.” They either feel risky (identifiable metadata), live outside Slack (low completion), or produce venting instead of actionable, behavior-focused signal. Teammato uniquely delivers: high participation + safe anonymity + actionable output + a visible “You said → We did” loop.
+
+Tone / vibe
+
+Trust-first, human, and competent.
+
+Primary: Privacy-first enterprise (calm, precise, plain English).
+
+Secondary: Scientific & psychological (light touch—explain the why without jargon).
+
+Tertiary: Modern startup warmth (approachable, not cutesy).
+
+Voice traits: Calm, candid, specific, bias-to-action, zero drama.
+Avoid: hype, scare tactics, buzzword soup, snark.
+
+Brands to emulate (and why)
+
+1Password / Proton — trust and plain-English security.
+
+Stripe — rigorous docs and credibility without heaviness.
+
+Linear / Notion — focus, crisp UI, modern product storytelling.
+
+Slack — friendly tone and in-product clarity.
+
+Vercel — performance + developer empathy (for our install story).
+
+“Heavy opinions” (non-negotiables)
+
+Anonymity is enforceable, not performative.
+
+k-anonymous aggregation by default; never release single submissions.
+
+No @mentions or names in open feedback; person-level only in opt-in 360 with group minimums.
+
+Data minimization.
+
+No IP/UA in feedback tables; pseudonymous submitter hashes for rate limiting only.
+
+Coarsen Situation details; default retention 365 days; legal hold supported.
+
+Security by design, not by promise.
+
+AEAD encryption with per-org keys; SOC 2, pen tests, 24/7 monitoring.
+
+RBAC + tenant isolation (RLS). Clear audit trails.
+
+In-Slack first.
+
+Modal capture as the primary path; advanced web handoff only when needed.
+
+Low cognitive load, fast completion, mobile-friendly.
+
+Action over venting.
+
+Light SBI prompts (Behavior & Impact required).
+
+“You said → We did” status is part of the product, not an optional PM ritual.
+
+Accessibility & clarity.
+
+Light theme default, AA contrast, keyboard focus rings, plain-language microcopy.
+
+No dark patterns.
+
+No mystery counters (“how many reported”); no bait-and-switch anonymity claims.
+
+How this translates into design, layout & branding
+
+Homepage hero:
+
+Outcome first: “Hear the truth at work—safely, in Slack.”
+
+Subcopy: “Anonymous by default, behavior-focused by design, built for action.”
+
+Primary CTA: “Add to Slack” + secondary “See how it works” (scroll to a 4-step).
+
+Section order:
+
+How it works (4 tiles, screens of modal → aggregate → action post).
+
+Why it’s safe (three proof points: anonymity, encryption, data controls).
+
+Why it’s useful (actionability, completion rates, in-Slack flow).
+
+For HR / for Managers / for Security (tabs with tailored benefits).
+
+Social proof (logo bar or 1–2 short quotes).
+
+Install steps + pricing CTA.
+
+Visual system:
+
+Teal/navy palette (trust) with tomato accent (Option B: red fruit + teal stem).
+
+Inter / IBM Plex Serif / JetBrains Mono (already picked).
+
+Light, airy, generous whitespace; subtle shadows; rounded 0.8rem.
+
+Screenshots: modal with prompts, anonymized aggregate, “You said → We did” card.
+
+Icons: simple line + soft fills; avoid alert reds except destructive actions.
+
+Key messages to repeat:
+
+Anonymous by default.
+
+In Slack, not another portal.
+
+Clear, behavior-focused input.
+
+Aggregate summaries only.
+
+“You said → We did.”
+
+If you want, I’ll turn this into a one-page brand brief (voice & tone, color tokens, component usage) and a wireframe outline for your marketing pages.

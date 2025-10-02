@@ -1,0 +1,151 @@
+export default function BrandSwatches() {
+  const Chip = ({ name, bg, fg }: { name: string; bg: string; fg: string }) => (
+    <div className="rounded-xl border border-[var(--border)] p-3">
+      <div className="h-12 rounded-lg" style={{ background: bg }} />
+      <div className="mt-2 flex justify-between text-sm text-[var(--muted-fg)]">
+        <span>{name}</span>
+        <span className="font-mono">{bg}</span>
+      </div>
+    </div>
+  );
+
+  const Section = ({ title, children }: any) => (
+    <section className="space-y-3">
+      <h2 className="text-lg font-semibold text-[var(--fg)]">{title}</h2>
+      {children}
+    </section>
+  );
+
+  return (
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--fg)]">
+      <div className="mx-auto max-w-6xl p-6 space-y-10">
+        <header className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold">Teammato · Theme Preview</h1>
+          <span className="rounded-full bg-[var(--accent)] px-3 py-1 text-sm text-[var(--accent-fg)]">
+            Reading live theme tokens
+          </span>
+        </header>
+
+        {/* Color Swatches */}
+        <Section title="Color swatches">
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            <Chip name="Background" bg="var(--bg)" fg="var(--fg)" />
+            <Chip name="Foreground" bg="var(--fg)" fg="var(--bg)" />
+            <Chip name="Muted bg" bg="var(--muted-bg)" fg="var(--muted-fg)" />
+            <Chip name="Muted fg" bg="var(--muted-fg)" fg="var(--bg)" />
+            <Chip name="Primary" bg="var(--primary)" fg="var(--primary-fg)" />
+            <Chip name="Secondary" bg="var(--secondary, var(--accent))" fg="var(--secondary-fg, var(--accent-fg))" />
+            <Chip name="Accent" bg="var(--accent)" fg="var(--accent-fg)" />
+            <Chip name="Danger" bg="var(--danger)" fg="var(--danger-fg)" />
+            <Chip name="Card" bg="var(--card)" fg="var(--card-fg)" />
+            <Chip name="Border" bg="var(--border)" fg="var(--fg)" />
+            <Chip name="Popover" bg="var(--popover)" fg="var(--popover-fg)" />
+            <Chip name="Focus" bg="var(--focus)" fg="white" />
+          </div>
+        </Section>
+
+        {/* Typography */}
+        <Section title="Typography">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
+              <div className="text-4xl font-serif tracking-[-0.02em]">Hear the truth at work—safely, in Slack.</div>
+              <p className="mt-3 text-[var(--muted-fg)]">
+                Anonymous by default. Behavior-focused by design. Built for action.
+              </p>
+            </div>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
+              <div className="text-2xl font-serif">Section Heading</div>
+              <div className="mt-2 font-semibold">Subheading / Card Title</div>
+              <p className="mt-2 text-sm text-[var(--muted-fg)]">
+                Body text and muted copy preview using your live theme.
+              </p>
+              <code className="mt-3 inline-block rounded bg-[var(--muted-bg)] px-2 py-1 text-sm">
+                JetBrains Mono sample
+              </code>
+            </div>
+          </div>
+        </Section>
+
+        {/* Buttons */}
+        <Section title="Buttons">
+          <div className="flex flex-wrap gap-3 rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
+            <button className="rounded-[0.8rem] bg-[var(--primary)] px-4 py-2 text-sm font-medium text-[var(--primary-fg)]">
+              Primary
+            </button>
+            <button className="rounded-[0.8rem] bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--accent-fg)]">
+              Secondary / Accent
+            </button>
+            <button className="rounded-[0.8rem] bg-transparent px-4 py-2 text-sm font-medium text-[var(--fg)] hover:bg-[var(--muted-bg)]">
+              Ghost
+            </button>
+            <button className="rounded-[0.8rem] bg-[var(--danger)] px-4 py-2 text-sm font-medium text-[var(--danger-fg)]">
+              Destructive
+            </button>
+          </div>
+        </Section>
+
+        {/* Inputs */}
+        <Section title="Inputs">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
+              <label className="text-sm">Text input</label>
+              <input
+                placeholder="Placeholder"
+                className="mt-2 w-full rounded-[0.7rem] border border-[var(--border)] bg-white px-3 py-2 text-sm placeholder:text-[var(--muted-fg)] focus:outline-none focus:ring-2 focus:ring-[var(--focus)]"
+              />
+              <label className="mt-4 block text-sm">Textarea</label>
+              <textarea
+                placeholder="Write a few lines…"
+                className="mt-2 w-full rounded-[0.7rem] border border-[var(--border)] bg-white px-3 py-2 text-sm placeholder:text-[var(--muted-fg)] focus:outline-none focus:ring-2 focus:ring-[var(--focus)]"
+                rows={4}
+              />
+            </div>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
+              <label className="text-sm">Select (mock)</label>
+              <div className="mt-2 flex items-center justify-between rounded-[0.7rem] border border-[var(--border)] bg-white px-3 py-2 text-sm">
+                <span className="text-[var(--muted-fg)]">Choose an option</span>
+                <span>▾</span>
+              </div>
+              <p className="mt-3 text-xs text-[var(--muted-fg)]">
+                Focus states use your <span className="font-mono">--focus</span> color.
+              </p>
+            </div>
+          </div>
+        </Section>
+
+        {/* Cards & Alerts */}
+        <Section title="Cards & Alerts">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
+              <div className="font-semibold">Card title</div>
+              <p className="mt-1 text-sm text-[var(--muted-fg)]">Card body preview with muted copy.</p>
+            </div>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--accent)] p-5 text-[var(--accent-fg)]">
+              <div className="font-semibold">Accent banner</div>
+              <p className="mt-1 text-sm opacity-90">Use for soft highlights and tips.</p>
+            </div>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--danger)] p-5 text-[var(--danger-fg)]">
+              <div className="font-semibold">Destructive</div>
+              <p className="mt-1 text-sm opacity-90">For irreversible actions only.</p>
+            </div>
+          </div>
+        </Section>
+
+        {/* Data viz swatches */}
+        <Section title="Charts palette">
+          <div className="grid grid-cols-5 gap-3">
+            {['--chart-1','--chart-2','--chart-3','--chart-4','--chart-5'].map((varName) => (
+              <div key={varName} className="rounded-xl border border-[var(--border)] p-3">
+                <div className="h-10 rounded-lg" style={{ background: `var(${varName}, #E5E7EB)` }} />
+                <div className="mt-2 text-xs text-[var(--muted-fg)] font-mono">{varName}</div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-[var(--muted-fg)]">
+            If your theme defines <code className="font-mono">--chart-1…--chart-5</code>, they’ll render here.
+          </p>
+        </Section>
+      </div>
+    </div>
+  );
+}
