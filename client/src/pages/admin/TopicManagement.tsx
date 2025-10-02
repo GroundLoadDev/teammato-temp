@@ -29,6 +29,7 @@ interface Topic {
   id: string;
   name: string;
   slug: string;
+  description: string | null;
   slackChannelId: string | null;
   kThreshold: number;
   isActive: boolean;
@@ -45,10 +46,12 @@ export default function TopicManagement() {
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null);
   const [formData, setFormData] = useState({ 
     name: '', 
-    slug: '', 
+    slug: '',
+    description: '',
     slackChannelId: '', 
     kThreshold: 5, 
     isActive: true,
+    windowDays: 21,
     status: 'collecting',
     actionNotes: ''
   });
@@ -59,14 +62,14 @@ export default function TopicManagement() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: { name: string; slug: string; isActive: boolean }) => {
+    mutationFn: async (data: { name: string; slug: string; description?: string; windowDays: number; isActive: boolean }) => {
       return apiRequest('POST', '/api/topics', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/topics'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       setIsCreateDialogOpen(false);
-      setFormData({ name: '', slug: '', slackChannelId: '', kThreshold: 5, isActive: true, status: 'collecting', actionNotes: '' });
+      setFormData({ name: '', slug: '', description: '', slackChannelId: '', kThreshold: 5, isActive: true, windowDays: 21, status: 'collecting', actionNotes: '' });
       toast({
         title: "Topic created",
         description: "The topic has been created successfully.",
@@ -89,7 +92,7 @@ export default function TopicManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/topics'] });
       setEditingTopic(null);
-      setFormData({ name: '', slug: '', slackChannelId: '', kThreshold: 5, isActive: true, status: 'collecting', actionNotes: '' });
+      setFormData({ name: '', slug: '', description: '', slackChannelId: '', kThreshold: 5, isActive: true, windowDays: 21, status: 'collecting', actionNotes: '' });
       toast({
         title: "Topic updated",
         description: "The topic has been updated successfully.",
@@ -167,10 +170,12 @@ export default function TopicManagement() {
     setEditingTopic(topic);
     setFormData({ 
       name: topic.name, 
-      slug: topic.slug, 
+      slug: topic.slug,
+      description: topic.description || '',
       slackChannelId: topic.slackChannelId || '', 
       kThreshold: topic.kThreshold, 
       isActive: topic.isActive,
+      windowDays: topic.windowDays,
       status: topic.status,
       actionNotes: topic.actionNotes || ''
     });
@@ -342,6 +347,42 @@ export default function TopicManagement() {
                   Auto-generated from name, can be customized
                 </p>
               )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description (optional)</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Brief description of what feedback this topic covers"
+                rows={2}
+                data-testid="input-description"
+              />
+              <p className="text-xs text-muted-foreground">
+                Helps employees understand what feedback to share
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="windowDays">Duration (days)</Label>
+              <Select
+                value={formData.windowDays.toString()}
+                onValueChange={(value) => setFormData({ ...formData, windowDays: parseInt(value) })}
+              >
+                <SelectTrigger id="windowDays" data-testid="select-duration">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">1 week</SelectItem>
+                  <SelectItem value="14">2 weeks</SelectItem>
+                  <SelectItem value="21">3 weeks</SelectItem>
+                  <SelectItem value="30">1 month</SelectItem>
+                  <SelectItem value="60">2 months</SelectItem>
+                  <SelectItem value="90">3 months</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                How long this topic will collect feedback
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="slackChannelId">Slack Channel ID (optional)</Label>
