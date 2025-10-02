@@ -32,6 +32,7 @@ export interface IStorage {
   // Invitations
   createInvitation(invitation: InsertInvitation): Promise<Invitation>;
   getInvitation(id: string, orgId: string): Promise<Invitation | undefined>;
+  getInvitationById(id: string): Promise<Invitation | undefined>;
   getPendingInvitationBySlackUserId(slackUserId: string, orgId: string): Promise<Invitation | undefined>;
   getOrgInvitations(orgId: string, status?: string): Promise<Invitation[]>;
   updateInvitationStatus(id: string, status: string, orgId: string): Promise<Invitation | undefined>;
@@ -193,6 +194,13 @@ export class PgStorage implements IStorage {
   async getInvitation(id: string, orgId: string): Promise<Invitation | undefined> {
     const result = await db.select().from(invitations)
       .where(and(eq(invitations.id, id), eq(invitations.orgId, orgId)))
+      .limit(1);
+    return result[0];
+  }
+
+  async getInvitationById(id: string): Promise<Invitation | undefined> {
+    const result = await db.select().from(invitations)
+      .where(eq(invitations.id, id))
       .limit(1);
     return result[0];
   }

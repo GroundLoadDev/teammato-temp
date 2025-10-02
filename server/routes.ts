@@ -1031,12 +1031,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const invitationId = action.value;
           
           try {
-            // Get the invitation
-            const invitation = await storage.getInvitation(invitationId);
+            // Get the invitation (without org scoping for now)
+            const invitation = await storage.getInvitationById(invitationId);
             
             if (!invitation) {
               return res.json({
                 text: '❌ Invitation not found. It may have expired or been revoked.',
+              });
+            }
+            
+            // Verify the invitation's org matches the Slack team sending this action
+            const slackTeamForOrg = await storage.getSlackTeamByOrgId(invitation.orgId);
+            if (!slackTeamForOrg || slackTeamForOrg.teamId !== team.id) {
+              return res.json({
+                text: '❌ This invitation is not valid for your Slack workspace.',
               });
             }
             
