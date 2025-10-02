@@ -24,6 +24,7 @@ import Auth from "@/pages/Auth";
 import GetStarted from "@/pages/admin/GetStarted";
 import FeedbackManagement from "@/pages/admin/FeedbackManagement";
 import TopicManagement from "@/pages/admin/TopicManagement";
+import TopicSuggestions from "@/pages/admin/TopicSuggestions";
 import SlackSettings from "@/pages/admin/SlackSettings";
 import BillingSettings from "@/pages/admin/BillingSettings";
 import Analytics from "@/pages/admin/Analytics";
@@ -51,6 +52,7 @@ function Router() {
       <Route path="/admin/get-started" component={GetStarted} />
       <Route path="/admin/feedback" component={FeedbackManagement} />
       <Route path="/admin/topics" component={TopicManagement} />
+      <Route path="/admin/topic-suggestions" component={TopicSuggestions} />
       <Route path="/admin/slack-settings" component={SlackSettings} />
       <Route path="/admin/billing" component={BillingSettings} />
       <Route path="/admin/analytics" component={Analytics} />

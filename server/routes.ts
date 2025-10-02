@@ -283,6 +283,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Topic Suggestions API (admin-only)
+  app.get('/api/topic-suggestions', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const status = req.query.status as string | undefined;
+      
+      const suggestions = await storage.getTopicSuggestions(orgId, status);
+      
+      // Enhance with suggester information
+      const enhanced = await Promise.all(
+        suggestions.map(async (suggestion) => {
+          let suggesterEmail = null;
+          if (suggestion.suggestedBy) {
+            const suggester = await storage.getUser(suggestion.suggestedBy);
+            suggesterEmail = suggester?.email || null;
+          }
+          return {
+            ...suggestion,
+            suggesterEmail,
+          };
+        })
+      );
+      
+      res.json(enhanced);
+    } catch (error) {
+      console.error('Get topic suggestions error:', error);
+      res.status(500).json({ error: 'Failed to fetch topic suggestions' });
+    }
+  });
+
+  app.patch('/api/topic-suggestions/:id', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const { status } = req.body;
+      
+      if (!status || !['approved', 'rejected'].includes(status)) {
+        return res.status(400).json({ error: 'Invalid status. Must be "approved" or "rejected"' });
+      }
+      
+      const suggestion = await storage.updateTopicSuggestionStatus(req.params.id, status, orgId);
+      
+      if (!suggestion) {
+        return res.status(404).json({ error: 'Topic suggestion not found' });
+      }
+      
+      // If approved, create a new topic
+      if (status === 'approved') {
+        const slug = suggestion.title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '');
+        
+        await storage.createTopic({
+          orgId,
+          name: suggestion.title,
+          slug,
+          description: null,
+          slackChannelId: null,
+          kThreshold: 5,
+          isActive: true,
+          windowDays: 21,
+          status: 'collecting',
+          ownerId: req.session.userId!,
+          actionNotes: null,
+          parentTopicId: null,
+          isParent: false,
+          windowStart: null,
+          windowEnd: null,
+          instanceIdentifier: null,
+          expiresAt: null,
+        });
+      }
+      
+      res.json(suggestion);
+    } catch (error: any) {
+      console.error('Update topic suggestion error:', error);
+      
+      // Handle slug uniqueness violation
+      if (error.code === '23505' && error.constraint?.includes('slug')) {
+        return res.status(409).json({ 
+          error: 'A topic with this name already exists. Please modify the suggestion or reject it.' 
+        });
+      }
+      
+      res.status(500).json({ error: 'Failed to update topic suggestion' });
+    }
+  });
+
   // Feedback Management API (moderator-only)
   app.get('/api/feedback/threads', requireRole('owner', 'admin', 'moderator'), async (req, res) => {
     try {

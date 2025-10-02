@@ -63,7 +63,18 @@ export default function TopicManagement() {
   });
   const { toast } = useToast();
 
-  const { data: topics, isLoading } = useQuery<Topic[]>({
+  interface CategorizedTopics {
+    created: Topic[];
+    instances: Topic[];
+    archived: Topic[];
+  }
+
+  const { data: categorizedTopics, isLoading } = useQuery<CategorizedTopics>({
+    queryKey: ['/api/topics/categorized'],
+  });
+
+  // For validation, we need all topics
+  const { data: allTopics } = useQuery<Topic[]>({
     queryKey: ['/api/topics'],
   });
 
@@ -72,6 +83,7 @@ export default function TopicManagement() {
       return apiRequest('POST', '/api/topics', data);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/topics/categorized'] });
       queryClient.invalidateQueries({ queryKey: ['/api/topics'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       setIsCreateDialogOpen(false);
@@ -96,6 +108,7 @@ export default function TopicManagement() {
       return apiRequest('PATCH', `/api/topics/${id}`, data);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/topics/categorized'] });
       queryClient.invalidateQueries({ queryKey: ['/api/topics'] });
       setEditingTopic(null);
       setFormData({ name: '', slug: '', description: '', slackChannelId: '', kThreshold: 5, isActive: true, windowDays: 21, status: 'collecting', actionNotes: '' });
@@ -119,6 +132,7 @@ export default function TopicManagement() {
       return apiRequest('DELETE', `/api/topics/${id}`, undefined);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/topics/categorized'] });
       queryClient.invalidateQueries({ queryKey: ['/api/topics'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       toast({
@@ -210,15 +224,107 @@ export default function TopicManagement() {
 
   // Check if slug already exists (excluding current topic when editing)
   const isSlugDuplicate = (slug: string): boolean => {
-    if (!topics || !slug) return false;
+    if (!allTopics || !slug) return false;
     const normalizedSlug = slug.toLowerCase().trim();
-    return topics.some(topic => 
+    return allTopics.some(topic => 
       topic.slug === normalizedSlug && 
       (!editingTopic || topic.id !== editingTopic.id)
     );
   };
 
   const isDuplicateSlug = isSlugDuplicate(formData.slug);
+
+  // Pagination state for archived topics
+  const [archivedPage, setArchivedPage] = useState(1);
+  const ARCHIVED_PAGE_SIZE = 6;
+  const archivedTopicsAll = categorizedTopics?.archived || [];
+  const archivedPageCount = Math.ceil(archivedTopicsAll.length / ARCHIVED_PAGE_SIZE);
+  const paginatedArchived = archivedTopicsAll.slice(
+    (archivedPage - 1) * ARCHIVED_PAGE_SIZE,
+    archivedPage * ARCHIVED_PAGE_SIZE
+  );
+
+  // Helper function to render a topic card
+  const renderTopicCard = (topic: Topic) => (
+    <Card key={topic.id} className="p-4" data-testid={`card-topic-${topic.id}`}>
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold mb-1 truncate" data-testid={`text-topic-name-${topic.id}`}>
+            {topic.name}
+          </h3>
+          <code className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded" data-testid={`text-topic-slug-${topic.id}`}>
+            {topic.slug}
+          </code>
+          {topic.instanceIdentifier && (
+            <div className="mt-1">
+              <Badge variant="outline" className="text-xs" data-testid={`badge-instance-${topic.id}`}>
+                Instance: {topic.instanceIdentifier}
+              </Badge>
+            </div>
+          )}
+        </div>
+        <Badge variant={topic.isActive ? 'default' : 'secondary'} data-testid={`badge-status-${topic.id}`}>
+          {topic.isActive ? 'Active' : 'Inactive'}
+        </Badge>
+      </div>
+      {topic.description && (
+        <p className="text-sm text-muted-foreground mb-3 line-clamp-2" data-testid={`text-description-${topic.id}`}>
+          {topic.description}
+        </p>
+      )}
+      <div className="space-y-2 mb-3">
+        {topic.ownerEmail && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Tag className="w-3 h-3" />
+            <span data-testid={`text-creator-${topic.id}`}>
+              Created by: {topic.ownerEmail}
+            </span>
+          </div>
+        )}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Tag className="w-3 h-3" />
+          <span data-testid={`text-duration-${topic.id}`}>
+            Duration: {topic.windowDays} days
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Tag className="w-3 h-3" />
+          <span data-testid={`text-k-threshold-${topic.id}`}>
+            K-Threshold: {topic.kThreshold}
+          </span>
+        </div>
+        {topic.slackChannelId && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Hash className="w-3 h-3" />
+            <code className="bg-muted px-1 py-0.5 rounded" data-testid={`text-channel-id-${topic.id}`}>
+              {topic.slackChannelId}
+            </code>
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleEdit(topic)}
+          data-testid={`button-edit-${topic.id}`}
+        >
+          <Edit2 className="w-3 h-3 mr-1" />
+          Edit
+        </Button>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => handleDelete(topic.id)}
+          disabled={deleteMutation.isPending}
+          data-testid={`button-delete-${topic.id}`}
+        >
+          <Trash2 className="w-3 h-3 mr-1" />
+          Delete
+        </Button>
+      </div>
+    </Card>
+  );
 
   return (
     <div className="p-8 space-y-6">
@@ -242,7 +348,11 @@ export default function TopicManagement() {
 
       {isLoading ? (
         <p className="text-muted-foreground">Loading topics...</p>
-      ) : !topics || topics.filter(t => !t.isParent).length === 0 ? (
+      ) : !categorizedTopics || (
+        categorizedTopics.created.length === 0 && 
+        categorizedTopics.instances.length === 0 && 
+        categorizedTopics.archived.length === 0
+      ) ? (
         <Card className="p-8 text-center" data-testid="card-no-topics">
           <Tag className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
           <p className="text-muted-foreground mb-2">No topics yet</p>
@@ -259,87 +369,67 @@ export default function TopicManagement() {
           </Button>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {topics.filter(t => !t.isParent).map((topic) => (
-            <Card key={topic.id} className="p-4" data-testid={`card-topic-${topic.id}`}>
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold mb-1 truncate" data-testid={`text-topic-name-${topic.id}`}>
-                    {topic.name}
-                  </h3>
-                  <code className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded" data-testid={`text-topic-slug-${topic.id}`}>
-                    {topic.slug}
-                  </code>
-                  {topic.instanceIdentifier && (
-                    <div className="mt-1">
-                      <Badge variant="outline" className="text-xs" data-testid={`badge-instance-${topic.id}`}>
-                        Instance: {topic.instanceIdentifier}
-                      </Badge>
-                    </div>
-                  )}
-                </div>
-                <Badge variant={topic.isActive ? 'default' : 'secondary'} data-testid={`badge-status-${topic.id}`}>
-                  {topic.isActive ? 'Active' : 'Inactive'}
-                </Badge>
+        <div className="space-y-8">
+          {/* Created Topics Section */}
+          {categorizedTopics.created.length > 0 && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4" data-testid="text-created-topics-heading">
+                Created Topics
+              </h2>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {categorizedTopics.created.map((topic) => renderTopicCard(topic))}
               </div>
-              {topic.description && (
-                <p className="text-sm text-muted-foreground mb-3 line-clamp-2" data-testid={`text-description-${topic.id}`}>
-                  {topic.description}
-                </p>
+            </div>
+          )}
+
+          {/* Weekly Topics (General Feedback Instances) Section */}
+          {categorizedTopics.instances.length > 0 && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4" data-testid="text-weekly-topics-heading">
+                Weekly Topics
+              </h2>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {categorizedTopics.instances.map((topic) => renderTopicCard(topic))}
+              </div>
+            </div>
+          )}
+
+          {/* Archived Topics Section */}
+          {archivedTopicsAll.length > 0 && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4" data-testid="text-archived-topics-heading">
+                Archived Topics
+              </h2>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {paginatedArchived.map((topic) => renderTopicCard(topic))}
+              </div>
+              {archivedPageCount > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setArchivedPage(p => Math.max(1, p - 1))}
+                    disabled={archivedPage === 1}
+                    data-testid="button-archived-prev"
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-muted-foreground" data-testid="text-archived-page">
+                    Page {archivedPage} of {archivedPageCount}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setArchivedPage(p => Math.min(archivedPageCount, p + 1))}
+                    disabled={archivedPage === archivedPageCount}
+                    data-testid="button-archived-next"
+                  >
+                    Next
+                  </Button>
+                </div>
               )}
-              <div className="space-y-2 mb-3">
-                {topic.ownerEmail && (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Tag className="w-3 h-3" />
-                    <span data-testid={`text-creator-${topic.id}`}>
-                      Created by: {topic.ownerEmail}
-                    </span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Tag className="w-3 h-3" />
-                  <span data-testid={`text-duration-${topic.id}`}>
-                    Duration: {topic.windowDays} days
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Tag className="w-3 h-3" />
-                  <span data-testid={`text-k-threshold-${topic.id}`}>
-                    K-Threshold: {topic.kThreshold}
-                  </span>
-                </div>
-                {topic.slackChannelId && (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Hash className="w-3 h-3" />
-                    <code className="bg-muted px-1 py-0.5 rounded" data-testid={`text-channel-id-${topic.id}`}>
-                      {topic.slackChannelId}
-                    </code>
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleEdit(topic)}
-                  data-testid={`button-edit-${topic.id}`}
-                >
-                  <Edit2 className="w-3 h-3 mr-1" />
-                  Edit
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => handleDelete(topic.id)}
-                  disabled={deleteMutation.isPending}
-                  data-testid={`button-delete-${topic.id}`}
-                >
-                  <Trash2 className="w-3 h-3 mr-1" />
-                  Delete
-                </Button>
-              </div>
-            </Card>
-          ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -562,6 +652,7 @@ export default function TopicManagement() {
                   <SelectItem value="in_review">In Review</SelectItem>
                   <SelectItem value="action_decided">Action Decided</SelectItem>
                   <SelectItem value="actioned">Actioned</SelectItem>
+                  <SelectItem value="archived">Archived</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
