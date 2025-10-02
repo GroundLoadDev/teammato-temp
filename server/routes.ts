@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import crypto from "crypto";
 import { z } from "zod";
 import "./types"; // Load session type extensions
-import { filterAnonymousFeedback } from "./utils/contentFilter";
+import { filterAnonymousFeedback, generateSubmitterHash, coarsenSituation } from "./utils/contentFilter";
 import { sendContributionReceipt, postActionNotesToChannel } from "./utils/slackMessaging";
 import { buildFeedbackModal } from "./utils/slackModal";
 import { WebClient } from '@slack/web-api';
@@ -604,6 +604,277 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json({
         response_type: 'ephemeral',
         text: '❌ An error occurred while processing your feedback. Please try again.',
+      });
+    }
+  });
+
+  // Slack Modal Submission - Handle feedback modal submissions
+  app.post('/api/slack/modal', async (req, res) => {
+    try {
+      // Verify Slack signature
+      if (!verifySlackSignature(req)) {
+        console.error('Invalid Slack signature');
+        return res.status(401).json({ error: 'Invalid signature' });
+      }
+
+      // Parse the modal submission payload
+      const bodyString = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : '';
+      const body = new URLSearchParams(bodyString);
+      const payloadStr = body.get('payload');
+      
+      if (!payloadStr) {
+        return res.status(400).json({ error: 'Missing payload' });
+      }
+
+      const payload = JSON.parse(payloadStr);
+      const { user, view, team } = payload;
+
+      // Extract metadata
+      const metadata = JSON.parse(view.private_metadata);
+      const { topicId, orgId } = metadata;
+
+      // Extract form values
+      const values = view.state.values;
+      const suggestTopic = values.suggest_topic_block?.suggest_topic_input?.value?.trim();
+      const situation = values.situation_block?.situation_input?.value?.trim() || '';
+      const behavior = values.behavior_block?.behavior_input?.value?.trim();
+      const impact = values.impact_block?.impact_input?.value?.trim();
+
+      // Look up org from Slack team
+      const slackTeam = await storage.getSlackTeamByTeamId(team.id);
+      if (!slackTeam) {
+        return res.json({
+          response_action: 'errors',
+          errors: {
+            behavior_block: {
+              behavior_input: 'Your Slack workspace is not connected.',
+            },
+          },
+        });
+      }
+
+      // Handle topic suggestion if provided
+      if (suggestTopic && suggestTopic.length > 0) {
+        // Validate topic suggestion title
+        if (suggestTopic.length < 5) {
+          return res.json({
+            response_action: 'errors',
+            errors: {
+              suggest_topic_block: {
+                suggest_topic_input: 'Topic title must be at least 5 characters',
+              },
+            },
+          });
+        }
+
+        // Find or create user for suggested_by
+        let user_record = await storage.getUserBySlackId(user.id, orgId);
+        if (!user_record) {
+          user_record = await storage.createUser({
+            orgId,
+            slackUserId: user.id,
+            email: null,
+            role: 'member',
+            profile: null,
+          });
+        }
+
+        await storage.createTopicSuggestion({
+          orgId,
+          suggestedBy: user_record.id,
+          title: suggestTopic,
+          status: 'pending',
+        });
+
+        // Success - close modal
+        return res.json({
+          response_action: 'clear',
+        });
+      }
+
+      // If no topic suggestion, validate feedback fields are provided
+      if (!behavior || !impact) {
+        const errors: any = {};
+        if (!behavior) {
+          errors.behavior_block = {
+            behavior_input: 'Behavior is required when submitting feedback',
+          };
+        }
+        if (!impact) {
+          errors.impact_block = {
+            impact_input: 'Impact is required when submitting feedback',
+          };
+        }
+        return res.json({
+          response_action: 'errors',
+          errors,
+        });
+      }
+
+      // Validate field lengths
+      if (behavior.length < 20) {
+        return res.json({
+          response_action: 'errors',
+          errors: {
+            behavior_block: {
+              behavior_input: 'Behavior must be at least 20 characters. What specifically occurred?',
+            },
+          },
+        });
+      }
+
+      if (impact.length < 15) {
+        return res.json({
+          response_action: 'errors',
+          errors: {
+            impact_block: {
+              impact_input: 'Impact must be at least 15 characters. How did this affect work or people?',
+            },
+          },
+        });
+      }
+
+      // Check for @mentions and PII
+      const behaviorCheck = filterAnonymousFeedback(behavior);
+      if (!behaviorCheck.isValid) {
+        return res.json({
+          response_action: 'errors',
+          errors: {
+            behavior_block: {
+              behavior_input: behaviorCheck.error,
+            },
+          },
+        });
+      }
+
+      const impactCheck = filterAnonymousFeedback(impact);
+      if (!impactCheck.isValid) {
+        return res.json({
+          response_action: 'errors',
+          errors: {
+            impact_block: {
+              impact_input: impactCheck.error,
+            },
+          },
+        });
+      }
+
+      if (situation.length > 0) {
+        const situationCheck = filterAnonymousFeedback(situation);
+        if (!situationCheck.isValid) {
+          return res.json({
+            response_action: 'errors',
+            errors: {
+              situation_block: {
+                situation_input: situationCheck.error,
+              },
+            },
+          });
+        }
+      }
+
+      // Get topic
+      const topic = await storage.getTopic(topicId, orgId);
+      if (!topic || !topic.isActive) {
+        return res.json({
+          response_action: 'errors',
+          errors: {
+            behavior_block: {
+              behavior_input: 'This topic is no longer active.',
+            },
+          },
+        });
+      }
+
+      // Find or create collecting thread
+      let thread = await storage.getActiveCollectingThread(topic.id, orgId);
+      if (!thread) {
+        try {
+          thread = await storage.createFeedbackThread({
+            orgId,
+            topicId: topic.id,
+            title: `${topic.name} Feedback`,
+            status: 'collecting',
+            kThreshold: topic.kThreshold,
+            participantCount: 0,
+            slackChannelId: topic.slackChannelId || null,
+            slackMessageTs: null,
+          });
+        } catch (error: any) {
+          if (error.code === '23505') {
+            thread = await storage.getActiveCollectingThread(topic.id, orgId);
+            if (!thread) {
+              throw new Error('Failed to create or retrieve collecting thread');
+            }
+          } else {
+            throw error;
+          }
+        }
+      }
+
+      // Generate submitter hash and coarsen situation
+      const submitterHash = generateSubmitterHash(user.id, orgId);
+      const situationCoarse = coarsenSituation(situation);
+      const createdAtDay = new Date().toISOString().slice(0, 10);
+
+      // Submit feedback
+      try {
+        await storage.createFeedbackItem({
+          threadId: thread.id,
+          orgId,
+          slackUserId: user.id,
+          content: null,
+          behavior,
+          impact,
+          situationCoarse,
+          submitterHash,
+          createdAtDay,
+          status: 'pending',
+          moderatorId: null,
+          moderatedAt: null,
+        });
+
+        // Update participant count
+        const participants = await storage.getUniqueParticipants(thread.id);
+        await storage.updateThreadParticipantCount(thread.id, participants.length);
+
+        if (participants.length >= thread.kThreshold && thread.status === 'collecting') {
+          await storage.updateThreadStatus(thread.id, 'ready');
+          console.log(`Thread ${thread.id} reached k-anonymity threshold (${participants.length}/${thread.kThreshold})`);
+        }
+
+        // Send contribution receipt
+        sendContributionReceipt(slackTeam.accessToken, user.id, topic.id, topic.name)
+          .catch(err => console.error('Failed to send receipt:', err));
+
+        // Success - close modal
+        return res.json({
+          response_action: 'clear',
+        });
+
+      } catch (error: any) {
+        if (error.code === '23505') {
+          return res.json({
+            response_action: 'errors',
+            errors: {
+              behavior_block: {
+                behavior_input: 'You have already submitted feedback to this topic.',
+              },
+            },
+          });
+        }
+        throw error;
+      }
+
+    } catch (error) {
+      console.error('Modal submission error:', error);
+      return res.json({
+        response_action: 'errors',
+        errors: {
+          behavior_block: {
+            behavior_input: 'An error occurred. Please try again.',
+          },
+        },
       });
     }
   });

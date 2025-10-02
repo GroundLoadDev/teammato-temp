@@ -70,21 +70,20 @@ export function buildFeedbackModal(topic: Topic, metadata: ModalMetadata) {
     {
       type: "input",
       block_id: "behavior_block",
-      optional: false,
+      optional: true,
       label: {
         type: "plain_text",
-        text: "Behavior (Required) *"
+        text: "Behavior (Required for feedback)"
       },
       hint: {
         type: "plain_text",
-        text: "What specifically occurred? Observable actions only."
+        text: "What specifically occurred? Observable actions only. Skip if suggesting a topic."
       },
       element: {
         type: "plain_text_input",
         action_id: "behavior_input",
         multiline: true,
         max_length: 800,
-        min_length: 20,
         initial_value: metadata.prefillBehavior || "",
         placeholder: {
           type: "plain_text",
@@ -95,21 +94,20 @@ export function buildFeedbackModal(topic: Topic, metadata: ModalMetadata) {
     {
       type: "input",
       block_id: "impact_block",
-      optional: false,
+      optional: true,
       label: {
         type: "plain_text",
-        text: "Impact (Required) *"
+        text: "Impact (Required for feedback)"
       },
       hint: {
         type: "plain_text",
-        text: "How did this affect work or people?"
+        text: "How did this affect work or people? Skip if suggesting a topic."
       },
       element: {
         type: "plain_text_input",
         action_id: "impact_input",
         multiline: true,
         max_length: 500,
-        min_length: 15,
         placeholder: {
           type: "plain_text",
           text: "Describe the impact..."

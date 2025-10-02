@@ -98,3 +98,49 @@ export function generateReceiptHash(userId: string, topicId: string, timestamp: 
   const hash = Buffer.from(hashInput).toString('base64').substring(0, 8).toUpperCase();
   return `#${hash}`;
 }
+
+// Generate submitter hash for deduplication and rate-limiting
+export function generateSubmitterHash(userId: string, orgId: string): string {
+  const crypto = require('crypto');
+  const secret = process.env.SESSION_SECRET || 'default-secret';
+  const data = `${userId}:${orgId}:${new Date().toISOString().slice(0, 10)}`;
+  return crypto.createHmac('sha256', secret)
+    .update(data)
+    .digest('hex');
+}
+
+// Coarsen situation to remove identifying details
+export function coarsenSituation(situation: string | null): string | null {
+  if (!situation || situation.trim().length === 0) {
+    return null;
+  }
+
+  const text = situation.trim();
+  
+  // Extract week numbers, months, quarters
+  const weekMatch = text.match(/week\s+(\d+)/i);
+  const monthMatch = text.match(/(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)/i);
+  const quarterMatch = text.match(/q[1-4]/i);
+  
+  // Build coarsened version
+  const parts: string[] = [];
+  
+  if (weekMatch) {
+    parts.push(`Week ${weekMatch[1]}`);
+  }
+  if (monthMatch) {
+    const month = monthMatch[1].charAt(0).toUpperCase() + monthMatch[1].slice(1);
+    parts.push(month);
+  }
+  if (quarterMatch) {
+    parts.push(quarterMatch[0].toUpperCase());
+  }
+  
+  // If no temporal markers found, return generic description
+  if (parts.length === 0) {
+    return "Recent period";
+  }
+  
+  // Limit to 120 chars
+  return parts.join(', ').substring(0, 120);
+}

@@ -2,7 +2,7 @@ import { eq, and, sql as sqlOperator } from "drizzle-orm";
 import { db } from "./db";
 import { 
   orgs, users, slackTeams, slackSettings, topics,
-  feedbackThreads, feedbackItems, moderationAudit,
+  feedbackThreads, feedbackItems, moderationAudit, topicSuggestions,
   type Org, type InsertOrg,
   type User, type InsertUser,
   type SlackTeam, type InsertSlackTeam,
@@ -10,7 +10,8 @@ import {
   type Topic, type InsertTopic,
   type FeedbackThread, type InsertFeedbackThread,
   type FeedbackItem, type InsertFeedbackItem,
-  type ModerationAudit, type InsertModerationAudit
+  type ModerationAudit, type InsertModerationAudit,
+  type TopicSuggestion, type InsertTopicSuggestion
 } from "@shared/schema";
 
 export interface IStorage {
@@ -98,6 +99,11 @@ export interface IStorage {
   ): Promise<FeedbackItem | undefined>;
   createModerationAudit(audit: InsertModerationAudit): Promise<ModerationAudit>;
   getModerationAudit(targetType: string, targetId: string, orgId: string): Promise<ModerationAudit[]>;
+  
+  // Topic Suggestions
+  createTopicSuggestion(suggestion: InsertTopicSuggestion): Promise<TopicSuggestion>;
+  getTopicSuggestions(orgId: string, status?: string): Promise<TopicSuggestion[]>;
+  updateTopicSuggestionStatus(id: string, status: string, orgId: string): Promise<TopicSuggestion | undefined>;
 }
 
 export class PgStorage implements IStorage {
@@ -243,11 +249,15 @@ export class PgStorage implements IStorage {
     const uniqueParticipants = new Set<string>();
     
     for (const thread of topicThreads) {
-      const items = await db.select({ actorHash: feedbackItems.actorHash })
+      const items = await db.select({ submitterHash: feedbackItems.submitterHash })
         .from(feedbackItems)
         .where(eq(feedbackItems.threadId, thread.id));
       
-      items.forEach(item => uniqueParticipants.add(item.actorHash));
+      items.forEach(item => {
+        if (item.submitterHash) {
+          uniqueParticipants.add(item.submitterHash);
+        }
+      });
     }
 
     return uniqueParticipants.size;
@@ -526,6 +536,42 @@ export class PgStorage implements IStorage {
       .orderBy(sqlOperator`${moderationAudit.createdAt} DESC`);
     
     return result;
+  }
+  
+  // Topic Suggestions
+  async createTopicSuggestion(suggestion: InsertTopicSuggestion): Promise<TopicSuggestion> {
+    const result = await db.insert(topicSuggestions).values(suggestion).returning();
+    return result[0];
+  }
+  
+  async getTopicSuggestions(orgId: string, status?: string): Promise<TopicSuggestion[]> {
+    if (status) {
+      const result = await db.select()
+        .from(topicSuggestions)
+        .where(and(
+          eq(topicSuggestions.orgId, orgId),
+          eq(topicSuggestions.status, status)
+        ))
+        .orderBy(sqlOperator`${topicSuggestions.createdAt} DESC`);
+      return result;
+    } else {
+      const result = await db.select()
+        .from(topicSuggestions)
+        .where(eq(topicSuggestions.orgId, orgId))
+        .orderBy(sqlOperator`${topicSuggestions.createdAt} DESC`);
+      return result;
+    }
+  }
+  
+  async updateTopicSuggestionStatus(id: string, status: string, orgId: string): Promise<TopicSuggestion | undefined> {
+    const result = await db.update(topicSuggestions)
+      .set({ status })
+      .where(and(
+        eq(topicSuggestions.id, id),
+        eq(topicSuggestions.orgId, orgId)
+      ))
+      .returning();
+    return result[0];
   }
 }
 
