@@ -37,6 +37,7 @@ interface Topic {
   windowDays: number;
   status: string;
   ownerId: string | null;
+  ownerEmail: string | null;
   actionNotes: string | null;
   createdAt: string;
 }
@@ -275,6 +276,14 @@ export default function TopicManagement() {
                 </p>
               )}
               <div className="space-y-2 mb-3">
+                {topic.ownerEmail && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Tag className="w-3 h-3" />
+                    <span data-testid={`text-creator-${topic.id}`}>
+                      Created by: {topic.ownerEmail}
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Tag className="w-3 h-3" />
                   <span data-testid={`text-duration-${topic.id}`}>

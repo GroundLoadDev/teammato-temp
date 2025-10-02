@@ -1,4 +1,4 @@
-import { eq, and, sql as sqlOperator } from "drizzle-orm";
+import { eq, and, sql as sqlOperator, desc } from "drizzle-orm";
 import { db } from "./db";
 import { 
   orgs, users, slackTeams, slackSettings, topics,
@@ -187,7 +187,7 @@ export class PgStorage implements IStorage {
 
   // Topics
   async getTopics(orgId: string): Promise<Topic[]> {
-    return await db.select().from(topics).where(eq(topics.orgId, orgId));
+    return await db.select().from(topics).where(eq(topics.orgId, orgId)).orderBy(desc(topics.createdAt));
   }
 
   async getTopic(id: string, orgId: string): Promise<Topic | undefined> {

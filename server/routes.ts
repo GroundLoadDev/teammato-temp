@@ -906,7 +906,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const orgId = req.session.orgId!;
       const topicsList = await storage.getTopics(orgId);
-      res.json(topicsList);
+      
+      // Enhance topics with owner information
+      const enhancedTopics = await Promise.all(
+        topicsList.map(async (topic) => {
+          let ownerEmail = null;
+          if (topic.ownerId) {
+            const owner = await storage.getUser(topic.ownerId);
+            ownerEmail = owner?.email || null;
+          }
+          return {
+            ...topic,
+            ownerEmail,
+          };
+        })
+      );
+      
+      res.json(enhancedTopics);
     } catch (error) {
       console.error('Get topics error:', error);
       res.status(500).json({ error: 'Failed to fetch topics' });
