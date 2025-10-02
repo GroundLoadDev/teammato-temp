@@ -732,6 +732,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Topic not found' });
       }
       
+      // Validate status transitions if status is being changed
+      if (status !== undefined && status !== currentTopic.status) {
+        const validTransitions: Record<string, string[]> = {
+          'collecting': ['in_review'],
+          'in_review': ['collecting', 'action_decided'],
+          'action_decided': ['actioned'],
+          'actioned': [] // Terminal state - no further transitions
+        };
+        
+        const allowedNextStates = validTransitions[currentTopic.status] || [];
+        if (!allowedNextStates.includes(status)) {
+          return res.status(400).json({ 
+            error: `Invalid status transition: ${currentTopic.status} → ${status}. Allowed: ${allowedNextStates.join(', ') || 'none'}` 
+          });
+        }
+
+        // Check k-anonymity BEFORE updating to 'actioned'
+        if (status === 'actioned') {
+          const participantCount = await storage.getTopicParticipantCount(req.params.id, orgId);
+          
+          if (participantCount < currentTopic.kThreshold) {
+            return res.status(400).json({ 
+              error: `Cannot mark topic as actioned: k-anonymity threshold not met (${participantCount}/${currentTopic.kThreshold} participants)` 
+            });
+          }
+        }
+      }
+      
       const updateData: any = {};
       if (name !== undefined) updateData.name = name;
       if (slug !== undefined) updateData.slug = slug.toLowerCase().trim();
@@ -750,12 +778,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Topic not found' });
       }
       
-      // Auto-post action notes when status changes to 'actioned'
+      // Auto-post action notes when status changed to 'actioned'
       if (status === 'actioned' && actionNotes && topic.slackChannelId) {
         const slackTeam = await storage.getSlackTeamByOrgId(orgId);
         if (slackTeam) {
+          // Post to Slack but don't fail the update if Slack fails
           postActionNotesToChannel(slackTeam.accessToken, topic.slackChannelId, topic.name, actionNotes)
-            .catch(err => console.error('Failed to post action notes:', err));
+            .catch(err => {
+              console.error('Failed to post action notes to Slack (continuing):', err);
+            });
         }
       }
       

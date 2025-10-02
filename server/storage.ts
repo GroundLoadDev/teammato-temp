@@ -42,6 +42,7 @@ export interface IStorage {
   updateTopic(id: string, topic: Partial<InsertTopic>, orgId: string): Promise<Topic | undefined>;
   deleteTopic(id: string, orgId: string): Promise<void>;
   getExpiredTopics(): Promise<Topic[]>;
+  getTopicParticipantCount(topicId: string, orgId: string): Promise<number>;
   
   // Feedback Threads
   createFeedbackThread(thread: InsertFeedbackThread): Promise<FeedbackThread>;
@@ -223,6 +224,33 @@ export class PgStorage implements IStorage {
         eq(topics.status, 'collecting'),
         sqlOperator`${topics.expiresAt} <= ${now}`
       ));
+  }
+
+  async getTopicParticipantCount(topicId: string, orgId: string): Promise<number> {
+    // Get all threads for this topic
+    const topicThreads = await db.select()
+      .from(feedbackThreads)
+      .where(and(
+        eq(feedbackThreads.topicId, topicId),
+        eq(feedbackThreads.orgId, orgId)
+      ));
+
+    if (topicThreads.length === 0) {
+      return 0;
+    }
+
+    // Collect unique participant hashes across all threads
+    const uniqueParticipants = new Set<string>();
+    
+    for (const thread of topicThreads) {
+      const items = await db.select({ actorHash: feedbackItems.actorHash })
+        .from(feedbackItems)
+        .where(eq(feedbackItems.threadId, thread.id));
+      
+      items.forEach(item => uniqueParticipants.add(item.actorHash));
+    }
+
+    return uniqueParticipants.size;
   }
 
   // Feedback Threads
