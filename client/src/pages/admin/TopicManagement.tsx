@@ -269,7 +269,18 @@ export default function TopicManagement() {
                   {topic.isActive ? 'Active' : 'Inactive'}
                 </Badge>
               </div>
+              {topic.description && (
+                <p className="text-sm text-muted-foreground mb-3 line-clamp-2" data-testid={`text-description-${topic.id}`}>
+                  {topic.description}
+                </p>
+              )}
               <div className="space-y-2 mb-3">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Tag className="w-3 h-3" />
+                  <span data-testid={`text-duration-${topic.id}`}>
+                    Duration: {topic.windowDays} days
+                  </span>
+                </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Tag className="w-3 h-3" />
                   <span data-testid={`text-k-threshold-${topic.id}`}>
