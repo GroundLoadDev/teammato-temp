@@ -53,6 +53,7 @@ export const topics = pgTable("topics", {
   orgId: uuid("org_id").notNull().references(() => orgs.id, { onDelete: 'cascade' }),
   name: text("name").notNull(),
   slug: text("slug").notNull(),
+  description: text("description"),
   slackChannelId: text("slack_channel_id"),
   kThreshold: integer("k_threshold").notNull().default(5),
   isActive: boolean("is_active").notNull().default(true),
