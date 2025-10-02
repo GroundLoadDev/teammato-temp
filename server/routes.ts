@@ -6,6 +6,8 @@ import { z } from "zod";
 import "./types"; // Load session type extensions
 import { filterAnonymousFeedback } from "./utils/contentFilter";
 import { sendContributionReceipt, postActionNotesToChannel } from "./utils/slackMessaging";
+import { buildFeedbackModal } from "./utils/slackModal";
+import { WebClient } from '@slack/web-api';
 
 // Slack OAuth configuration
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
@@ -522,36 +524,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         return res.json({
           response_type: 'ephemeral',
-          text: `📋 *Available Topics*\n\n${topicList}\n\n💡 *How to submit:*\n\`/teammato <topic-slug> <your feedback>\`\n\nExample: \`/teammato product-feedback The new UI is confusing\``,
+          text: `📋 *Available Topics*\n\n${topicList}\n\n💡 *How to submit:*\n\`/teammato <topic-slug>\` to open the feedback form\n\nExample: \`/teammato product-feedback\``,
         });
       }
 
+      // Parse topic slug and optional prefill text
       const parts = text.split(/\s+/);
-      if (parts.length < 2) {
-        return res.json({
-          response_type: 'ephemeral',
-          text: '❌ Please provide both a topic and your feedback.\n\nExample: `/teammato product-feedback The new UI is confusing`',
-        });
-      }
-
       const topicSlug = parts[0];
-      const message = parts.slice(1).join(' ');
-
-      // Filter for @mentions and PII
-      const filterResult = filterAnonymousFeedback(message);
-      if (!filterResult.isValid) {
-        return res.json({
-          response_type: 'ephemeral',
-          text: `❌ ${filterResult.error}`,
-        });
-      }
+      const prefillText = parts.slice(1).join(' ');
 
       // Find topic
       const topic = await storage.getTopicBySlug(topicSlug, orgId);
       if (!topic) {
         return res.json({
           response_type: 'ephemeral',
-          text: `❌ Topic "${topicSlug}" not found. Please check with your admin for available topics.`,
+          text: `❌ Topic "${topicSlug}" not found.\n\nUse \`/teammato list\` to see available topics.`,
         });
       }
 
@@ -562,92 +549,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Find or create active "collecting" thread for this topic
-      let thread = await storage.getActiveCollectingThread(topic.id, orgId);
-      
-      if (!thread) {
-        // Create a new collecting thread (with race condition handling)
-        try {
-          thread = await storage.createFeedbackThread({
-            orgId,
-            topicId: topic.id,
-            title: `${topic.name} Feedback`,
-            status: 'collecting',
-            kThreshold: topic.kThreshold,
-            participantCount: 0,
-            slackChannelId: topic.slackChannelId || null,
-            slackMessageTs: null,
-          });
-        } catch (error: any) {
-          // If another request created the thread concurrently, fetch it
-          if (error.code === '23505') {
-            thread = await storage.getActiveCollectingThread(topic.id, orgId);
-            if (!thread) {
-              throw new Error('Failed to create or retrieve collecting thread');
-            }
-          } else {
-            throw error;
-          }
-        }
-      }
-
-      // Try to insert feedback item (will fail if user already submitted to this thread)
-      try {
-        await storage.createFeedbackItem({
-          threadId: thread.id,
-          orgId,
-          slackUserId: userId,
-          content: message,
-          status: 'pending',
-          moderatorId: null,
-          moderatedAt: null,
-        });
-
-        // Get unique participants to update count
-        const participants = await storage.getUniqueParticipants(thread.id);
-        await storage.updateThreadParticipantCount(thread.id, participants.length);
-
-        // Check if k-threshold is reached
-        if (participants.length >= thread.kThreshold && thread.status === 'collecting') {
-          // Transition to ready status
-          await storage.updateThreadStatus(thread.id, 'ready');
-          
-          // TODO: Post aggregated feedback to Slack channel
-          console.log(`Thread ${thread.id} reached k-anonymity threshold (${participants.length}/${thread.kThreshold})`);
-        }
-
-        // Send contribution receipt DM
-        sendContributionReceipt(slackTeam.accessToken, userId, topic.id, topic.name)
-          .catch(err => console.error('Failed to send receipt:', err));
-
-        // Calculate days until expiry
-        let expiryMessage = '';
-        if (topic.expiresAt) {
-          const now = new Date();
-          const expiresAt = new Date(topic.expiresAt);
-          const daysLeft = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-          
-          if (daysLeft > 0) {
-            expiryMessage = `\n\n⏰ This topic closes in ${daysLeft} day${daysLeft === 1 ? '' : 's'}.`;
-          } else if (daysLeft === 0) {
-            expiryMessage = '\n\n⏰ This topic closes today!';
-          }
-        }
-
+      // Check if topic has expired
+      if (topic.expiresAt && new Date(topic.expiresAt) < new Date()) {
         return res.json({
           response_type: 'ephemeral',
-          text: `✅ Your anonymous feedback has been submitted to **${topic.name}**.${expiryMessage}\n\nCheck your DMs for a private receipt. Your feedback will be revealed once enough participants have contributed to maintain anonymity.`,
+          text: `❌ Topic "${topic.name}" has closed. Please contact your admin if you have questions.`,
+        });
+      }
+
+      // Get trigger_id to open modal
+      const triggerId = body.get('trigger_id');
+      if (!triggerId) {
+        return res.json({
+          response_type: 'ephemeral',
+          text: '❌ Failed to open feedback form. Please try again.',
+        });
+      }
+
+      // Build and open modal
+      const client = new WebClient(slackTeam.accessToken);
+      const modal = buildFeedbackModal(topic, {
+        topicId: topic.id,
+        topicSlug: topic.slug,
+        orgId,
+        prefillBehavior: prefillText || undefined,
+      });
+
+      try {
+        await client.views.open({
+          trigger_id: triggerId,
+          view: modal as any,
         });
 
-      } catch (error: any) {
-        // Check for duplicate submission
-        if (error.code === '23505') { // Postgres unique violation
+        // If text was provided, acknowledge prefill
+        if (prefillText) {
           return res.json({
             response_type: 'ephemeral',
-            text: `ℹ️ You've already submitted feedback to this **${topic.name}** thread. Each person can only submit once per collection period.`,
+            text: `✅ Feedback form opened with your text prefilled. Please review and submit when ready.`,
           });
         }
-        throw error;
+
+        // Return 200 OK for modal opening (Slack requires this)
+        return res.status(200).send();
+      } catch (error: any) {
+        console.error('Failed to open modal:', error);
+        return res.json({
+          response_type: 'ephemeral',
+          text: '❌ Failed to open feedback form. Please try again or contact your admin.',
+        });
       }
 
     } catch (error) {
