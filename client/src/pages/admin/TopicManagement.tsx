@@ -40,6 +40,11 @@ interface Topic {
   ownerEmail: string | null;
   actionNotes: string | null;
   createdAt: string;
+  parentTopicId: string | null;
+  isParent: boolean;
+  instanceIdentifier: string | null;
+  windowStart: string | null;
+  windowEnd: string | null;
 }
 
 export default function TopicManagement() {
@@ -237,7 +242,7 @@ export default function TopicManagement() {
 
       {isLoading ? (
         <p className="text-muted-foreground">Loading topics...</p>
-      ) : !topics || topics.length === 0 ? (
+      ) : !topics || topics.filter(t => !t.isParent).length === 0 ? (
         <Card className="p-8 text-center" data-testid="card-no-topics">
           <Tag className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
           <p className="text-muted-foreground mb-2">No topics yet</p>
@@ -255,7 +260,7 @@ export default function TopicManagement() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {topics.map((topic) => (
+          {topics.filter(t => !t.isParent).map((topic) => (
             <Card key={topic.id} className="p-4" data-testid={`card-topic-${topic.id}`}>
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1 min-w-0">
@@ -265,6 +270,13 @@ export default function TopicManagement() {
                   <code className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded" data-testid={`text-topic-slug-${topic.id}`}>
                     {topic.slug}
                   </code>
+                  {topic.instanceIdentifier && (
+                    <div className="mt-1">
+                      <Badge variant="outline" className="text-xs" data-testid={`badge-instance-${topic.id}`}>
+                        Instance: {topic.instanceIdentifier}
+                      </Badge>
+                    </div>
+                  )}
                 </div>
                 <Badge variant={topic.isActive ? 'default' : 'secondary'} data-testid={`badge-status-${topic.id}`}>
                   {topic.isActive ? 'Active' : 'Inactive'}
