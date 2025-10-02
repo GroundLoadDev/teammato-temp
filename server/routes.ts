@@ -39,6 +39,15 @@ const USER_SCOPES = [
 // In-memory state storage (TODO: use Redis/session store in production)
 const oauthStates = new Map<string, number>();
 
+// Helper function to get ISO week number
+function getWeekNumber(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
+
 // Auth middleware
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
@@ -533,13 +542,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const topicSlug = parts[0];
       const prefillText = parts.slice(1).join(' ');
 
-      // Find topic
-      const topic = await storage.getTopicBySlug(topicSlug, orgId);
+      // Try to find topic by slug first
+      let topic = await storage.getTopicBySlug(topicSlug, orgId);
+      let isGeneralFeedback = false;
+      let freeText = '';
+      
       if (!topic) {
-        return res.json({
-          response_type: 'ephemeral',
-          text: `❌ Topic "${topicSlug}" not found.\n\nUse \`/teammato list\` to see available topics.`,
-        });
+        // No matching topic - treat entire text as free text for general feedback
+        freeText = text;
+        isGeneralFeedback = true;
+        
+        // Get or create current general feedback instance
+        let currentInstance = await storage.getCurrentGeneralFeedbackInstance(orgId);
+        
+        if (!currentInstance) {
+          // Get first user in org to use as owner (or create system user)
+          let ownerId: string | undefined;
+          try {
+            const user = await storage.getUserBySlackId(userId, orgId);
+            ownerId = user?.id;
+          } catch {
+            // If no user found, pass undefined and let getOrCreateParentTopic handle it
+            ownerId = undefined;
+          }
+          
+          // Create parent topic if it doesn't exist
+          const parent = await storage.getOrCreateParentTopic(orgId, ownerId || '');
+          
+          // Create first instance
+          const now = new Date();
+          const windowEnd = new Date(now);
+          windowEnd.setDate(windowEnd.getDate() + parent.windowDays);
+          
+          // Generate instance identifier (e.g., "2025-W41")
+          const weekNumber = getWeekNumber(now);
+          const year = now.getFullYear();
+          const instanceIdentifier = `${year}-W${weekNumber}`;
+          
+          currentInstance = await storage.createGeneralFeedbackInstance(
+            parent.id,
+            orgId,
+            now,
+            windowEnd,
+            instanceIdentifier
+          );
+        }
+        
+        topic = currentInstance;
       }
 
       if (!topic.isActive) {
@@ -591,7 +640,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         topicId: topic.id,
         topicSlug: topic.slug,
         orgId,
-        prefillBehavior: prefillText || undefined,
+        prefillBehavior: isGeneralFeedback ? freeText : (prefillText || undefined),
       }, {
         showTopicSuggestions: false,
         ownerName,

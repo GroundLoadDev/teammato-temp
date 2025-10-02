@@ -2,7 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { startTopicExpiryCron } from "./cron/topicExpiry";
+import { startTopicExpiryCron, startInstanceRotationCron } from "./cron/topicExpiry";
 
 const app = express();
 
@@ -98,5 +98,6 @@ app.use((req, res, next) => {
     
     // Start cron jobs
     startTopicExpiryCron();
+    startInstanceRotationCron();
   });
 })();
