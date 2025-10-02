@@ -32,6 +32,7 @@ import BillingSettings from "@/pages/admin/BillingSettings";
 import Analytics from "@/pages/admin/Analytics";
 import Export from "@/pages/admin/Export";
 import Retention from "@/pages/admin/Retention";
+import UserManagement from "@/pages/admin/UserManagement";
 
 function Router() {
   return (
@@ -55,6 +56,7 @@ function Router() {
       <Route path="/admin/feedback" component={FeedbackManagement} />
       <Route path="/admin/topics" component={TopicManagement} />
       <Route path="/admin/topic-suggestions" component={TopicSuggestions} />
+      <Route path="/admin/users" component={UserManagement} />
       <Route path="/admin/slack-settings" component={SlackSettings} />
       <Route path="/admin/billing" component={BillingSettings} />
       <Route path="/admin/analytics" component={Analytics} />

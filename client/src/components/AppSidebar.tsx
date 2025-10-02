@@ -1,4 +1,4 @@
-import { Home, MessageSquare, Tag, Lightbulb, BarChart, Slack, FileText, Download, Clock } from "lucide-react";
+import { Home, MessageSquare, Tag, Lightbulb, BarChart, Slack, FileText, Download, Clock, Users } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -28,6 +28,7 @@ const navigationGroups = [
   {
     label: "Settings",
     items: [
+      { href: "/admin/users", label: "Users", icon: Users },
       { href: "/admin/slack-settings", label: "Slack", icon: Slack },
       { href: "/admin/billing", label: "Billing", icon: FileText },
     ],
