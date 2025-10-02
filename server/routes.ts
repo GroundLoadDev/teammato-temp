@@ -1018,6 +1018,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const payload = JSON.parse(payloadStr);
+      
+      // Handle button actions (invitation acceptance, etc.)
+      if (payload.type === 'block_actions') {
+        const { user, team, actions } = payload;
+        console.log(`[MODAL] Button action: ${actions[0]?.action_id}, User: ${user.id}, Team: ${team.id}`);
+        
+        const action = actions[0];
+        
+        // Handle invitation acceptance
+        if (action.action_id === 'accept_invitation') {
+          const invitationId = action.value;
+          
+          try {
+            // Get the invitation
+            const invitation = await storage.getInvitation(invitationId);
+            
+            if (!invitation) {
+              return res.json({
+                text: '❌ Invitation not found. It may have expired or been revoked.',
+              });
+            }
+            
+            if (invitation.status !== 'pending') {
+              return res.json({
+                text: '❌ This invitation has already been processed.',
+              });
+            }
+            
+            if (invitation.expiresAt < new Date()) {
+              await storage.updateInvitationStatus(invitationId, 'expired', invitation.orgId);
+              return res.json({
+                text: '❌ This invitation has expired. Please ask your admin for a new invitation.',
+              });
+            }
+            
+            // Verify the invitation is for this user
+            if (invitation.slackUserId !== user.id) {
+              return res.json({
+                text: '❌ This invitation is not for you.',
+              });
+            }
+            
+            // Get Slack user info to get email
+            const slackTeam = await storage.getSlackTeamByOrgId(invitation.orgId);
+            if (!slackTeam) {
+              return res.json({
+                text: '❌ Slack workspace not connected. Please contact your admin.',
+              });
+            }
+            
+            const slackClient = new WebClient(slackTeam.accessToken);
+            const userInfo = await slackClient.users.info({ user: user.id });
+            const email = (userInfo.user as any)?.profile?.email || invitation.email || null;
+            
+            // Create the user account
+            await storage.createUser({
+              orgId: invitation.orgId,
+              slackUserId: user.id,
+              email,
+              role: invitation.role,
+              profile: null,
+            });
+            
+            // Mark invitation as accepted
+            await storage.updateInvitationStatus(invitationId, 'accepted', invitation.orgId);
+            
+            console.log(`[MODAL] User ${user.id} accepted invitation and created as ${invitation.role}`);
+            
+            return res.json({
+              text: `✅ Welcome to Teammato! You now have *${invitation.role}* access. You can start using \`/teammato\` commands in Slack.`,
+            });
+          } catch (error) {
+            console.error('[MODAL] Error accepting invitation:', error);
+            return res.json({
+              text: '❌ Failed to process invitation. Please try again or contact your admin.',
+            });
+          }
+        }
+        
+        // Unknown action
+        return res.json({
+          text: '❌ Unknown action.',
+        });
+      }
+      
+      // Handle modal view submissions
       const { user, view, team } = payload;
       console.log(`[MODAL] User: ${user.id}, Team: ${team.id}`);
 
