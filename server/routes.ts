@@ -566,6 +566,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Fetch topic owner info if available
+      let ownerName: string | undefined;
+      if (topic.ownerId) {
+        const owner = await storage.getUser(topic.ownerId);
+        if (owner) {
+          // Try to get Slack user info for a friendly name
+          try {
+            const client = new WebClient(slackTeam.accessToken);
+            const userInfo = await client.users.info({ user: owner.slackUserId || '' });
+            if (userInfo.user) {
+              ownerName = (userInfo.user as any).real_name || (userInfo.user as any).name;
+            }
+          } catch (err) {
+            // Fallback to email if Slack lookup fails
+            ownerName = owner.email || undefined;
+          }
+        }
+      }
+
       // Build and open modal
       const client = new WebClient(slackTeam.accessToken);
       const modal = buildFeedbackModal(topic, {
@@ -573,6 +592,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         topicSlug: topic.slug,
         orgId,
         prefillBehavior: prefillText || undefined,
+      }, {
+        showTopicSuggestions: false,
+        ownerName,
       });
 
       try {
