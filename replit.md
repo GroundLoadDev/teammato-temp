@@ -59,11 +59,12 @@ Teammato is an enterprise-grade Slack-first anonymous feedback SaaS with privacy
 - `users` - Users with org binding and roles (owner, admin, moderator, viewer)
 - `topics` - **Time-boxed feedback campaigns** with expiresAt, windowDays, status (collecting/in_review/action_decided/actioned), ownerId, actionNotes for transparent action loops
 - `threads` - Anonymous feedback posts with moderation fields (moderationStatus, moderationNotes, moderatedBy, moderatedAt)
-- `items` - Individual feedback items with moderation fields (moderationStatus, moderatedBy, moderatedAt)
+- `items` - **SBI feedback items** with behavior, impact, situationCoarse, submitterHash, createdAtDay, moderation fields
 - `comments` - Comments on feedback threads
 - `slack_teams` - Slack workspace mappings with access tokens
 - `moderation_audit` - Immutable audit trail for all moderation actions
 - `slack_settings` - Per-org Slack configuration (digest channel, enabled status)
+- `topic_suggestions` - User-suggested topics with orgId, suggestedBy, title, status (pending/approved/rejected)
 
 ### Planned Tables:
 - `reactions` - Deduplicated reactions by actor_hash
@@ -121,16 +122,25 @@ Teammato is an enterprise-grade Slack-first anonymous feedback SaaS with privacy
   - Daily digest configuration (channel ID, enabled/disabled toggle)
   - Settings persistence with validation
   - Backend APIs: `GET/POST /api/slack-settings` with Zod validation
-- **Slack Slash Command Handler** (Oct 2025)
-  - `/teammato topic-slug Feedback content` command processing
+- **Slack Slash Command & SBI Modal** (Oct 2025) ✅ COMPLETE
+  - `/teammato <slug> [optional text]` - Opens Block Kit modal instead of direct text submission
   - HMAC-SHA256 signature verification with replay attack prevention (5-minute window)
+  - Modal prefill: Text after slug populates Behavior field automatically
+  - Block Kit modal with dual paths:
+    1. **SBI Feedback Submission**: Situation (optional), Behavior (required), Impact (required)
+    2. **Topic Suggestion**: Checkbox reveals title input, skips feedback validation
+  - Situation coarsening: Extracts temporal markers (week/month/quarter), strips specifics before storage
+  - PII/@mention blocking: Filters all feedback fields to protect k-anonymity
+  - Submitter hash: Daily-rotating hash for deduplication and rate-limiting (no identifying info stored)
   - Topic routing by slug with org-scoped lookup
   - K-anonymity enforcement: find-or-create active collecting thread per topic
   - Race condition handling: DB unique constraint + application-level retry on conflict
   - Duplicate submission protection (one feedback per user per thread)
   - Atomic participant count tracking with status transitions
-  - User-friendly ephemeral responses with progress indicators
-  - Backend API: `POST /api/slack/command` with raw body parsing for signature verification
+  - Inline validation errors: Slack nested format `{block_id: {action_id: message}}`
+  - Contribution receipts: DM users with hash + anti-retaliation policy link after submission
+  - Backend APIs: `POST /api/slack/command`, `POST /api/slack/modal`
+  - Storage methods: createTopicSuggestion, getTopicSuggestions, updateTopicSuggestionStatus
 - **Moderation Workflow** (Oct 2025) ✅ COMPLETE
   - Database schema: moderationStatus, moderationNotes, moderatedBy, moderatedAt fields on threads and items
   - Moderation audit table: Immutable audit trail with action, previous/new status, reason, admin user, timestamp
@@ -159,12 +169,15 @@ Teammato is an enterprise-grade Slack-first anonymous feedback SaaS with privacy
 - Multi-tenant isolation with org-scoped queries
 
 ### 🚧 In Progress / Next Steps
-- **SBI Feedback Modal** (Phase 1.2) - Slack Block Kit modal with Situation, Behavior, Impact fields
+- **Topic Suggestions Admin UI** (Phase 1.3) - Admin page to approve/reject user-suggested topics
 - **Web Portal** (Phase 2.1) - Public /topics page for browsing available feedback campaigns
-- **Admin UI Updates** (Phase 2.2) - Topic status management and action notes publishing in admin panel
+- **Admin UI Updates** (Phase 2.2) - Enhanced topic management with status transitions and action notes UI
 - Per-org encryption for feedback content
 - CSV/PDF export functionality for Analytics
 - Digest notifications to Slack channels (settings page complete, cron job pending)
 - User invitation and management
 - Billing integration with Stripe
 - Public landing pages and marketing content
+
+### 📝 Configuration Required (External)
+- **Slack App Settings**: Enable "Interactivity & Shortcuts" and set Request URL to `https://[YOUR-DOMAIN]/api/slack/modal` for modal submissions to work
