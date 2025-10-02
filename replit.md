@@ -57,7 +57,7 @@ Teammato is an enterprise-grade Slack-first anonymous feedback SaaS with privacy
 ### Tables (Currently Implemented):
 - `orgs` - Organizations with settings (k_anonymity, retention, etc.)
 - `users` - Users with org binding and roles (owner, admin, moderator, viewer)
-- `topics` - **Time-boxed feedback campaigns** with expiresAt, windowDays, status (collecting/in_review/action_decided/actioned), ownerId, actionNotes for transparent action loops
+- `topics` - **Time-boxed feedback campaigns** with description, expiresAt, windowDays, status (collecting/in_review/action_decided/actioned), ownerId, actionNotes for transparent action loops
 - `threads` - Anonymous feedback posts with moderation fields (moderationStatus, moderationNotes, moderatedBy, moderatedAt)
 - `items` - **SBI feedback items** with behavior, impact, situationCoarse, submitterHash, createdAtDay, moderation fields
 - `comments` - Comments on feedback threads
@@ -106,6 +106,9 @@ Teammato is an enterprise-grade Slack-first anonymous feedback SaaS with privacy
 - Role-based access control (owner, admin, viewer)
 - Admin Dashboard with real-time org stats
 - Topic Management with CRUD operations
+  - **Topic description field** (optional text to help employees understand topic purpose)
+  - **Duration selector** with preset options: 7, 14, 21, 30, 60, 90 days
+  - Topic cards display: description (line-clamped), duration, k-threshold
   - Slack channel mapping (slackChannelId)
   - Per-topic k-anonymity thresholds (kThreshold)
   - Real-time duplicate validation
@@ -124,11 +127,17 @@ Teammato is an enterprise-grade Slack-first anonymous feedback SaaS with privacy
   - Backend APIs: `GET/POST /api/slack-settings` with Zod validation
 - **Slack Slash Command & SBI Modal** (Oct 2025) ✅ COMPLETE
   - `/teammato <slug> [optional text]` - Opens Block Kit modal instead of direct text submission
+  - **Context-aware modal header** displays:
+    - Topic name (bold)
+    - Creator name (fetched from Slack user info, fallback to email)
+    - Topic description (if provided)
+    - Status emoji + text + duration + expiry countdown
   - HMAC-SHA256 signature verification with replay attack prevention (5-minute window)
   - Modal prefill: Text after slug populates Behavior field automatically
-  - Block Kit modal with dual paths:
-    1. **SBI Feedback Submission**: Situation (optional), Behavior (required), Impact (required)
-    2. **Topic Suggestion**: Checkbox reveals title input, skips feedback validation
+  - **Topic-specific modals**: No topic suggestion option when targeting a specific topic (prevents topic hijacking)
+  - Block Kit modal with conditional paths:
+    1. **SBI Feedback Submission** (when topic specified): Situation (optional), Behavior (required), Impact (required)
+    2. **Topic Suggestion** (future: when no topic specified): Checkbox reveals title input, skips feedback validation
   - Situation coarsening: Extracts temporal markers (week/month/quarter), strips specifics before storage
   - PII/@mention blocking: Filters all feedback fields to protect k-anonymity
   - Submitter hash: Daily-rotating hash for deduplication and rate-limiting (no identifying info stored)
@@ -169,9 +178,8 @@ Teammato is an enterprise-grade Slack-first anonymous feedback SaaS with privacy
 - Multi-tenant isolation with org-scoped queries
 
 ### 🚧 In Progress / Next Steps
-- **Topic Suggestions Admin UI** (Phase 1.3) - Admin page to approve/reject user-suggested topics
-- **Web Portal** (Phase 2.1) - Public /topics page for browsing available feedback campaigns
-- **Admin UI Updates** (Phase 2.2) - Enhanced topic management with status transitions and action notes UI
+- **Topic Suggestions Admin UI** - Admin page to approve/reject user-suggested topics
+- **Web Portal** - Public /topics page for browsing available feedback campaigns
 - Per-org encryption for feedback content
 - CSV/PDF export functionality for Analytics
 - Digest notifications to Slack channels (settings page complete, cron job pending)
