@@ -10,7 +10,6 @@ export interface ModalMetadata {
 export interface ModalOptions {
   showTopicSuggestions?: boolean;
   ownerName?: string;
-  topicDescription?: string;
 }
 
 export function buildFeedbackModal(
@@ -18,7 +17,7 @@ export function buildFeedbackModal(
   metadata: ModalMetadata,
   options: ModalOptions = {}
 ) {
-  const { showTopicSuggestions = false, ownerName, topicDescription } = options;
+  const { showTopicSuggestions = false, ownerName } = options;
 
   const daysLeft = topic.expiresAt 
     ? Math.ceil((new Date(topic.expiresAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
@@ -44,12 +43,12 @@ export function buildFeedbackModal(
 
   let headerText = `*${topic.name}*\n`;
   if (ownerName) {
-    headerText += `Created by: ${ownerName}\n`;
+    headerText += `_Created by: ${ownerName}_\n`;
   }
-  if (topicDescription) {
-    headerText += `${topicDescription}\n`;
+  if (topic.description) {
+    headerText += `${topic.description}\n\n`;
   }
-  headerText += `${statusEmoji} ${statusText} • ${expiryText}`;
+  headerText += `${statusEmoji} ${statusText} • Duration: ${topic.windowDays} days • ${expiryText}`;
 
   const blocks: any[] = [
     {
