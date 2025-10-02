@@ -1,0 +1,111 @@
+Short answer: use both—a Slack modal for speed and completion rates, plus a seamless “escrow to web” handoff when the user needs richer validation or longer inputs.
+
+Here’s how I’d decide and implement.
+
+Recommendation
+
+Default to a Slack modal (Block Kit) for 80–90% of submissions. It reduces friction (no context switch), boosts completion, and fits simple SBI well.
+
+Offer an “Open advanced form” link inside the modal (and as a validation fallback) that deep-links to a secure web form when:
+
+the text trips stricter checks (e.g., @handles, names/PII, toxic language, exact dates that increase re-ID risk),
+
+the user needs richer features (attachments, multiple examples, preview, drafts, long text),
+
+or they’re doing a special flow (e.g., opt-in 360, compliance report).
+
+Why this split works (product + science)
+
+Lower activation energy → more voice. Staying in Slack minimizes perceived cost of speaking up—key when fear of retaliation is high.
+
+Guardrails kick in only when needed. The handoff preserves anonymity while letting you run heavier redaction/triangulation checks that modals can’t do well.
+
+Structured prompts in-context. The modal keeps SBI coaching right where people already are, improving specificity without making the task feel “official.”
+
+What each option does best
+Criterion	Slack modal (native)	Web form (advanced)
+Friction / completion	Excellent (no context switch)	Lower (new tab)
+SBI structure	Good (3 inputs, hints)	Excellent (rich tips, examples, dynamic help)
+Validation	Basic (required, length, simple regex client-side; server can reject on submit)	Advanced (PII/name detection, toxicity, k-risk scoring, live feedback, previews)
+Attachments	Weak (no file input in modals; requires separate upload flow)	Strong (files, screenshots, scrub EXIF)
+Length & layout	Constrained (block limits, narrow UI)	Flexible (long text, collapsible sections)
+Multi-step flows	Okay (view pushing)	Excellent (wizards, branching)
+Accessibility	Good (Slack a11y)	You control a11y; can be great
+Security posture	Slack auth context	Your SSO, risk controls, audit, rate limiting
+Drafts & autosave	No	Yes
+Concrete design
+
+Slack modal fields (simple SBI)
+
+Topic picker (static or external select with typeahead).
+
+Situation (short text; date/time optional).
+
+Behavior (multiline; required; 200–800 chars recommended).
+
+Impact (multiline; required; 100–500 chars recommended).
+
+Optional: “Suggest a topic” toggle (hidden if launched from a topic).
+
+Inline tips: 1-line examples under each field.
+
+Lightweight checks in the modal (client-ish)
+
+Prevent @ and obvious names (fail with a helpful message).
+
+Character minimums to curb vague feedback.
+
+If fail → show:
+“This needs extra protection/cleanup. Continue in the secure form?” [Open advanced form]
+
+Advanced web form extras
+
+Real-time PII/name/@handle redaction suggestions.
+
+Toxicity + doxxing screens with rewrite suggestions.
+
+k-risk hints (e.g., “Avoid unique dates/titles that could identify you or others.”)
+
+Attachments with metadata scrubbing.
+
+Drafts, preview, and “send test to me” receipt.
+
+360/HR/compliance variants (different routing, stricter rules).
+
+Handoff mechanics (secure and smooth)
+
+When user clicks “Open advanced form” or validation rejects:
+
+Your app generates a short-lived, single-use token bound to Slack user ID (not stored long-term) + topic + tenant, and signs it.
+
+Open a browser with form.example.com/new?token=….
+
+The web app exchanges token for a pseudonymous session (no real user data), pre-fills any modal inputs, and continues.
+
+On submit, return a receipt hash and optionally DM the user a confirmation (“Submitted to Leadership comms; you remain anonymous.”).
+
+Admin & privacy guardrails (same for both)
+
+Enforce release only when k-threshold is met; otherwise queue in encrypted storage.
+
+Coarsen timestamps and suppress cohorts unless cohort ≥ k.
+
+Block person-targeted feedback except in opt-in, time-boxed 360 cycles with k≥3–5 and only aggregated outputs.
+
+Implementation notes (nuts & bolts)
+
+Slack: views.open → modal; views.update for inline errors; views.push if you need a confirm screen. Use external_select for topic typeahead. Do server-side validation on view_submission and respond with response_action: "errors" to keep the user in-modal when possible.
+
+Web: SSO (if available) but always issue a pseudonymous submitter ID to preserve anonymity; store any real identity only in ephemeral handoff state (<10 mins). Add CSRF, rate limiting, and bot detection.
+
+Files: If you must accept files from Slack, support a post-submission DM that says “Reply with a file to attach to your anonymous feedback” and proxy-upload it server-side; otherwise prefer web form for attachments.
+
+Default config I’d ship
+
+Start with the Slack modal as the primary entry, always visible in App Home and via /feedback.
+
+Include an “Advanced form” link and auto-handoff when checks fail.
+
+Use the same copy and SBI coaching in both places, with richer examples on the web.
+
+Log strictly minimal metadata in both paths; delete raw text after aggregation window if policy allows.

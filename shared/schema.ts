@@ -56,6 +56,12 @@ export const topics = pgTable("topics", {
   slackChannelId: text("slack_channel_id"),
   kThreshold: integer("k_threshold").notNull().default(5),
   isActive: boolean("is_active").notNull().default(true),
+  expiresAt: timestamp("expires_at"),
+  windowDays: integer("window_days").notNull().default(21),
+  status: text("status").notNull().default('collecting'),
+  ownerId: uuid("owner_id").references(() => users.id, { onDelete: 'set null' }),
+  actionNotes: text("action_notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => ({
   uniqueSlug: unique().on(table.orgId, table.slug),
 }));
@@ -111,7 +117,7 @@ export const insertOrgSchema = createInsertSchema(orgs).omit({ id: true, created
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertSlackTeamSchema = createInsertSchema(slackTeams).omit({ id: true, createdAt: true });
 export const insertSlackSettingsSchema = createInsertSchema(slackSettings).omit({ id: true, createdAt: true });
-export const insertTopicSchema = createInsertSchema(topics).omit({ id: true });
+export const insertTopicSchema = createInsertSchema(topics).omit({ id: true, createdAt: true });
 export const insertFeedbackThreadSchema = createInsertSchema(feedbackThreads).omit({ id: true, createdAt: true });
 export const insertFeedbackItemSchema = createInsertSchema(feedbackItems).omit({ id: true, createdAt: true });
 export const insertModerationAuditSchema = createInsertSchema(moderationAudit).omit({ id: true, createdAt: true });

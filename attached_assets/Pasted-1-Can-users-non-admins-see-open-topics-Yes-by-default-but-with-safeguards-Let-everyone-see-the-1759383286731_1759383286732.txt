@@ -1,0 +1,123 @@
+1) Can users (non-admins) see open topics?
+Yes, by default—but with safeguards. Let everyone see the list of topics so it’s easy to contribute and so issues feel “legitimate,” which supports psychological safety (shared belief that speaking up is safe). Add guardrails to reduce bandwagoning or doxxing risk: hide author counts and example quotes until a k-threshold is met (see below), and pin a short “how to give good feedback” tip using SBI prompts. Psychological safety is a key predictor of learning and voice in teams. 
+Massachusetts Institute of Technology
++2
+SAGE Journals
++2
+
+2) Can users make feedback that isn’t part of topics?
+Yes—offer “Open feedback” with required structure. Freeform channels increase reporting when fear of retaliation suppresses voice, but quality varies. Use a structured template (Situation–Behavior–Impact) to nudge specificity and reduce defensiveness; this improves feedback quality and comfort. Tag to a topic post-hoc (or auto-cluster). 
+CCL
++1
+
+3) Do topics expire? Can users see expiration?
+Yes—set explicit windows and show a countdown. Time-boxing (e.g., 2–4 weeks) creates urgency and natural “review cycles.” After expiry, lock new submissions, summarize themes for owners, and archive read-only for transparency. This also helps satisfy k-anonymity over a window (see privacy model). Research on feedback processes favors clear, cyclical design over “always-on” ambiguity. 
+PMC
+
+4) Can users suggest topics to admins?
+Absolutely—make it anonymous and light-weight. A suggestion box (with upvote/downvote) helps the bot keep a living backlog that reflects current pain points. When suggestions cluster, auto-promote to official topics. Giving safe, anonymous routes increases intention to report when retaliation is feared. 
+DIVA Portal
++1
+
+5) Can users give feedback on another user with @?
+Default: no direct @-mentions in anonymous feedback. Person-targeted anonymous comments can feel like harassment and escalate retaliation concerns. Route interpersonal feedback through structured, private channels (e.g., to the person’s manager/HR) and only allow person-level collections in opt-in, time-boxed 360 cycles with strict minimum group sizes (k≥3–5) before any aggregated feedback is released to the subject. Keep routine topics focused on behaviors, roles, and processes—not individuals. SBI prompts help keep it behavioral. 
+CCL
++1
+
+Privacy & release model (k-anonymous delivery)
+
+Anonymity threshold (k). Only show aggregate stats or example quotes when ≥ k unique contributors have submitted within the release window. For small teams, set k to 5; for larger topics, 3 can be acceptable. This borrows from k-anonymity to reduce re-identification risk. Pair with time-windowing to avoid “temporal triangulation.” 
+PMC
++2
+EPIC
++2
+
+Windows. Evaluate release against both count and time (e.g., “release weekly if ≥k contributors or at expiration if ≥2k”).
+
+Anti-triangulation. Suppress metadata like timestamp granularity, team, and seniority unless the cohort itself meets k.
+
+PII & toxicity filters. Auto-redact names/@handles in free text, block doxxing, and throttle repeated submissions targeting the same person.
+
+Routing. Compliance/ethics flags should bypass normal release and go straight to the designated safe-channel owner (e.g., Compliance), since anonymity increases willingness to report serious issues. 
+DIVA Portal
++1
+
+UX that nudges constructive, low-drama feedback
+
+SBI prompt builder. “Situation (when/where?) → Behavior (observable, no labels) → Impact (on work/people).” Inline examples and a 500-char nudge help clarity. Evidence suggests SBI reduces anxiety for givers and defensiveness for receivers. 
+CCL
++1
+
+Topic templates. Provide default topics (e.g., “Team collaboration,” “Tools & processes,” “Leadership communication,” “Psych safety”) and allow custom ones via suggestions.
+
+Progress loop. For each topic, show status chips: “Collecting → In review → Action decided → Actioned,” plus a short “You said / We did” note. This maintains trust that speaking up leads to change.
+
+Contribution receipts. DM the submitter a private hash receipt and a link to your anti-retaliation policy/resources.
+
+Admin triage. Cluster similar submissions with lightweight NLP so owners see themes, not a firehose.
+
+Rate limits & cooldowns. Prevent brigading by limiting per-user submissions per topic/day while preserving anonymity internally.
+
+Opt-in 360 cycles (advanced). For person-level growth, run scheduled, opt-in cycles with (a) consent, (b) cross-rater minimums (k), (c) only aggregated outputs, and (d) SBI-only text.
+
+Roles & controls
+
+Owners & reviewers. Each topic must have an accountable owner (manager/function lead). The bot reminds owners post-expiry to publish an action note.
+
+Escalation. A “serious concern” toggle routes directly to Compliance/HR with different SLAs. Anonymity options measurably increase whistleblowing when retaliation threat is salient. 
+DIVA Portal
++1
+
+Policy alignment. Link to the org’s anti-retaliation policy and code of conduct inside the bot.
+
+Minimal data you should log (and protect)
+
+A salted, rotating pseudonymous user ID for rate limiting, k-counting, and receipts.
+
+Topic ID, timestamp (rounded/coarsened for privacy), content (after PII filtering).
+
+Optional cohort tags (team/location/level) stored but only surfaced if cohort size ≥k.
+
+Default configuration (you can tune later)
+
+k threshold: 5 (3 minimum in larger cohorts).
+
+Topic window: 21 days; extendable; show countdown.
+
+Release cadence: weekly aggregation; end-of-window summary even if only ≥2k contributors.
+
+Feedback modes: Topic, Open (structured), Serious Concern (secure channel).
+
+No @person mentions outside opt-in 360 cycles.
+
+Why this design lines up with the science
+
+Psychological safety drives voice → reduce interpersonal risk with anonymity, clear norms, and visible follow-through. 
+Massachusetts Institute of Technology
++1
+
+Fear of retaliation suppresses reporting → anonymous/intake channels and clear anti-retaliation messaging increase intention to speak up. 
+DIVA Portal
++1
+
+Structure beats free-form → SBI frameworks make feedback more specific and digestible, reducing defensiveness. 
+CCL
++1
+
+k-anonymous aggregation reduces re-identification risk vs. simple pseudonyms; pair with time windows and suppression of narrow cohorts. 
+EPIC
++2
+PMC
++2
+
+Quick implementation notes for Slack
+
+Input: modal with topic picker (or “Open”), SBI fields, optional file/screenshot (scrub metadata).
+
+Validation: block if @handles or names appear in free text (outside 360 cycles).
+
+Storage: encrypt at rest, short retention for raw text, keep only aggregated outputs long-term.
+
+Admin UI: theme clustering, redaction highlights, release checklist (k met? toxicity cleared? owner assigned?).
+
+Comms: automatic “You said / We did” post to the channel when owners mark “Actioned.”
