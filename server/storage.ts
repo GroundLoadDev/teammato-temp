@@ -37,6 +37,11 @@ export interface IStorage {
   
   // Topics
   getTopics(orgId: string): Promise<Topic[]>;
+  getCategorizedTopics(orgId: string): Promise<{
+    created: Topic[];
+    instances: Topic[];
+    archived: Topic[];
+  }>;
   getTopic(id: string, orgId: string): Promise<Topic | undefined>;
   getTopicBySlug(slug: string, orgId: string): Promise<Topic | undefined>;
   createTopic(topic: InsertTopic): Promise<Topic>;
@@ -194,6 +199,42 @@ export class PgStorage implements IStorage {
   // Topics
   async getTopics(orgId: string): Promise<Topic[]> {
     return await db.select().from(topics).where(eq(topics.orgId, orgId)).orderBy(desc(topics.createdAt));
+  }
+
+  async getCategorizedTopics(orgId: string): Promise<{
+    created: Topic[];
+    instances: Topic[];
+    archived: Topic[];
+  }> {
+    const allTopics = await db.select().from(topics)
+      .where(eq(topics.orgId, orgId))
+      .orderBy(desc(topics.createdAt));
+    
+    const created: Topic[] = [];
+    const instances: Topic[] = [];
+    const archived: Topic[] = [];
+    
+    for (const topic of allTopics) {
+      // Skip parent topics (they're just containers)
+      if (topic.isParent) {
+        continue;
+      }
+      
+      // Archived topics
+      if (topic.status === 'archived' || topic.status === 'actioned') {
+        archived.push(topic);
+      }
+      // Weekly instances (General Feedback instances)
+      else if (topic.parentTopicId) {
+        instances.push(topic);
+      }
+      // Created topics (custom campaigns)
+      else {
+        created.push(topic);
+      }
+    }
+    
+    return { created, instances, archived };
   }
 
   async getTopic(id: string, orgId: string): Promise<Topic | undefined> {

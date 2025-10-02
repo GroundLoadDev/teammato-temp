@@ -172,3 +172,14 @@ export type InsertModerationAudit = z.infer<typeof insertModerationAuditSchema>;
 
 export type TopicSuggestion = typeof topicSuggestions.$inferSelect;
 export type InsertTopicSuggestion = z.infer<typeof insertTopicSuggestionSchema>;
+
+// Topic Status Enum
+export const TOPIC_STATUS = {
+  COLLECTING: 'collecting',
+  IN_REVIEW: 'in_review',
+  ACTION_DECIDED: 'action_decided',
+  ACTIONED: 'actioned',
+  ARCHIVED: 'archived'
+} as const;
+
+export type TopicStatus = typeof TOPIC_STATUS[keyof typeof TOPIC_STATUS];

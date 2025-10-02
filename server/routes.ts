@@ -960,6 +960,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Topic Management API (admin-only)
+  // More specific routes first to avoid matching issues
+  app.get('/api/topics/categorized', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const categorized = await storage.getCategorizedTopics(orgId);
+      
+      // Enhance each category with owner information
+      const enhanceTopics = async (topicsList: any[]) => {
+        return await Promise.all(
+          topicsList.map(async (topic) => {
+            let ownerEmail = null;
+            if (topic.ownerId) {
+              const owner = await storage.getUser(topic.ownerId);
+              ownerEmail = owner?.email || null;
+            }
+            return {
+              ...topic,
+              ownerEmail,
+            };
+          })
+        );
+      };
+      
+      const enhanced = {
+        created: await enhanceTopics(categorized.created),
+        instances: await enhanceTopics(categorized.instances),
+        archived: await enhanceTopics(categorized.archived),
+      };
+      
+      res.json(enhanced);
+    } catch (error) {
+      console.error('Get categorized topics error:', error);
+      res.status(500).json({ error: 'Failed to fetch categorized topics' });
+    }
+  });
+
   app.get('/api/topics', requireRole('owner', 'admin'), async (req, res) => {
     try {
       const orgId = req.session.orgId!;
@@ -1061,10 +1097,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate status transitions if status is being changed
       if (status !== undefined && status !== currentTopic.status) {
         const validTransitions: Record<string, string[]> = {
-          'collecting': ['in_review'],
-          'in_review': ['collecting', 'action_decided'],
-          'action_decided': ['actioned'],
-          'actioned': [] // Terminal state - no further transitions
+          'collecting': ['in_review', 'archived'],
+          'in_review': ['collecting', 'action_decided', 'archived'],
+          'action_decided': ['actioned', 'archived'],
+          'actioned': ['archived'], // Can archive after actioned
+          'archived': [] // Terminal state - no further transitions
         };
         
         const allowedNextStates = validTransitions[currentTopic.status] || [];
