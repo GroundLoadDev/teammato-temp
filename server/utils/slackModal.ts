@@ -116,7 +116,7 @@ export function buildFeedbackModal(
       optional: showTopicSuggestions,
       label: {
         type: "plain_text",
-        text: showTopicSuggestions ? "Behavior (Required for feedback)" : "Behavior"
+        text: "Behavior"
       },
       hint: {
         type: "plain_text",
@@ -142,7 +142,7 @@ export function buildFeedbackModal(
       optional: showTopicSuggestions,
       label: {
         type: "plain_text",
-        text: showTopicSuggestions ? "Impact (Required for feedback)" : "Impact"
+        text: "Impact"
       },
       hint: {
         type: "plain_text",
