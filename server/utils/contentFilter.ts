@@ -1,4 +1,5 @@
 // Content filtering utilities for privacy protection
+import crypto from 'crypto';
 
 export interface FilterResult {
   isValid: boolean;
@@ -101,7 +102,6 @@ export function generateReceiptHash(userId: string, topicId: string, timestamp: 
 
 // Generate submitter hash for deduplication and rate-limiting
 export function generateSubmitterHash(userId: string, orgId: string): string {
-  const crypto = require('crypto');
   const secret = process.env.SESSION_SECRET || 'default-secret';
   const data = `${userId}:${orgId}:${new Date().toISOString().slice(0, 10)}`;
   return crypto.createHmac('sha256', secret)
