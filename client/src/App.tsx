@@ -1,9 +1,11 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Navigation } from "@/components/Navigation";
+import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
 import NotFound from "@/pages/not-found";
 
 // Public pages
@@ -65,13 +67,53 @@ function Router() {
   );
 }
 
+function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <SidebarProvider>
+      <div className="flex h-screen w-full">
+        <AppSidebar />
+        <SidebarInset className="flex flex-col flex-1">
+          <header className="flex h-14 items-center gap-4 border-b px-6">
+            <SidebarTrigger data-testid="button-sidebar-toggle" />
+            <div className="flex-1" />
+          </header>
+          <main className="flex-1 overflow-auto">
+            {children}
+          </main>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
+  );
+}
+
+function PublicLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <Navigation />
+      {children}
+    </>
+  );
+}
+
+function AppRouter() {
+  const [location] = useLocation();
+  const isAdmin = location.startsWith("/admin");
+
+  const Layout = isAdmin ? AdminLayout : PublicLayout;
+
+  return (
+    <Layout>
+      <Router />
+    </Layout>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Navigation />
         <Toaster />
-        <Router />
+        <AppRouter />
       </TooltipProvider>
     </QueryClientProvider>
   );
