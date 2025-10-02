@@ -681,10 +681,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Slack Modal Submission - Handle feedback modal submissions
   app.post('/api/slack/modal', async (req, res) => {
+    console.log('[MODAL] Received modal submission');
     try {
       // Verify Slack signature
       if (!verifySlackSignature(req)) {
-        console.error('Invalid Slack signature');
+        console.error('[MODAL] Invalid Slack signature');
         return res.status(401).json({ error: 'Invalid signature' });
       }
 
@@ -694,15 +695,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const payloadStr = body.get('payload');
       
       if (!payloadStr) {
+        console.error('[MODAL] Missing payload');
         return res.status(400).json({ error: 'Missing payload' });
       }
 
       const payload = JSON.parse(payloadStr);
       const { user, view, team } = payload;
+      console.log(`[MODAL] User: ${user.id}, Team: ${team.id}`);
 
       // Extract metadata
       const metadata = JSON.parse(view.private_metadata);
       const { topicId, orgId } = metadata;
+      console.log(`[MODAL] TopicId: ${topicId}, OrgId: ${orgId}`);
 
       // Extract form values
       const values = view.state.values;
@@ -845,8 +849,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get topic
+      console.log(`[MODAL] Fetching topic ${topicId} for org ${orgId}`);
       const topic = await storage.getTopic(topicId, orgId);
+      console.log(`[MODAL] Topic found:`, topic ? `${topic.name} (isActive: ${topic.isActive})` : 'null');
       if (!topic || !topic.isActive) {
+        console.error(`[MODAL] Topic validation failed - exists: ${!!topic}, isActive: ${topic?.isActive}`);
         return res.json({
           response_action: 'errors',
           errors: {
@@ -856,6 +863,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         });
       }
+      console.log(`[MODAL] Topic validated, proceeding with thread creation`);
 
       // Find or create collecting thread
       let thread = await storage.getActiveCollectingThread(topic.id, orgId);
@@ -938,7 +946,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
     } catch (error) {
-      console.error('Modal submission error:', error);
+      console.error('[MODAL] Modal submission error:', error);
+      console.error('[MODAL] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       return res.json({
         response_action: 'errors',
         errors: {
