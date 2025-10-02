@@ -62,6 +62,11 @@ export const topics = pgTable("topics", {
   status: text("status").notNull().default('collecting'),
   ownerId: uuid("owner_id").references(() => users.id, { onDelete: 'set null' }),
   actionNotes: text("action_notes"),
+  parentTopicId: uuid("parent_topic_id").references((): any => topics.id, { onDelete: 'cascade' }),
+  isParent: boolean("is_parent").notNull().default(false),
+  windowStart: timestamp("window_start"),
+  windowEnd: timestamp("window_end"),
+  instanceIdentifier: text("instance_identifier"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => ({
   uniqueSlug: unique().on(table.orgId, table.slug),

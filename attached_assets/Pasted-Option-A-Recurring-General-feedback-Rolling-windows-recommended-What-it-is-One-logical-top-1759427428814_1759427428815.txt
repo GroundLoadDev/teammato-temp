@@ -1,0 +1,76 @@
+Option A — Recurring “General feedback” (Rolling windows) ✅ recommended
+
+What it is: One logical topic (“General feedback”) that auto-spawns time-boxed instances (e.g., week or month).
+
+Examples: General feedback — 2025-W41, then … W42, or General feedback — Oct 2025.
+
+Behavior:
+
+New submissions automatically go to the current instance (no human needed).
+
+When an instance expires, you archive it (read-only) and auto-create the next instance.
+
+Release rule: publish aggregates only if the instance hit k; otherwise roll themes into the next instance or keep for admin-only trend tracking.
+
+Pros: Always open; clean archives; metrics by period; easy to communicate (“this week’s general feedback”).
+
+Cons: You’ll have multiple archived instances (normal and useful).
+
+Implementation notes
+
+Table: topics has a parent row (general_feedback) + child rows per period (topic_instances).
+
+Routing: /teammato <free text> → prefill Behavior → default Topic = current General instance.
+
+UI: App Home shows “General feedback — closes in X days.” Previous instances listed under “Past summaries.”
+
+Option B — Single “General feedback” with a Sliding window
+
+What it is: One topic that’s always open; you compute k on a sliding period (e.g., last 21 days) when releasing summaries.
+
+Pros: No instance management.
+
+Cons: Harder to do tidy archives (“what was last month’s?”). Reports can feel “moving target.”
+
+Option C — Continuous topic + Scheduled snapshots
+
+What it is: One always-open topic; you take a snapshot on a schedule (weekly/monthly) and release the snapshot if it meets k.
+
+Pros: Simple author flow + tidy reports.
+
+Cons: You still need snapshot logic (close-out markers) — effectively similar to Option A under the hood.
+
+Recommended default
+
+Option A: Recurring instances, weekly cadence, k≥5.
+It’s the most intuitive: keeps anonymity math clear, creates predictable “cadence” for leaders, and requires zero manual creation.
+
+Default settings
+
+Instance length: 14–21 days for small orgs, 7 days for larger orgs.
+
+Auto-create next instance: 24 hours before current expires.
+
+Carry-over rule: If an instance <k at expiry, carry its items forward for analysis but don’t publish; the next instance starts fresh for release.
+
+Naming: General feedback — 2025-W41 (week) or General feedback — Oct 2025 (month).
+
+UI copy: “General feedback — closes in 3 days. We publish an aggregate summary when there’s enough input.”
+
+Edge cases handled
+
+Submission during switchover: Route to whichever instance has the later close time (or add a 30-min “grace window”).
+
+Backfill to a real topic: If admins tag an item from General → “Tooling friction,” move it to that topic’s current instance and re-count for k.
+
+Tiny teams: Increase k (e.g., 7–9) and lengthen the window (21–28 days).
+
+Minimal engineering to enable it
+
+Schema: topic_parent(id, name) + topic_instance(id, parent_id, window_start, window_end, state).
+
+Cron/worker: Nightly job that (a) closes expired instances, (b) creates the next instance, (c) triggers aggregation if k met.
+
+Routing: Submission resolver that maps “General feedback” → the current open instance by NOW() BETWEEN window_start AND window_end.
+
+Release guard: Summaries show only aggregate themes from that instance; no example quotes until anonymization checks pass.

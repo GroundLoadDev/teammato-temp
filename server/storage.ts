@@ -45,6 +45,12 @@ export interface IStorage {
   getExpiredTopics(): Promise<Topic[]>;
   getTopicParticipantCount(topicId: string, orgId: string): Promise<number>;
   
+  // General Feedback Instances
+  getOrCreateParentTopic(orgId: string, userId: string): Promise<Topic>;
+  getCurrentGeneralFeedbackInstance(orgId: string): Promise<Topic | undefined>;
+  createGeneralFeedbackInstance(parentId: string, orgId: string, windowStart: Date, windowEnd: Date, instanceIdentifier: string): Promise<Topic>;
+  getExpiredInstances(): Promise<Topic[]>;
+  
   // Feedback Threads
   createFeedbackThread(thread: InsertFeedbackThread): Promise<FeedbackThread>;
   getFeedbackThread(id: string): Promise<FeedbackThread | undefined>;
@@ -261,6 +267,100 @@ export class PgStorage implements IStorage {
     }
 
     return uniqueParticipants.size;
+  }
+
+  // General Feedback Instances
+  async getOrCreateParentTopic(orgId: string, userId: string): Promise<Topic> {
+    // Check if parent topic already exists
+    const existing = await db.select().from(topics)
+      .where(and(
+        eq(topics.orgId, orgId),
+        eq(topics.isParent, true),
+        eq(topics.slug, 'general-feedback')
+      ))
+      .limit(1);
+    
+    if (existing[0]) {
+      return existing[0];
+    }
+    
+    // Create parent topic
+    const result = await db.insert(topics).values({
+      orgId,
+      name: 'General Feedback',
+      slug: 'general-feedback',
+      description: 'Share your thoughts, ideas, and feedback about anything',
+      kThreshold: 5,
+      isActive: true,
+      windowDays: 14,
+      status: 'collecting',
+      ownerId: userId,
+      isParent: true,
+    }).returning();
+    
+    return result[0];
+  }
+
+  async getCurrentGeneralFeedbackInstance(orgId: string): Promise<Topic | undefined> {
+    const now = new Date();
+    const result = await db.select().from(topics)
+      .where(and(
+        eq(topics.orgId, orgId),
+        eq(topics.isParent, false),
+        sqlOperator`${topics.parentTopicId} IS NOT NULL`,
+        eq(topics.isActive, true),
+        sqlOperator`${topics.windowStart} <= ${now}`,
+        sqlOperator`${topics.windowEnd} > ${now}`
+      ))
+      .limit(1);
+    
+    return result[0];
+  }
+
+  async createGeneralFeedbackInstance(
+    parentId: string, 
+    orgId: string, 
+    windowStart: Date, 
+    windowEnd: Date, 
+    instanceIdentifier: string
+  ): Promise<Topic> {
+    // Get parent topic to inherit settings
+    const parent = await this.getTopic(parentId, orgId);
+    if (!parent) {
+      throw new Error('Parent topic not found');
+    }
+    
+    const result = await db.insert(topics).values({
+      orgId,
+      name: `${parent.name} — ${instanceIdentifier}`,
+      slug: `general-feedback-${instanceIdentifier.toLowerCase().replace(/\s+/g, '-')}`,
+      description: parent.description,
+      kThreshold: parent.kThreshold,
+      isActive: true,
+      expiresAt: windowEnd,
+      windowDays: parent.windowDays,
+      status: 'collecting',
+      ownerId: parent.ownerId,
+      parentTopicId: parentId,
+      isParent: false,
+      windowStart,
+      windowEnd,
+      instanceIdentifier,
+    }).returning();
+    
+    return result[0];
+  }
+
+  async getExpiredInstances(): Promise<Topic[]> {
+    const now = new Date();
+    return await db.select().from(topics)
+      .where(and(
+        eq(topics.isParent, false),
+        sqlOperator`${topics.parentTopicId} IS NOT NULL`,
+        eq(topics.isActive, true),
+        eq(topics.status, 'collecting'),
+        sqlOperator`${topics.windowEnd} <= ${now}`
+      ));
   }
 
   // Feedback Threads
