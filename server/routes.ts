@@ -371,6 +371,236 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User Management API (admin-only)
+  app.get('/api/users', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      
+      // Get all active users
+      const users = await storage.getOrgUsers(orgId);
+      
+      // Get pending invitations
+      const pendingInvitations = await storage.getOrgInvitations(orgId, 'pending');
+      
+      // Enhance invitations with inviter information
+      const enhancedInvitations = await Promise.all(
+        pendingInvitations.map(async (invitation) => {
+          const inviter = await storage.getUser(invitation.invitedBy);
+          return {
+            ...invitation,
+            inviterEmail: inviter?.email || null,
+          };
+        })
+      );
+      
+      res.json({
+        users,
+        pendingInvitations: enhancedInvitations,
+      });
+    } catch (error) {
+      console.error('Get users error:', error);
+      res.status(500).json({ error: 'Failed to fetch users' });
+    }
+  });
+
+  app.post('/api/invitations', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const inviterId = req.session.userId!;
+      
+      // Validate request body
+      const bodySchema = z.object({
+        slackHandle: z.string().min(1),
+        role: z.enum(['owner', 'admin', 'moderator', 'viewer']),
+      });
+      
+      const result = bodySchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: 'Invalid request body', details: result.error });
+      }
+      
+      const { slackHandle, role } = result.data;
+      
+      // Only owners can invite other owners
+      if (role === 'owner' && req.session.role !== 'owner') {
+        return res.status(403).json({ error: 'Only owners can invite other owners' });
+      }
+      
+      // Get Slack team to use their access token
+      const slackTeam = await storage.getSlackTeamByOrgId(orgId);
+      if (!slackTeam) {
+        return res.status(400).json({ error: 'Slack team not connected' });
+      }
+      
+      const slackClient = new WebClient(slackTeam.accessToken);
+      
+      // Remove @ prefix if present
+      const cleanHandle = slackHandle.startsWith('@') ? slackHandle.slice(1) : slackHandle;
+      
+      // Look up Slack user by handle (search all users)
+      const usersListResponse = await slackClient.users.list({});
+      const slackUser = (usersListResponse.members as any[])?.find(
+        (member: any) => member.name === cleanHandle || member.profile?.display_name === cleanHandle
+      );
+      
+      if (!slackUser) {
+        return res.status(404).json({ error: 'Slack user not found. Please check the handle.' });
+      }
+      
+      const slackUserId = slackUser.id;
+      const email = slackUser.profile?.email || null;
+      
+      // Check if user is already in the org
+      const existingUser = await storage.getUserBySlackId(slackUserId, orgId);
+      if (existingUser) {
+        return res.status(409).json({ error: 'User is already a member of this organization' });
+      }
+      
+      // Check if there's already a pending invitation
+      const existingInvitation = await storage.getPendingInvitationBySlackUserId(slackUserId, orgId);
+      if (existingInvitation) {
+        return res.status(409).json({ error: 'User already has a pending invitation' });
+      }
+      
+      // Create invitation (expires in 7 days)
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+      
+      const invitation = await storage.createInvitation({
+        orgId,
+        slackUserId,
+        slackHandle: cleanHandle,
+        email,
+        role,
+        invitedBy: inviterId,
+        status: 'pending',
+        expiresAt,
+      });
+      
+      // Get inviter info for the DM
+      const inviter = await storage.getUser(inviterId);
+      const inviterName = inviter?.email || 'An admin';
+      
+      // Send DM with invitation button
+      try {
+        await slackClient.chat.postMessage({
+          channel: slackUserId,
+          text: `You've been invited to join Teammato!`,
+          blocks: [
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: `Hi <@${slackUserId}>! ${inviterName} has invited you to be an *${role}* on Teammato.`,
+              },
+            },
+            {
+              type: 'actions',
+              elements: [
+                {
+                  type: 'button',
+                  text: {
+                    type: 'plain_text',
+                    text: 'Accept Invitation',
+                  },
+                  style: 'primary',
+                  value: invitation.id,
+                  action_id: 'accept_invitation',
+                },
+              ],
+            },
+          ],
+        });
+      } catch (dmError) {
+        console.error('Failed to send DM:', dmError);
+        // Still return success - invitation is created
+      }
+      
+      res.json(invitation);
+    } catch (error) {
+      console.error('Create invitation error:', error);
+      res.status(500).json({ error: 'Failed to create invitation' });
+    }
+  });
+
+  app.patch('/api/users/:id/role', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const userId = req.params.id;
+      const currentUserRole = req.session.role!;
+      
+      // Validate request body
+      const bodySchema = z.object({
+        role: z.enum(['owner', 'admin', 'moderator', 'viewer']),
+      });
+      
+      const result = bodySchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: 'Invalid request body', details: result.error });
+      }
+      
+      const { role } = result.data;
+      
+      // Only owners can promote to owner or demote owners
+      if ((role === 'owner' || currentUserRole !== 'owner')) {
+        const targetUser = await storage.getUser(userId);
+        if (targetUser?.role === 'owner' && currentUserRole !== 'owner') {
+          return res.status(403).json({ error: 'Only owners can change owner roles' });
+        }
+      }
+      
+      if (role === 'owner' && currentUserRole !== 'owner') {
+        return res.status(403).json({ error: 'Only owners can promote users to owner' });
+      }
+      
+      // Prevent users from changing their own role
+      if (userId === req.session.userId) {
+        return res.status(400).json({ error: 'Cannot change your own role' });
+      }
+      
+      const updatedUser = await storage.updateUserRole(userId, role, orgId);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error('Update user role error:', error);
+      res.status(500).json({ error: 'Failed to update user role' });
+    }
+  });
+
+  app.delete('/api/users/:id', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const userId = req.params.id;
+      
+      // Prevent users from deleting themselves
+      if (userId === req.session.userId) {
+        return res.status(400).json({ error: 'Cannot delete your own account' });
+      }
+      
+      // Check if target user exists and get their role
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser || targetUser.orgId !== orgId) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      // Only owners can delete other owners
+      if (targetUser.role === 'owner' && req.session.role !== 'owner') {
+        return res.status(403).json({ error: 'Only owners can delete other owners' });
+      }
+      
+      await storage.deleteUser(userId, orgId);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Delete user error:', error);
+      res.status(500).json({ error: 'Failed to delete user' });
+    }
+  });
+
   // Feedback Management API (moderator-only)
   app.get('/api/feedback/threads', requireRole('owner', 'admin', 'moderator'), async (req, res) => {
     try {
