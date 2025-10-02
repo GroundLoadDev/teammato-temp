@@ -2,7 +2,7 @@ import { eq, and, sql as sqlOperator, desc } from "drizzle-orm";
 import { db } from "./db";
 import { 
   orgs, users, slackTeams, slackSettings, topics,
-  feedbackThreads, feedbackItems, moderationAudit, topicSuggestions,
+  feedbackThreads, feedbackItems, moderationAudit, topicSuggestions, invitations,
   type Org, type InsertOrg,
   type User, type InsertUser,
   type SlackTeam, type InsertSlackTeam,
@@ -11,7 +11,8 @@ import {
   type FeedbackThread, type InsertFeedbackThread,
   type FeedbackItem, type InsertFeedbackItem,
   type ModerationAudit, type InsertModerationAudit,
-  type TopicSuggestion, type InsertTopicSuggestion
+  type TopicSuggestion, type InsertTopicSuggestion,
+  type Invitation, type InsertInvitation
 } from "@shared/schema";
 
 export interface IStorage {
@@ -23,7 +24,17 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string, orgId: string): Promise<User | undefined>;
   getUserBySlackId(slackUserId: string, orgId: string): Promise<User | undefined>;
+  getOrgUsers(orgId: string): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserRole(userId: string, role: string, orgId: string): Promise<User | undefined>;
+  deleteUser(userId: string, orgId: string): Promise<void>;
+  
+  // Invitations
+  createInvitation(invitation: InsertInvitation): Promise<Invitation>;
+  getInvitation(id: string, orgId: string): Promise<Invitation | undefined>;
+  getPendingInvitationBySlackUserId(slackUserId: string, orgId: string): Promise<Invitation | undefined>;
+  getOrgInvitations(orgId: string, status?: string): Promise<Invitation[]>;
+  updateInvitationStatus(id: string, status: string, orgId: string): Promise<Invitation | undefined>;
   
   // Slack Teams
   getSlackTeamByTeamId(teamId: string): Promise<SlackTeam | undefined>;
@@ -151,6 +162,68 @@ export class PgStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const result = await db.insert(users).values(insertUser).returning();
+    return result[0];
+  }
+
+  async getOrgUsers(orgId: string): Promise<User[]> {
+    return await db.select().from(users)
+      .where(eq(users.orgId, orgId))
+      .orderBy(desc(users.createdAt));
+  }
+
+  async updateUserRole(userId: string, role: string, orgId: string): Promise<User | undefined> {
+    const result = await db.update(users)
+      .set({ role })
+      .where(and(eq(users.id, userId), eq(users.orgId, orgId)))
+      .returning();
+    return result[0];
+  }
+
+  async deleteUser(userId: string, orgId: string): Promise<void> {
+    await db.delete(users)
+      .where(and(eq(users.id, userId), eq(users.orgId, orgId)));
+  }
+
+  // Invitations
+  async createInvitation(insertInvitation: InsertInvitation): Promise<Invitation> {
+    const result = await db.insert(invitations).values(insertInvitation).returning();
+    return result[0];
+  }
+
+  async getInvitation(id: string, orgId: string): Promise<Invitation | undefined> {
+    const result = await db.select().from(invitations)
+      .where(and(eq(invitations.id, id), eq(invitations.orgId, orgId)))
+      .limit(1);
+    return result[0];
+  }
+
+  async getPendingInvitationBySlackUserId(slackUserId: string, orgId: string): Promise<Invitation | undefined> {
+    const result = await db.select().from(invitations)
+      .where(and(
+        eq(invitations.slackUserId, slackUserId),
+        eq(invitations.orgId, orgId),
+        eq(invitations.status, 'pending')
+      ))
+      .limit(1);
+    return result[0];
+  }
+
+  async getOrgInvitations(orgId: string, status?: string): Promise<Invitation[]> {
+    if (status) {
+      return await db.select().from(invitations)
+        .where(and(eq(invitations.orgId, orgId), eq(invitations.status, status)))
+        .orderBy(desc(invitations.createdAt));
+    }
+    return await db.select().from(invitations)
+      .where(eq(invitations.orgId, orgId))
+      .orderBy(desc(invitations.createdAt));
+  }
+
+  async updateInvitationStatus(id: string, status: string, orgId: string): Promise<Invitation | undefined> {
+    const result = await db.update(invitations)
+      .set({ status })
+      .where(and(eq(invitations.id, id), eq(invitations.orgId, orgId)))
+      .returning();
     return result[0];
   }
 
