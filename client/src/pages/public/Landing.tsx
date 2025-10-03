@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Play, Link2, Lock, CheckCircle2, ArrowRight } from "lucide-react";
+import { MessageSquare, Play, Link2, Lock, CheckCircle2, ArrowRight, Shield, Globe, Database } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 
 // Quad motif SVG - rounded cross shape
@@ -595,6 +595,90 @@ export default function Landing() {
                 <p className="text-xs text-muted-foreground text-right">
                   Individual comments are never shown
                 </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 3: SECURITY FACT STRIP */}
+      <section className="relative pt-16 pb-16" style={{ marginTop: '72px' }}>
+        <div className="mx-auto max-w-7xl px-6">
+          {/* Section heading */}
+          <div className="mx-auto max-w-4xl mb-10">
+            <h2 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-4">
+              Why it's safe
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Privacy is enforced in the product—not promised in policy.
+            </p>
+          </div>
+
+          {/* Security rail */}
+          <div className="mx-auto max-w-4xl">
+            <div 
+              className="bg-card border border-border rounded-xl px-6 py-5"
+              data-testid="rail-security"
+            >
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                {/* Pills container */}
+                <div className="flex flex-wrap md:flex-nowrap items-center gap-3 overflow-x-auto snap-x snap-mandatory">
+                  {/* Pill 1: Encrypt */}
+                  <button
+                    className="group flex items-center gap-2.5 px-4 py-2.5 rounded-lg border border-border bg-background hover:bg-[hsl(var(--seafoam)/0.08)] transition-all duration-200 hover:translate-y-[-2px] active:translate-y-0 snap-start shrink-0"
+                    data-testid="pill-encrypt"
+                  >
+                    <Shield 
+                      className="w-4 h-4 shrink-0" 
+                      strokeWidth={1.75}
+                      style={{ color: 'hsl(var(--primary))' }}
+                    />
+                    <span className="text-sm font-medium text-foreground whitespace-nowrap">
+                      Encrypt per org (AEAD)
+                    </span>
+                  </button>
+
+                  {/* Pill 2: Don't log IPs */}
+                  <button
+                    className="group flex items-center gap-2.5 px-4 py-2.5 rounded-lg border border-border bg-background hover:bg-[hsl(var(--seafoam)/0.08)] transition-all duration-200 hover:translate-y-[-2px] active:translate-y-0 snap-start shrink-0"
+                    data-testid="pill-ip-logging"
+                  >
+                    <Globe 
+                      className="w-4 h-4 shrink-0" 
+                      strokeWidth={1.75}
+                      style={{ color: 'hsl(var(--primary))' }}
+                    />
+                    <span className="text-sm font-medium text-foreground whitespace-nowrap">
+                      Don't log IPs in feedback tables
+                    </span>
+                  </button>
+
+                  {/* Pill 3: Isolate by tenant */}
+                  <button
+                    className="group flex items-center gap-2.5 px-4 py-2.5 rounded-lg border border-border bg-background hover:bg-[hsl(var(--seafoam)/0.08)] transition-all duration-200 hover:translate-y-[-2px] active:translate-y-0 snap-start shrink-0"
+                    data-testid="pill-tenant-isolation"
+                  >
+                    <Database 
+                      className="w-4 h-4 shrink-0" 
+                      strokeWidth={1.75}
+                      style={{ color: 'hsl(var(--primary))' }}
+                    />
+                    <span className="text-sm font-medium text-foreground whitespace-nowrap">
+                      Isolate by tenant (RLS)
+                    </span>
+                  </button>
+                </div>
+
+                {/* Right-aligned link */}
+                <a
+                  href="/trust#security"
+                  className="text-sm font-medium shrink-0 flex items-center gap-1.5 group"
+                  style={{ color: 'hsl(var(--primary))' }}
+                  data-testid="link-trust-security"
+                >
+                  <span>Read the details</span>
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" strokeWidth={1.75} />
+                </a>
               </div>
             </div>
           </div>
