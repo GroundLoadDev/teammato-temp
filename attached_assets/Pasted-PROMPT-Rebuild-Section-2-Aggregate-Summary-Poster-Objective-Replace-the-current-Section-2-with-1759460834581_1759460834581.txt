@@ -1,0 +1,93 @@
+PROMPT — Rebuild Section 2 (Aggregate Summary Poster)
+
+Objective: Replace the current Section 2 with a single, premium “poster” component that proves what leaders get—an anonymized theme summary with one clear action. It must read as marketing, not an admin panel. Use existing theme tokens only.
+
+Section framing (text to ship)
+
+H2: Themes at a glance.
+
+Subhead (one line): When enough teammates weigh in, Teammato delivers a single, anonymized summary you can act on.
+
+The poster card (one card, centered)
+
+Max width: 920px.
+
+Padding: pt-40 pb-36.
+
+Spacing from previous section: mt-112 (no negative margins).
+
+Shadow: long/soft (16–20px blur, low opacity). Parent must allow overflow.
+
+Header (seafoam strip, 56–64px tall)
+
+Left, bold label: Aggregate summary
+
+Under it (muted, same line): Topic · Roadmap clarity
+
+Right: cohort dots — fixed 6–8 small circles in seafoam tones (decorative only; never wrap).
+
+Teal L-frame outline (1px) on the top and left edges of the card only.
+
+Body
+
+Muted intro label: Anonymized themes
+
+Three one-line theme chips (no paragraphs):
+
+Clarify scope before demos
+
+Share sprint goals earlier
+
+Add QA sign-off checklist
+
+Action bar (at bottom)
+
+Chip: You said → We did
+
+One concise action sentence: Added QA sign-off to Friday release checklist
+
+Micro-note (optional, tiny, footer-right): Individual comments are never shown
+
+Brand form factor
+
+No window chrome, kebab menus, timestamps, dividers, or extra badges.
+
+Quad-corner lift: simulate a lifted top-left corner with a corner-biased shadow; do not change border radius.
+
+Seafoam used once (header strip).
+
+Tomato micro-accent: exactly one 4–6px dot inside the action icon; nowhere else in this section.
+
+Motion (meaningful only)
+
+Cohort dots stagger in (80ms) when card enters view.
+
+Action chip slides in 4–6px after the dots.
+
+No zooms. Respect prefers-reduced-motion.
+
+Accessibility & contrast
+
+Deep-teal text on the seafoam header for AA+.
+
+Visible teal focus ring on any interactive chip/link.
+
+Theme chips are one line each; truncate with ellipsis if needed.
+
+Acceptance checklist (must pass)
+
+Section contains only: H2, subhead, one centered poster card, micro-note (optional).
+
+Card looks like a final deliverable, not a dashboard.
+
+Exactly three theme chips + one action sentence.
+
+Dots never wrap; L-frame aligns perfectly; shadow not clipped.
+
+Generous white space above/below; no background quads in this section.
+
+No words like “example,” “k-met,” or internal jargon.
+
+If a placeholder is required (no live UI yet)
+
+Use a neutral image box labeled PLACEHOLDER: AGGREGATE_SUMMARY_CARD that follows the structure above (header strip, dots row, three chips, action chip). Do not attempt to auto-draw extra UI.
