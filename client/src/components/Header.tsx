@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 type NavItem = { label: string; href: string };
 
 const NAV: NavItem[] = [
-  { label: "Features", href: "/#features" },
+  { label: "Features", href: "/features" },
   { label: "Pricing", href: "/pricing" },
   { label: "FAQ", href: "/#faq" },
   { label: "Trust", href: "/trust" },

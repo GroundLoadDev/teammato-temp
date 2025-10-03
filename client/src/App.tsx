@@ -9,6 +9,7 @@ import NotFound from "@/pages/not-found";
 
 // Public pages
 import Landing from "@/pages/public/Landing";
+import Features from "@/pages/public/Features";
 import Pricing from "@/pages/public/Pricing";
 import FAQ from "@/pages/public/FAQ";
 import Contact from "@/pages/public/Contact";
@@ -39,6 +40,7 @@ function Router() {
     <Switch>
       {/* Public pages */}
       <Route path="/" component={Landing} />
+      <Route path="/features" component={Features} />
       <Route path="/pricing" component={Pricing} />
       <Route path="/faq" component={FAQ} />
       <Route path="/contact" component={Contact} />
