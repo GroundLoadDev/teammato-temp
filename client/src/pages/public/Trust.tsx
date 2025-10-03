@@ -37,9 +37,7 @@ function TrustHero() {
         </div>
 
         <div className="mt-6 flex flex-wrap gap-3">
-          <a href="/dpa" className="rounded-xl border px-4 py-2 text-sm hover:bg-muted" data-testid="link-dpa">Download DPA</a>
-          <a href="/subprocessors" className="rounded-xl border px-4 py-2 text-sm hover:bg-muted" data-testid="link-subprocessors">Subprocessors</a>
-          <a href="https://status.teammato.com" className="rounded-xl border px-4 py-2 text-sm hover:bg-muted" data-testid="link-status">Status</a>
+          <a href="/Teammato_DPA.pdf" download className="rounded-xl border px-4 py-2 text-sm hover:bg-muted" data-testid="link-dpa">Download DPA</a>
         </div>
       </div>
     </section>
@@ -224,11 +222,6 @@ function Compliance() {
           </details>
         ))}
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">
-        Need artifacts? See <a className="underline underline-offset-4" href="/dpa">DPA</a>,{" "}
-        <a className="underline underline-offset-4" href="/subprocessors">Subprocessors</a>, and{" "}
-        <a className="underline underline-offset-4" href="https://status.teammato.com">Status</a>.
-      </p>
     </section>
   );
 }
@@ -240,7 +233,7 @@ function ContactStrip() {
         <div className="md:col-span-8">
           <h3 className="text-xl font-semibold" data-testid="text-contact-title">Security questions or a review?</h3>
           <p className="mt-1 text-sm text-muted-foreground" data-testid="text-contact-subtitle">
-            We'll share artifacts under NDA and answer technical controls—no sales pitch.
+            No sales pitches. Transparency over gatekeeping: all security documents are published here. Contact teammato if you need something custom.
           </p>
         </div>
         <div className="md:col-span-4">
