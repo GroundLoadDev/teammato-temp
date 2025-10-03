@@ -1668,7 +1668,7 @@ export default function Landing() {
                     <div
                       key={i}
                       className="w-6 h-6 rounded"
-                      style={{ backgroundColor: 'hsl(var(--muted))' }}
+                      style={{ backgroundColor: 'hsl(var(--primary))' }}
                     />
                   ))}
                 </div>
@@ -1686,24 +1686,24 @@ export default function Landing() {
               {/* 3. Threshold gate (lock + meter) - Seafoam signal */}
               <div className="flex flex-col items-center gap-2 flex-1">
                 <div 
-                  className="relative w-20 h-20 rounded-lg border-2 flex flex-col items-center justify-center gap-1 p-2"
+                  className="relative w-20 h-20 rounded-lg border-2 flex flex-col items-center justify-center gap-1.5 p-2"
                   style={{ 
                     borderColor: 'hsl(var(--seafoam))',
-                    backgroundColor: 'hsl(var(--accent) / 0.05)'
+                    backgroundColor: 'hsl(var(--seafoam) / 0.12)'
                   }}
                 >
                   {/* Lock icon */}
                   <Lock 
-                    className="w-5 h-5" 
+                    className="w-6 h-6" 
                     style={{ color: 'hsl(var(--seafoam))' }}
-                    strokeWidth={1.75}
+                    strokeWidth={2}
                   />
                   {/* Mini meter */}
-                  <div className="flex gap-0.5">
+                  <div className="flex gap-1">
                     {[1, 2, 3, 4].map((i) => (
                       <div
                         key={i}
-                        className="w-2 h-2 rounded-sm"
+                        className="w-2.5 h-2.5 rounded-sm"
                         style={{ backgroundColor: 'hsl(var(--seafoam))' }}
                       />
                     ))}
