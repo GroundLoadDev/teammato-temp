@@ -1,0 +1,109 @@
+Global spacing guardrails (so sections don’t crowd)
+
+Hero → Section 1 offset: margin-top: 64–80px on Section 1 (desktop). The hero’s overlapping modal may sit visually closer; the section cards should still start ~64px below the hero copy block.
+
+Section paddings (desktop):
+
+Hero: pt-96 / pb-48 (or visually equivalent).
+
+Section 1 (Install strip): pt-24 / pb-28.
+
+Card elevation rhythm: long, soft shadow (12–18px blur, low opacity). Hover = shadow only; no scale.
+
+Mobile/tablet: reduce above values by ~30% (tablet) and ~45% (mobile).
+
+Image placeholders (use these exact labels):
+
+PLACEHOLDER: OAUTH_SCREENSHOT (Tile 1)
+
+PLACEHOLDER: MODAL_CROP_SBI (Tile 2)
+
+PLACEHOLDER: ACTION_POST_CARD (Tile 3)
+Replit should not synthesize UI—drop these images in later.
+
+Section 2 — Aggregate Summary (poster component)
+
+Purpose
+Be the “movie poster” for Teammato: show what leaders actually see—safe aggregation, themes, and an action chip. This is the visual proof that we’re not just collecting venting.
+
+Layout
+
+One wide card, centered. Max width 880–960px on desktop.
+
+Section padding: pt-40 / pb-36.
+
+Top spacing from Section 1: additional mt-56 (or 80–96px) so the poster breathes.
+
+Structure inside the card
+
+Seafoam header strip (56–64px tall)
+
+Left: Topic title and tiny “k met” hint (no numbers).
+
+Right: cohort dots (8–10 fixed positions; 2–3 seafoam tones).
+
+Teal L-frame: 1px outline that hugs top + left edges of the card only.
+
+Body
+
+Line: “Based on anonymous submissions (min threshold reached).” (plain, no k jargon)
+
+Theme bullets (2–3)—each bullet in a soft capsule row.
+
+Action row: “You said → We did” action chip (success tint) with one concise action beneath.
+
+Brand form factor
+
+Quad-corner emphasis: simulate a lifted top-left corner using a corner-biased shadow; do not change radius.
+
+Single container owns border + radius (no seams between header and body).
+
+Shadow: longer blur (16–20px), lower opacity; ensure parent allows overflow so it isn’t clipped.
+
+Color & accents
+
+Header background: seafoam (--accent) with deep-teal text.
+
+Dots: seafoam tones only; no green checks—keep it abstract.
+
+One tomato micro-dot in this section: inside the action icon only.
+
+Motion (meaningful)
+
+Cohort dots fill in a left→right stagger (80ms) when the card enters view.
+
+Action chip slides in 4–6px with a soft ease.
+
+Respect prefers-reduced-motion.
+
+Accessibility
+
+Deep-teal text on seafoam to maintain AA contrast.
+
+Focus rings visible on any interactive chips/links inside the card.
+
+Mobile & tablet
+
+Max width becomes full-bleed minus gutters; header compresses to 48px.
+
+Dots reduce to 6 positions (still fixed; never wrap).
+
+Body uses 2 themes + action to avoid crowding.
+
+Acceptance checklist
+
+One wide poster card, centered, with generous white space above/below.
+
+L-frame aligns perfectly to card edges; no double borders or seams.
+
+Cohort dots are fixed and never wrap; header and body radii match.
+
+Exactly one tomato micro-accent in the section.
+
+Motion = dots stagger + chip slide; no zooms.
+
+Card reads like “what leaders get,” not a mock graph.
+
+Image placeholder used here:
+
+PLACEHOLDER: AGGREGATE_SUMMARY_CARD (single composite image if you’re not rendering live UI yet).
