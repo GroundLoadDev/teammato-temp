@@ -727,18 +727,18 @@ export default function Landing() {
                         key={key}
                         onClick={() => setActivePrinciple(key)}
                         className={[
-                          "flex items-center justify-between rounded-xl px-3 py-3 text-left ring-1 ring-black/5",
+                          "flex items-start justify-between rounded-xl px-3 py-3 min-h-[56px] text-left ring-1 ring-black/5",
                           isActive ? "bg-background shadow-sm" : "bg-muted hover:bg-muted/70",
                         ].join(" ")}
                         aria-pressed={isActive}
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-start gap-2">
                           <span className={["flex h-7 w-7 items-center justify-center rounded-lg",
                             isActive ? "bg-emerald-600 text-white" : "bg-foreground/10 text-foreground/80"
                           ].join(" ")}>
                             <Icon className="h-4 w-4" />
                           </span>
-                          <span className="line-clamp-1 text-sm font-medium">{p.title}</span>
+                          <span className="text-sm font-medium leading-snug whitespace-normal break-words">{p.title}</span>
                         </div>
                         <span className="ml-2 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-emerald-200">
                           {p.badge}
