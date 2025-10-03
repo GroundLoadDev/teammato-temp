@@ -1,0 +1,143 @@
+Hero Section — “Make it safe to speak up—right in Slack.”
+Purpose
+
+Deliver instant clarity (what + where + why now), establish Teammato’s signature look, and create a tangible product proof above the fold.
+
+Composition (desktop)
+
+Layout grid
+
+Two columns, 58/42 split.
+
+Max width: 1180–1280px. Section padding: pt-24 / pb-16 (taller than average).
+
+Left column (copy + CTAs)
+
+H1 (editorial, left-aligned): “Make it safe to speak up—right in Slack.”
+
+Subhead (1 sentence, ≤140 chars): “Anonymous by default with behavior-focused prompts and aggregate summaries your leaders can act on.”
+
+Primary CTA: Add to Slack (primary)
+
+Secondary CTA: See how it works (ghost)
+
+Proof chips (3, in one row): Anonymous by default · Aggregate summaries (not names) · Install in minutes
+
+Right column (product proof)
+
+Hero card: cropped Slack modal (SBI fields) with:
+
+Aggregation meter (4 quads) at the top; quads fill sequentially on load
+
+Teal L-frame (1px outline on top/left edges) + long, soft shadow (12–18px blur, low opacity)
+
+Overlap & lift: card intentionally overlaps the section boundary by ~24–32px into the next section
+
+Tomato micro-accent: a single 4–6px dot as a notification bead on the card (one per viewport)
+
+Background
+
+Quad Field: large, sparse rounded-cross quads at 6–7% opacity; one quad sits partly off-canvas and peeks back in.
+
+Subtle grain (1–2%) on the neutral background only (no grain on the card).
+
+Visual language (brand tokens applied)
+
+Primary: teal family; accent: seafoam only for signals, not fills
+
+Typography: IBM Plex Serif for H1; Inter for subhead, chips, CTAs
+
+Shadows: airy (long blur, low opacity). On hover, shadow changes only (no scale)
+
+Focus rings: teal, visible on CTAs & chips (accessibility signal)
+
+No yellow/brown anywhere
+
+Motion & Interaction (meaningful, not decorative)
+
+Meter reveal: the 4 meter-quads fill at 80ms stagger on initial load/in-view
+
+Press physics: primary button depresses on click (translate-y 1px + shadow tighten)
+
+Quad Field parallax: hero-only, ≤1% scroll parallax (respect prefers-reduced-motion)
+
+CTA hover: subtle elevation; ghost CTA gains seafoam tint on hover (no gray wash)
+
+Content variants (same layout; swap only text if needed)
+
+Default (balanced): “Make it safe to speak up—right in Slack.”
+Subhead: “Anonymous by default with behavior-focused prompts and aggregate summaries your leaders can act on.”
+
+Outcome-led: “Find problems early. Fix them faster.”
+Subhead: “Anonymous by default in Slack with behavior-focused input your leaders can act on.”
+
+Security-led: “Privacy-first feedback, built for Slack.”
+Subhead: “Anonymous capture, per-org encryption, tenant isolation—aggregate summaries only.”
+
+(Keep one live; test the others later.)
+
+Mobile & Tablet behavior
+
+Tablet (≥768px)
+
+Keep 58/42 split; reduce hero card overlap to ~16px
+
+Shrink meter quads slightly; maintain L-frame
+
+Mobile (<768px)
+
+Order: product proof first, then H1, subhead, CTAs (shows product immediately)
+
+H1 clamps at 2 lines; subhead trims to: “Anonymous by default. Built for action.”
+
+Meter still animates; tomato bead remains visible
+
+Proof chips collapse to a horizontal scroll (chip-rail)
+
+Accessibility & Performance
+
+H1 color contrast AA+ on your light background
+
+Deep-teal text on any seafoam elements
+
+Focus ring visible on both CTAs + chips
+
+Hero card image is sized with explicit aspect ratio to prevent CLS
+
+Parallax/motion respects prefers-reduced-motion
+
+Do / Don’t (guardrails)
+
+Do
+
+Keep H1 left-aligned; use serif for H1 only
+
+Ensure one element breaks the section edge (overlap & lift)
+
+Use seafoam as signal (meter, chip underlines), not as big blocks
+
+Don’t
+
+Center the H1 on desktop
+
+Add gradient blobs or Memphis art
+
+Show numbers or “k-anonymity” jargon in the hero (explain below the fold)
+
+Use tomato red as a background (micro-accent only)
+
+Acceptance checklist (review in 30 seconds)
+
+I see one signature object (the hero modal) overlapping the next section
+
+The Quad Field is present but subtle; one quad peeks off-edge
+
+The meter animates in a short stagger; CTAs feel tactile; focus rings are visible
+
+Three proof chips say the promise without paragraphs
+
+No yellow/brown; a single tomato micro-accent is used
+
+Optional flourish (if you want a little “wow”)
+
+Interactive quads: on hover near the hero card, nearby quads rotate 2–3° and brighten +5%—a soft pulse that implies “alive system,” not a static template.
