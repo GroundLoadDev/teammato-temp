@@ -48,7 +48,7 @@ export default function PricingPage() {
     <main id="main">
       <PricingHero term={term} onTermChange={setTerm} />
       <SeatSizer seats={seats} setSeats={setSeats} recommended={recommended} term={term} />
-      <PlansGrid term={term} />
+      <PlansTwoUp term={term} />
       <FeatureParity />
       <BillingExplainer />
       <PricingFAQ />
@@ -175,47 +175,133 @@ function SeatSizer({
   );
 }
 
-function PlansGrid({ term }: { term: Term }) {
+function PlansTwoUp({ term }: { term: Term }) {
+  type ScaleBandKey = "scale_500" | "scale_1000" | "scale_2500" | "scale_5000";
+
+  type ScaleBand = {
+    key: ScaleBandKey;
+    cap: number;
+    monthly: number;
+    annual: number;
+    label: string;
+  };
+
+  const PRO = { key: "pro_250", name: "Pro", cap: 250, monthly: 99, annual: 999 };
+
+  const SCALE_BANDS: ScaleBand[] = [
+    { key: "scale_500",  cap: 500,  monthly: 149, annual: 1490, label: "Up to 500" },
+    { key: "scale_1000", cap: 1000, monthly: 199, annual: 1990, label: "Up to 1,000" },
+    { key: "scale_2500", cap: 2500, monthly: 299, annual: 2990, label: "Up to 2,500" },
+    { key: "scale_5000", cap: 5000, monthly: 399, annual: 3990, label: "Up to 5,000" },
+  ];
+
+  const [selected, setSelected] = useState<ScaleBandKey>("scale_500");
+  const active = SCALE_BANDS.find((b) => b.key === selected)!;
+  const price = term === "annual" ? active.annual : active.monthly;
+
   return (
-    <section className="mx-auto max-w-6xl px-6 py-4 md:py-6">
-      <div className="grid gap-4 md:grid-cols-5">
-        {BANDS.map((b, i) => (
-          <div
-            key={b.key}
-            className="rounded-2xl border bg-background p-5 shadow-[0_1px_0_rgba(0,0,0,0.06)]"
-            data-testid={`card-plan-${b.key}`}
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold" data-testid={`text-plan-name-${b.key}`}>{b.name}</h3>
-              <span className="rounded-full bg-foreground/5 px-2 py-1 text-xs text-foreground/70" data-testid={`text-plan-blurb-${b.key}`}>{b.blurb}</span>
-            </div>
+    <section className="mx-auto max-w-6xl px-6 py-6 md:py-8">
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* PRO column */}
+        <article className="rounded-2xl border bg-background p-6 shadow-[0_1px_0_rgba(0,0,0,0.06)]" data-testid="card-plan-pro">
+          <header className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold" data-testid="text-plan-name-pro">Pro</h3>
+            <span className="rounded-full bg-foreground/5 px-2 py-1 text-xs text-foreground/70">For most teams</span>
+          </header>
 
-            <div className="mt-2 text-3xl font-semibold" data-testid={`text-plan-price-${b.key}`}>
-              {formatUSD(term === "annual" ? b.annual : b.monthly)}
-              <span className="ml-1 text-sm font-normal text-muted-foreground">/{term === "annual" ? "yr" : "mo"}</span>
-            </div>
-
-            <ul className="mt-4 space-y-2 text-sm">
-              <li className="flex items-center justify-between">
-                <span>Max workspace users</span>
-                <span className="rounded-lg bg-foreground/5 px-2 py-0.5 text-xs text-foreground/70" data-testid={`text-plan-cap-${b.key}`}>{b.cap.toLocaleString()}</span>
-              </li>
-              <li className="text-muted-foreground">Anonymous posts & comments</li>
-              <li className="text-muted-foreground">Weekly digests & analytics</li>
-              <li className="text-muted-foreground">K-anonymity & retention controls</li>
-              <li className="text-muted-foreground">Email support</li>
-            </ul>
-
-            <a
-              href={`/api/billing/checkout?plan=${b.key}&term=${term}`}
-              className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-              data-testid={`button-choose-${b.key}`}
-            >
-              Choose {b.name}
-            </a>
+          <div className="mt-2 text-3xl font-semibold" data-testid="text-plan-price-pro">
+            {formatUSD(term === "annual" ? PRO.annual : PRO.monthly)}
+            <span className="ml-1 text-sm font-normal text-muted-foreground">/{term === "annual" ? "yr" : "mo"}</span>
           </div>
-        ))}
+
+          <ul className="mt-4 space-y-2 text-sm">
+            <li className="flex items-center justify-between">
+              <span>Max workspace users</span>
+              <span className="rounded-lg bg-foreground/5 px-2 py-0.5 text-xs text-foreground/70" data-testid="text-plan-cap-pro">
+                {PRO.cap.toLocaleString()}
+              </span>
+            </li>
+            <li className="text-muted-foreground">Anonymous posts & comments</li>
+            <li className="text-muted-foreground">Weekly digests & analytics</li>
+            <li className="text-muted-foreground">K-anonymity & retention controls</li>
+            <li className="text-muted-foreground">Email support</li>
+          </ul>
+
+          <a
+            href={`/api/billing/checkout?plan=${PRO.key}&term=${term}`}
+            className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+            data-testid="button-choose-pro"
+          >
+            Choose Pro
+          </a>
+        </article>
+
+        {/* SCALE column */}
+        <article className="rounded-2xl border bg-background p-6 shadow-[0_1px_0_rgba(0,0,0,0.06)]" data-testid="card-plan-scale">
+          <header className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold" data-testid="text-plan-name-scale">Scale</h3>
+            <span className="rounded-full bg-foreground/5 px-2 py-1 text-xs text-foreground/70">Larger workspaces</span>
+          </header>
+
+          <div className="mt-2 text-3xl font-semibold" data-testid="text-plan-price-scale">
+            {formatUSD(price)}
+            <span className="ml-1 text-sm font-normal text-muted-foreground">/{term === "annual" ? "yr" : "mo"}</span>
+          </div>
+
+          {/* size selector (interactive chips) */}
+          <div className="mt-4">
+            <p className="text-sm text-muted-foreground">Pick your seat cap</p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {SCALE_BANDS.map((b) => {
+                const activeChip = selected === b.key;
+                return (
+                  <button
+                    key={b.key}
+                    onClick={() => setSelected(b.key)}
+                    aria-pressed={activeChip}
+                    className={[
+                      "w-full rounded-xl px-3 py-2 text-left text-sm ring-1 ring-black/5 transition",
+                      activeChip ? "bg-emerald-600 text-white" : "bg-muted hover:bg-muted/70",
+                    ].join(" ")}
+                    data-testid={`button-scale-${b.key}`}
+                  >
+                    {b.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-3 flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Max workspace users</span>
+              <span className="rounded-lg bg-foreground/5 px-2 py-0.5 text-xs text-foreground/70" data-testid="text-plan-cap-scale">
+                {active.cap.toLocaleString()}
+              </span>
+            </div>
+          </div>
+
+          <ul className="mt-4 space-y-2 text-sm">
+            <li className="text-muted-foreground">Anonymous posts & comments</li>
+            <li className="text-muted-foreground">Weekly digests & analytics</li>
+            <li className="text-muted-foreground">K-anonymity & retention controls</li>
+            <li className="text-muted-foreground">Email support</li>
+          </ul>
+
+          <a
+            href={`/api/billing/checkout?plan=${active.key}&term=${term}`}
+            className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+            data-testid="button-choose-scale"
+          >
+            Choose Scale
+          </a>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Change size anytime in the Billing Portal.
+          </p>
+        </article>
       </div>
+
+      {/* parity reminder */}
+      <p className="mx-auto mt-4 max-w-3xl text-center text-sm text-muted-foreground" data-testid="text-parity-reminder">
+        Same product on every plan. We price by workspace size—not features or support tiers.
+      </p>
     </section>
   );
 }
