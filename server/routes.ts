@@ -1757,6 +1757,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Contact form endpoint (public)
+  app.post('/api/contact', async (req, res) => {
+    try {
+      const schema = z.object({
+        topic: z.enum(['security', 'privacy', 'billing', 'incident', 'product', 'other']),
+        email: z.string().email(),
+        message: z.string().min(1),
+      });
+
+      const { topic, email, message } = schema.parse(req.body);
+
+      // TODO: Add Cloudflare Recaptcha validation here
+      
+      // Log contact request
+      console.log('[CONTACT]', {
+        topic,
+        email,
+        messageLength: message.length,
+        timestamp: new Date().toISOString(),
+      });
+
+      // TODO: Send email notification or store in database
+      // For now, just return success
+
+      res.json({ success: true });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Invalid contact form data' });
+      }
+      console.error('Contact form error:', error);
+      res.status(500).json({ error: 'Failed to submit contact form' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
