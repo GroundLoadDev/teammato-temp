@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import Footer from "@/components/Footer";
+import Header from "@/components/Header";
 
 const STEPS = [
   {
@@ -286,8 +287,10 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Header authorizeUrl={slackAuthUrl} transparent={true} />
+      
       {/* HERO */}
-      <section className="relative">
+      <section id="main" className="relative">
         <div className="mx-auto max-w-6xl px-6 py-24 lg:py-28">
           <div className="grid items-center gap-12 lg:grid-cols-2">
             {/* Left copy */}
