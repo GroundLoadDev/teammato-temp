@@ -1,0 +1,96 @@
+7 signature moves that make it unmistakably Teammato
+
+1) Quad Field (brand background system)
+a soft, generative “field” of rounded-cross quads that drifts behind sections (scale/opacity variance, 2–6%). it’s your core texture—replaces stripes/blobs.
+
+hero: large quads, sparse.
+
+content sections: tiny, denser grid that fades at the edges.
+
+never full-bleed solid blocks; this field creates depth without heaviness.
+
+2) Overlap & Lift (layer hierarchy)
+break the card rectangle. let one hero element (modal crop or aggregate card) overlap the section boundary with a 1px teal outline and long, soft shadow (12–24px blur). this single overlap tells the eye “custom build,” not boilerplate.
+
+3) Quad-Corner Cards (form factor)
+standard cards feel generic. give key cards a lifted corner (one quadrant subtly elevated) to echo aggregation. it’s a tiny geometry change that sets the whole system apart.
+
+4) Aggregation Meter (visual metaphor)
+a horizontal strip of 4 faint quads that fill sequentially as “enough input” is reached. keep it abstract—no numbers—just a branded progress language. show it in hero and once more in the gallery.
+
+5) Motion with meaning (not decoration)
+micro-parallax on the quad field (0.5–1.5%); quadrants reveal in 80ms staggers when components appear. buttons depress (translate-y 1px + shadow change). avoid scale/zoom; use lift and reveal to feel tactile.
+
+6) Seafoam, not blocks (accent discipline)
+seafoam is for signals: strips, tags, headers, promise banner—not entire sections. most surfaces stay neutral; seafoam appears in thin doses (headers, side bars, chips). tomato red = micro-spark (icons/dots), never a fill.
+
+7) Grain + Light (tactility)
+add a whisper of subtle grain (1–2% noise) to large neutral areas and a soft top-left key light on hero objects. this breaks the “flat Tailwind” look without resorting to gradients.
+
+What to change on the sample page (big, not small)
+
+A) Hero
+
+Replace the typography demo with one strong scene: left editorial headline; right a hero card that overlaps into the next section.
+
+Behind it, the Quad Field large and sparse, slight parallax on scroll.
+
+B) Aggregate Summary (make it the poster child)
+
+Add the aggregation meter strip on top.
+
+Use a quad-corner body with a seafoam header strip (not a full seafoam card).
+
+Subtle long shadow + teal 1px outline.
+
+C) Promise & Security
+
+Promise banner = full-width seafoam ribbon (rounded ends), quad icon stamp on the left.
+
+Security bar = three pills with icons; seafoam underlines, not fills.
+
+D) Bento Trio
+
+Break symmetry with uneven modules (40/30/30).
+
+Put the Quad Field only behind the center panel (lighter field elsewhere).
+
+Each tile has one unique shape cue (corner lift, header strip, or side rail), not all at once.
+
+E) Buttons & Inputs
+
+Demonstrate press physics (translate-y + shadow).
+
+Inputs show teal focus and one inline rule hint state (no @mentions) purely as a visual pattern, not content.
+
+F) Rhythm
+
+Vary vertical spacing intentionally: hero (very tall), summary (tall), promise (short), security (compact), bento (tall). this creates a scroll melody.
+
+Brand guardrails (avoid “same-y”)
+
+no centered H1 on marketing pages.
+
+no gradient blobs or Memphis humans.
+
+no full seafoam cards; use strips/rails/badges.
+
+no four equal cards in a row; if you must, break the grid with one taller card.
+
+never use tomato red as a background.
+
+Experience tests (to judge the next build)
+
+Silhouette test: squint—do you see one element breaking the section edge (overlap & lift)?
+
+Signature test: can you spot three brand cues above the fold (quad field, quad-corner card, aggregation meter)?
+
+Texture test: does the neutral background feel slightly tactile (grain), not sterile?
+
+Motion test: do quads reveal/stagger and buttons depress? no zooms.
+
+Discipline test: is seafoam used in strips and tags rather than big blocks?
+
+Optional “wow” idea (still lightweight)
+
+Interactive Quad Field: on hover, nearby quads gently rotate 3–5° and brighten by 5%—a “soft pulse” that feels alive but not gamey. it’s one tiny JS hook, huge perceived craft.

@@ -1,0 +1,144 @@
+What’s working
+
+Editorial hierarchy: Left-aligned serif H1 + clear subhead = premium and readable.
+
+Quad motif: Visible in hero, bento, and accent banner—nice brand signature.
+
+Seafoam accent: Much better than the yellow/brown. Feels trustworthy.
+
+Signature modules: Aggregate Summary, Anonymity Promise, Security Fact Bar—distinct and on-story.
+
+Asymmetry: The bento trio breaks the grid monotony.
+
+What to improve (high-impact first)
+1) Focus the hero on product proof
+
+Issue: The hero still feels like a typography spec.
+Fix: Swap “Type Scale & Hierarchy” for a single real product scene: headline, 1-sentence subcopy, and a convincing modal crop that overlaps the section edge (break the card). Keep the type scale demo lower on the page.
+
+Copy tweak:
+Subhead: “Anonymous by default. Behavior-focused by design. Built for action.” (shorter, stronger)
+
+2) Make the quad motif bolder but rarer
+
+Issue: Small, washed-out quads risk reading as decoration.
+Fix: Choose two moments to go bold (hero watermark + aggregate header), and tone down elsewhere (e.g., remove from bento backgrounds). Increase opacity slightly in hero (6–8%), lower or remove in others for contrast hierarchy.
+
+3) Elevate the “Aggregate Summary” card
+
+Issue: It’s good, but it can become the signature shot.
+Fixes:
+
+Add a thin teal outline to the header strip; use mini quads/dots as cohort indicators (3–5).
+
+Include a tiny “released on [Week ##]” chip to hint at k-safe batching.
+
+Give the “You said → We did” chip a subtle success tint (seafoam border) so it reads as an action tag, not a badge.
+
+4) Tighten the “Security Fact Bar”
+
+Issue: Icons are a bit generic; copy is passive.
+Fix: Use verb-led facts and fewer words. Examples:
+
+“Encrypt per organization (AEAD)”
+
+“Don’t log IPs in feedback tables”
+
+“Isolate by tenant (RLS)”
+Optional: add a tiny “Learn more” chevron that jumps to /trust anchors.
+
+5) Buttons and states = brand feel
+
+Issue: Primary feels flat; ghost lacks intent.
+Fix:
+
+Add micro-press on click (shadow → translate-y 1px).
+
+Ghost should show intent on hover (seafoam tint, not gray).
+
+Keep teal focus rings very visible everywhere (accessibility signal).
+
+6) Inputs: push the SBI story
+
+Issue: Inputs demonstrate components, not the Teammato POV.
+Fix: Use the final microcopy we wrote (observable actions, effects) and add a single inline anti-pattern hint state (“Remove names/@—describe the behavior instead”) to show your guardrails.
+
+7) Accent usage guidelines
+
+Issue: Seafoam sometimes fills big blocks that read samey.
+Fix: Reserve seafoam for signals (promise banner, active tabs, hints). Prefer neutral card for content sections; use seafoam strips, tags, and borders instead of full cards when possible.
+
+8) Visual rhythm and spacing
+
+Issue: Sections have similar height; scroll feels uniform.
+Fix: Alternate tall/short sections. Example: hero (tall), summary (medium), promise (short, full-bleed), fact bar (compact), bento (tall).
+
+9) Tomato brand touches (micro, not macro)
+
+Issue: Brand red is almost invisible now.
+Fix: Use tomato red for tiny accents only: divider dot in the headline, notification dot on the modal crop, or the “Action taken” icon. Never use as a background.
+
+10) Real-world copy & data density
+
+Issue: Some lorem-ish phrases reduce believability.
+Fix: Replace at least two spots with realistic examples (e.g., “Add QA sign-off” → “Add QA sign-off to Friday release checklist”). Denser, specific bullets make screenshots feel true.
+
+Quick punch-list for the next pass (no code here—just directions)
+
+Hero
+
+Remove “Type Scale & Hierarchy” framing; keep headline + subhead.
+
+Increase quad watermark scale + opacity slightly (6–8%), position off-edge.
+
+Modal crop overlaps section edge; add micro shadow and 1px teal outline.
+
+Aggregate Summary
+
+Header: seafoam strip with 3–4 cohort dots, thin teal underline.
+
+Add “Released Week W41” chip.
+
+“You said → We did” chip: subtle seafoam border.
+
+Anonymity Promise
+
+Keep full-width seafoam; add a small lock-quad icon on the left.
+
+One sentence only.
+
+Security Fact Bar
+
+Replace copy with verb-led facts; add “Learn more →” link to /trust anchors.
+
+Bento trio
+
+Remove background quads; keep one bigger, blurred quad behind the center card only.
+
+Use verbs for titles (“Capture in Slack,” “Protect anonymity,” “Publish actions”).
+
+Buttons & Inputs
+
+Demonstrate hover/active/focus side-by-side.
+
+Inputs: final SBI placeholders + one example of the “no @mentions” validation hint.
+
+Cards
+
+Replace one accent card with a neutral card + seafoam side strip (less blocky).
+
+Add one quad-corner card (lift one corner subtly).
+
+Spacing & rhythm
+
+Vary section vertical padding (hero 96px, summary 64px, promise 40px, fact bar 32px, bento 80px).
+
+Tomato micro-accents
+
+Add a single tomato-red 4px dot in the H1 (between em-dash and “in Slack,” or as a lead-in bullet).
+
+Use tomato for the tiny “Action taken” icon only.
+
+Footer
+
+Replace “Design Gallery” line with: “Reading live theme tokens • Light mode • Quad system v1”.
