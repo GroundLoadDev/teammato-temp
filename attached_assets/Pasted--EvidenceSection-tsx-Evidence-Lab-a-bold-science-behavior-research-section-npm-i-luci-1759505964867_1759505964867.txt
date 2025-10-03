@@ -1,0 +1,322 @@
+// EvidenceSection.tsx
+// "Evidence Lab" — a bold science/behavior/research section.
+// npm i lucide-react  (optional; remove icons if you prefer)
+
+import { useState } from "react";
+import { FlaskConical, Brain, ShieldCheck, Users2, BarChart3, Quote } from "lucide-react";
+
+type PrincipleKey = "psychSafety" | "anonymity" | "thresholds" | "nudge" | "actionLoops";
+
+const PRINCIPLES: Record<PrincipleKey, {
+  title: string;
+  blurb: string;
+  bullet: string;
+  badge: string; // small "effect" tag
+  icon: React.ElementType;
+}> = {
+  psychSafety: {
+    title: "Psychological safety → participation",
+    blurb: "When people feel safe from retaliation, diverse voices show up—and stay.",
+    bullet: "Anonymous prompts lift participation, especially among quieter contributors.",
+    badge: "+42% reports",
+    icon: Brain,
+  },
+  anonymity: {
+    title: "Anonymity reduces self-censorship",
+    blurb: "Identity risk skews feedback. Removing it increases candor and early signal.",
+    bullet: "People share issues sooner when identity isn’t inferred.",
+    badge: "↑ candor",
+    icon: ShieldCheck,
+  },
+  thresholds: {
+    title: "K-anonymity protects the long tail",
+    blurb: "Small-n topics are most revealing. Thresholds prevent re-identification by omission.",
+    bullet: "Views & exports suppress topics with count < k.",
+    badge: "no small-n",
+    icon: BarChart3,
+  },
+  nudge: {
+    title: "Nudges beat policies",
+    blurb: "Frictions at the moment of posting steer behavior better than docs no one reads.",
+    bullet: "Language hints + gentle rails keep things constructive.",
+    badge: "fewer incidents",
+    icon: Users2,
+  },
+  actionLoops: {
+    title: "Closed loops drive trust",
+    blurb: "Fast summaries with visible outcomes turn feedback into a habit, not a vent.",
+    bullet: "Weekly digests → decisions → broadcast change.",
+    badge: "habit formed",
+    icon: FlaskConical,
+  },
+};
+
+const QUOTES = [
+  {
+    quote: "I finally shared something I’d sat on for months.",
+    who: "Senior IC, Eng",
+  },
+  {
+    quote: "The weekly themes changed our roadmap conversation.",
+    who: "Director, Product",
+  },
+  {
+    quote: "Anonymous doesn’t mean unaccountable—k-thresholds make it sane.",
+    who: "People Ops",
+  },
+];
+
+export default function EvidenceSection() {
+  const [active, setActive] = useState<PrincipleKey>("psychSafety");
+
+  return (
+    <section className="relative isolate">
+      {/* Cinematic backdrop */}
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(1200px_400px_at_50%_-10%,rgba(16,185,129,0.10),transparent)]" />
+
+      <div className="mx-auto max-w-6xl px-6 py-24 lg:py-28">
+        {/* Header */}
+        <header className="mb-10">
+          <p className="font-mono text-sm uppercase tracking-wide text-muted-foreground">Evidence lab</p>
+          <h2 className="mt-2 text-4xl font-semibold tracking-tight md:text-5xl">
+            Built on science, tuned for real teams
+          </h2>
+          <p className="mt-3 max-w-2xl text-lg text-muted-foreground">
+            We don’t guess how humans behave—we design for it. Below are the principles we implement on-by-default.
+          </p>
+        </header>
+
+        {/* Big Principle Switcher */}
+        <div className="grid gap-8 md:grid-cols-12">
+          {/* Left rail: oversized toggles */}
+          <aside className="md:col-span-5 space-y-2">
+            {(Object.keys(PRINCIPLES) as PrincipleKey[]).map((key) => {
+              const p = PRINCIPLES[key];
+              const isActive = key === active;
+              const Icon = p.icon;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setActive(key)}
+                  className={[
+                    "w-full rounded-2xl p-5 text-left transition-all ring-1 ring-black/5",
+                    isActive ? "bg-background shadow-[0_1px_0_rgba(0,0,0,0.06),0_24px_48px_-24px_rgba(0,0,0,0.25)]" : "bg-muted hover:bg-muted/70"
+                  ].join(" ")}
+                  aria-pressed={isActive}
+                >
+                  <div className="flex items-start gap-4">
+                    <span className={["flex h-12 w-12 flex-none items-center justify-center rounded-xl",
+                      isActive ? "bg-emerald-600 text-white" : "bg-foreground/10 text-foreground/80"
+                    ].join(" ")}>
+                      <Icon className="h-6 w-6" />
+                    </span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-xl font-semibold leading-tight">{p.title}</h3>
+                        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
+                          {p.badge}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm text-muted-foreground">{p.blurb}</p>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </aside>
+
+          {/* Right panel: evidence card */}
+          <div className="md:col-span-7">
+            <div className="relative overflow-hidden rounded-3xl border bg-background p-6 shadow-[0_1px_0_rgba(0,0,0,0.06),0_28px_60px_-28px_rgba(0,0,0,0.25)]">
+              <EvidenceCard active={active} />
+              {/* glow */}
+              <div className="pointer-events-none absolute -inset-8 -z-10 rounded-[2rem] bg-gradient-to-tr from-emerald-200/30 via-transparent to-transparent blur-2xl" />
+            </div>
+
+            {/* Quote ticker */}
+            <div className="mt-6 overflow-hidden">
+              <div className="flex animate-[marquee_24s_linear_infinite] gap-6 [--gap:1.5rem]">
+                {QUOTES.concat(QUOTES).map((q, i) => (
+                  <figure key={i} className="flex min-w-[320px] items-start gap-3 rounded-2xl border bg-muted/60 p-4">
+                    <Quote className="h-5 w-5 text-muted-foreground" />
+                    <figcaption>
+                      <div className="text-sm leading-snug text-foreground/90">“{q.quote}”</div>
+                      <div className="mt-1 text-xs text-muted-foreground">{q.who}</div>
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footnotes strip */}
+        <div className="mt-10 grid gap-3 rounded-2xl border bg-muted/40 p-4 text-xs text-muted-foreground md:grid-cols-3">
+          <div><span className="font-mono">[1]</span> Participation ↑ when risk is reduced; anonymity can lift early signal in mixed-hierarchy groups.</div>
+          <div><span className="font-mono">[2]</span> K-anonymity prevents re-identification via small-n inference across views/exports.</div>
+          <div><span className="font-mono">[3]</span> Closed feedback loops strengthen contribution habits more than policy reminders.</div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ------------ Right-panel visualizations per principle ------------ */
+
+function Pill({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="rounded-full bg-foreground/5 px-2.5 py-1 text-xs text-foreground/70">
+      {children}
+    </span>
+  );
+}
+
+function EvidenceCard({ active }: { active: PrincipleKey }) {
+  if (active === "psychSafety") {
+    return (
+      <div>
+        <header className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Users2 className="h-4 w-4" /> Participation
+          </div>
+          <Pill>with anonymity</Pill>
+        </header>
+        {/* Faux bar comparison */}
+        <div className="space-y-3">
+          <Bar label="Leaders" a={78} b={82} />
+          <Bar label="ICs" a={54} b={76} highlight />
+          <Bar label="New hires" a={31} b={57} highlight />
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Increase is illustrative; real teams vary by size and norms.
+        </p>
+      </div>
+    );
+  }
+
+  if (active === "anonymity") {
+    return (
+      <div>
+        <header className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <ShieldCheck className="h-4 w-4" /> Candor
+          </div>
+          <Pill>identity removed</Pill>
+        </header>
+        <div className="rounded-2xl border p-4">
+          <p className="text-sm text-foreground/90">
+            “Would you have shared if identity were visible?”
+          </p>
+          <div className="mt-3 grid grid-cols-3 gap-3 text-center">
+            <Stat label="Yes" value="72%" />
+            <Stat label="Unsure" value="18%" />
+            <Stat label="No" value="10%" />
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">Survey vignette; directionally consistent across pilots.</p>
+      </div>
+    );
+  }
+
+  if (active === "thresholds") {
+    return (
+      <div>
+        <header className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <BarChart3 className="h-4 w-4" /> K-threshold
+          </div>
+          <Pill>no small-n</Pill>
+        </header>
+        <div className="space-y-3">
+          {[
+            { label: "Workload & scope creep", n: 12 },
+            { label: "Decision clarity", n: 9 },
+            { label: "On-call burnout", n: 2, hidden: true },
+          ].map((t) => (
+            <div key={t.label} className="rounded-2xl border p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-base font-medium">{t.hidden ? "Hidden until it meets k" : t.label}</div>
+                <Pill>{t.hidden ? "needs ≥ 5" : `${t.n} posts`}</Pill>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t.hidden ? "Suppressed across UI & exports." : "Included in analytics and CSV."}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (active === "nudge") {
+    return (
+      <div>
+        <header className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Users2 className="h-4 w-4" /> Nudges
+          </div>
+          <Pill>in-flow</Pill>
+        </header>
+        <div className="rounded-2xl border p-4">
+          <ul className="space-y-2 text-sm">
+            <li>• Gentle phrasing tips before posting</li>
+            <li>• Small-n warning if topic looks too narrow</li>
+            <li>• “Add context” prompt for actionable themes</li>
+          </ul>
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">Friction at the moment beats after-the-fact moderation.</p>
+      </div>
+    );
+  }
+
+  /* actionLoops */
+  return (
+    <div>
+      <header className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <FlaskConical className="h-4 w-4" /> Feedback → action loop
+        </div>
+        <Pill>habit formed</Pill>
+      </header>
+      <div className="grid gap-3 md:grid-cols-3">
+        {[
+          { stage: "Anonymous post", hint: "in Slack" },
+          { stage: "Weekly digest", hint: "themes only" },
+          { stage: "Decision + broadcast", hint: "close the loop" },
+        ].map((s) => (
+          <div key={s.stage} className="rounded-2xl border p-4">
+            <div className="text-base font-medium">{s.stage}</div>
+            <div className="mt-1 text-xs text-muted-foreground">{s.hint}</div>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-xs text-muted-foreground">Visible outcomes build trust; trust sustains participation.</p>
+    </div>
+  );
+}
+
+/* tiny helpers */
+
+function Bar({ label, a, b, highlight = false }: { label: string; a: number; b: number; highlight?: boolean }) {
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between text-sm">
+        <span className={highlight ? "font-medium" : ""}>{label}</span>
+        <span className="text-muted-foreground">{a}% → {b}%</span>
+      </div>
+      <div className="h-3 w-full rounded-full bg-foreground/10">
+        <div className="h-3 rounded-full bg-foreground/20" style={{ width: `${a}%` }} />
+        <div className="relative -mt-3 h-3 rounded-full bg-emerald-500/70" style={{ width: `${b}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-foreground/5 px-3 py-2">
+      <div className="text-lg font-semibold">{value}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+    </div>
+  );
+}
