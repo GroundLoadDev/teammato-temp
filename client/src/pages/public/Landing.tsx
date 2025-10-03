@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Play, Link2, Lock, CheckCircle2, ArrowRight, Shield, Globe, Database, Clock, FileText, Award, BookOpen, Check, Edit3, BarChart3 } from "lucide-react";
+import { MessageSquare, Play, Link2, Lock, CheckCircle2, ArrowRight, Shield, Globe, Database, Clock, FileText, Award, BookOpen, Check, Edit3, BarChart3, EyeOff, Layers } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 
 // Quad motif SVG - rounded cross shape
@@ -1276,6 +1276,237 @@ export default function Landing() {
               <span>Privacy details</span>
               <ArrowRight className="w-3.5 h-3.5" strokeWidth={1.75} />
             </a>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 8: FEATURE GRID (6 tiles) */}
+      <section className="relative pt-24 pb-32" style={{ marginTop: '72px' }}>
+        <div className="mx-auto max-w-7xl px-6">
+          {/* Section heading */}
+          <div className="mb-5 text-center">
+            <h2 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-3">
+              What you get
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+              The essentials for safe capture, clear input, and visible follow-through—built for Slack.
+            </p>
+          </div>
+
+          {/* 6-tile grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mt-5 max-w-6xl mx-auto">
+            
+            {/* Tile 1: Slack-native capture (Blue header strip) */}
+            <div 
+              className="relative bg-card border border-border rounded-xl overflow-hidden"
+              style={{ 
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                minHeight: '175px'
+              }}
+              data-testid="tile-slack-capture"
+            >
+              {/* Support Blue header strip */}
+              <div 
+                className="h-2"
+                style={{ backgroundColor: 'hsl(var(--support-blue))' }}
+              />
+              
+              <div className="p-6">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <MessageSquare 
+                      className="w-5 h-5" 
+                      style={{ color: 'hsl(var(--primary))' }} 
+                      strokeWidth={1.75}
+                    />
+                  </div>
+                  <h3 className="text-base font-bold text-foreground leading-tight">
+                    Slack-native capture
+                  </h3>
+                </div>
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  Open the modal from App Home or /teammato—no extra portal.
+                </p>
+              </div>
+            </div>
+
+            {/* Tile 2: Anonymous by default (Seafoam side rail) */}
+            <div 
+              className="relative bg-card border border-border rounded-xl overflow-hidden"
+              style={{ 
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                minHeight: '175px'
+              }}
+              data-testid="tile-anonymous"
+            >
+              {/* Seafoam side rail */}
+              <div 
+                className="absolute left-0 top-0 bottom-0 w-2"
+                style={{ backgroundColor: 'hsl(var(--seafoam))' }}
+              />
+              
+              <div className="p-6 pl-8">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <EyeOff 
+                      className="w-5 h-5" 
+                      style={{ color: 'hsl(var(--primary))' }} 
+                      strokeWidth={1.75}
+                    />
+                  </div>
+                  <h3 className="text-base font-bold text-foreground leading-tight">
+                    Anonymous by default
+                  </h3>
+                </div>
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  You see themes—not people. Individual comments aren't exposed.
+                </p>
+              </div>
+            </div>
+
+            {/* Tile 3: SBI prompts (Quad-corner lift) */}
+            <div 
+              className="relative bg-card border border-border rounded-xl overflow-hidden"
+              style={{ 
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                minHeight: '175px'
+              }}
+              data-testid="tile-sbi"
+            >
+              {/* Quad-corner lift (shadow only) */}
+              <div 
+                className="absolute top-0 right-0 w-16 h-16 rounded-tr-xl pointer-events-none"
+                style={{
+                  backgroundColor: 'transparent',
+                  boxShadow: '-3px 3px 10px -3px rgba(0, 0, 0, 0.12)',
+                }}
+              />
+              
+              <div className="p-6 relative z-10">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <FileText 
+                      className="w-5 h-5" 
+                      style={{ color: 'hsl(var(--primary))' }} 
+                      strokeWidth={1.75}
+                    />
+                  </div>
+                  <h3 className="text-base font-bold text-foreground leading-tight">
+                    SBI prompts for clarity
+                  </h3>
+                </div>
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  Behavior & Impact required; fewer rants, more signal.
+                </p>
+              </div>
+            </div>
+
+            {/* Tile 4: Aggregate summaries (Mini aggregation meter) */}
+            <div 
+              className="relative bg-card border border-border rounded-xl overflow-hidden"
+              style={{ 
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                minHeight: '175px'
+              }}
+              data-testid="tile-aggregate"
+            >
+              <div className="p-6">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <BarChart3 
+                      className="w-5 h-5" 
+                      style={{ color: 'hsl(var(--primary))' }} 
+                      strokeWidth={1.75}
+                    />
+                  </div>
+                  <h3 className="text-base font-bold text-foreground leading-tight">
+                    Aggregate summaries only
+                  </h3>
+                </div>
+                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                  Results release when there's enough input—no one stands out.
+                </p>
+                {/* Mini aggregation meter (4 quads inline, static) */}
+                <div className="flex gap-1.5">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div
+                      key={i}
+                      className="w-5 h-5 rounded"
+                      style={{ backgroundColor: 'hsl(var(--seafoam))' }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Tile 5: Topics & rolling General (Lilac corner backplate) */}
+            <div 
+              className="relative bg-card border border-border rounded-xl overflow-hidden"
+              style={{ 
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                minHeight: '175px'
+              }}
+              data-testid="tile-topics"
+            >
+              <div className="p-6">
+                <div className="flex items-start gap-3 mb-3">
+                  {/* Icon with lilac corner backplate */}
+                  <div className="relative flex-shrink-0">
+                    <div 
+                      className="absolute -top-1 -right-1 w-12 h-12 rounded-lg"
+                      style={{ backgroundColor: 'hsl(var(--support-lilac))' }}
+                    />
+                    <div className="relative w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Layers 
+                        className="w-5 h-5" 
+                        style={{ color: 'hsl(var(--primary))' }} 
+                        strokeWidth={1.75}
+                      />
+                    </div>
+                  </div>
+                  <h3 className="text-base font-bold text-foreground leading-tight">
+                    Topics & rolling 'General'
+                  </h3>
+                </div>
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  Run time-boxed topics and a persistent 'General feedback' stream.
+                </p>
+              </div>
+            </div>
+
+            {/* Tile 6: Actions in Slack (Clean, tomato micro-dot) */}
+            <div 
+              className="relative bg-card border border-border rounded-xl overflow-hidden"
+              style={{ 
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                minHeight: '175px'
+              }}
+              data-testid="tile-actions"
+            >
+              <div className="p-6">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="relative w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 
+                      className="w-5 h-5" 
+                      style={{ color: 'hsl(var(--primary))' }} 
+                      strokeWidth={1.75}
+                    />
+                    {/* Tomato micro-accent dot (only one in this section) */}
+                    <div 
+                      className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full"
+                      style={{ backgroundColor: 'hsl(var(--tomato))' }}
+                    />
+                  </div>
+                  <h3 className="text-base font-bold text-foreground leading-tight">
+                    Actions in Slack
+                  </h3>
+                </div>
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  Publish 'You said → We did' updates to close the loop.
+                </p>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>

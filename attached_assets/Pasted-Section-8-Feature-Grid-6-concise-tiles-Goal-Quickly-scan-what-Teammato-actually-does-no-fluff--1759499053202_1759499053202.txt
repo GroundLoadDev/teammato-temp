@@ -1,0 +1,124 @@
+Section 8 — Feature Grid (6 concise tiles)
+
+Goal
+Quickly scan what Teammato actually does—no fluff. Six tight tiles, each with a title + one-line benefit and a small on-brand shape cue.
+
+Framing (ship this)
+
+H2: What you get
+
+Subhead (one line): The essentials for safe capture, clear input, and visible follow-through—built for Slack.
+
+Layout
+
+Grid: 2 rows × 3 columns (desktop).
+
+Top offset from previous section: 72px (var(--space-L)).
+
+Section padding: pt-24 pb-32.
+
+Tile size: 260–300px wide × 160–190px tall.
+
+Gaps: 20–24px.
+
+The 6 tiles (title + one-liner)
+
+Slack-native capture
+“Open the modal from App Home or /teammato—no extra portal.”
+Shape cue: Support Blue header strip (#E9F3FF).
+Placeholder: PLACEHOLDER: ICON_SLACK_MODAL
+
+Anonymous by default
+“You see themes—not people. Individual comments aren’t exposed.”
+Shape cue: Seafoam side rail (privacy signal).
+Placeholder: PLACEHOLDER: ICON_ANON
+
+SBI prompts for clarity
+“Behavior & Impact required; fewer rants, more signal.”
+Shape cue: Quad-corner lift (shadow only).
+Placeholder: PLACEHOLDER: ICON_SBI
+
+Aggregate summaries only
+“Results release when there’s enough input—no one stands out.”
+Shape cue: Mini aggregation meter (4 quads) inline, static.
+Placeholder: PLACEHOLDER: ICON_METER
+
+Topics & rolling ‘General’
+“Run time-boxed topics and a persistent ‘General feedback’ stream.”
+Shape cue: Lilac corner backplate behind icon.
+Placeholder: PLACEHOLDER: ICON_TOPICS
+
+Actions in Slack
+“Publish ‘You said → We did’ updates to close the loop.”
+Shape cue: none (keep this one clean); tomato micro-dot inside the action icon (this section only).
+Placeholder: PLACEHOLDER: ICON_ACTION_POST
+
+If you prefer a security tile here, swap any tile for:
+Per-org encryption & isolation — “AEAD at rest, TLS in transit, RLS for tenant isolation.”
+Shape cue: seafoam underline only. PLACEHOLDER: ICON_LOCK
+
+Visual rules
+
+No full tint fills. Blue/Lilac/Seafoam appear as strips/rails/backplates only.
+
+Icons: line + soft fill, stroke ≈ 1.75, consistent set.
+
+Text stays to one line; truncate with ellipsis if needed.
+
+Seafoam = privacy signal; teal = action; tomato appears once (Tile 6 icon dot).
+
+Motion
+
+Tiles reveal with 80ms stagger left→right, top→bottom.
+
+Hover = shadow lift only; no scale.
+
+Respect prefers-reduced-motion.
+
+Spacing & rhythm
+
+H2 → Subhead: 8–12px
+
+Subhead → Grid: 16–20px
+
+Tile internal padding: 20–24px
+
+Maintain consistent heights; avoid wrapping to a third line.
+
+Mobile & tablet
+
+Tablet: 2×3 grid.
+
+Mobile: 1 column × 6 tiles; keep shape cues; ensure icons stay 20–24px.
+
+Accessibility
+
+AA contrast on all text (deep-teal on seafoam; deep blue/violet on support tints).
+
+Any clickable tile or “Learn more” link shows a teal focus ring.
+
+Acceptance checklist
+
+Exactly 6 tiles, clean and even; no extra badges or metrics.
+
+Each tile uses at most one shape cue; no seafoam fills.
+
+Copy = 1 title + 1 line; no paragraphs.
+
+One tomato micro-accent total (Tile 6 icon).
+
+Grid aligns perfectly on desktop; stacks gracefully on smaller screens.
+
+Placeholders used (no auto-generated UI art):
+
+PLACEHOLDER: ICON_SLACK_MODAL
+
+PLACEHOLDER: ICON_ANON
+
+PLACEHOLDER: ICON_SBI
+
+PLACEHOLDER: ICON_METER
+
+PLACEHOLDER: ICON_TOPICS
+
+PLACEHOLDER: ICON_ACTION_POST
