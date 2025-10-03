@@ -1186,6 +1186,99 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* SECTION 7: ANONYMITY PROMISE (Brand Ribbon) */}
+      <section className="relative pt-20 pb-20" style={{ marginTop: '72px' }}>
+        <div className="mx-auto max-w-7xl px-6">
+          {/* Visually hidden H2 for a11y */}
+          <h2 className="sr-only">Anonymity promise</h2>
+          
+          {/* Promise ribbon */}
+          <div 
+            className="relative mx-auto max-w-[940px] rounded-full border overflow-hidden"
+            style={{
+              backgroundColor: 'hsl(var(--accent) / 0.12)',
+              borderColor: 'hsl(var(--border))',
+              height: 'clamp(80px, 15vw, 104px)',
+              boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.04)',
+            }}
+            data-testid="ribbon-anonymity-promise"
+          >
+            {/* Faint quad watermark - far right */}
+            <div className="absolute right-8 top-1/2 -translate-y-1/2 pointer-events-none">
+              <QuadMotif 
+                size={140} 
+                opacity={0.045} 
+                className="text-[hsl(var(--seafoam))]" 
+              />
+            </div>
+
+            {/* Content */}
+            <div className="relative h-full flex items-center px-6 md:px-12 gap-3 md:gap-4">
+              {/* Quad-lock icon */}
+              <div 
+                className="flex-shrink-0 w-5 h-5 md:w-7 md:h-7 relative"
+                aria-hidden="true"
+              >
+                {/* Quad-lock: lock inside rounded cross */}
+                <svg
+                  width="28"
+                  height="28"
+                  viewBox="0 0 28 28"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-full h-full"
+                  style={{ color: 'hsl(var(--accent-foreground))' }}
+                >
+                  {/* Rounded cross outline */}
+                  <path
+                    d="M11 2H17C18.1046 2 19 2.89543 19 4V9H24C25.1046 9 26 9.89543 26 11V17C26 18.1046 25.1046 19 24 19H19V24C19 25.1046 18.1046 26 17 26H11C9.89543 26 9 25.1046 9 24V19H4C2.89543 19 2 18.1046 2 17V11C2 9.89543 2.89543 9 4 9H9V4C9 2.89543 9.89543 2 11 2Z"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    fill="none"
+                  />
+                  {/* Lock in center */}
+                  <path
+                    d="M14 10.5C12.6193 10.5 11.5 11.6193 11.5 13V13.5H16.5V13C16.5 11.6193 15.3807 10.5 14 10.5Z"
+                    fill="currentColor"
+                  />
+                  <rect
+                    x="11"
+                    y="13.5"
+                    width="6"
+                    height="4.5"
+                    rx="0.5"
+                    fill="currentColor"
+                  />
+                </svg>
+              </div>
+
+              {/* Promise text */}
+              <p 
+                className="text-base md:text-lg font-medium leading-relaxed"
+                style={{ 
+                  color: 'hsl(var(--accent-foreground))',
+                  maxWidth: '64ch'
+                }}
+              >
+                We show themes, not people. Individual comments remain hidden until there's enough input.
+              </p>
+            </div>
+          </div>
+
+          {/* Optional privacy link (outside ribbon, below) */}
+          <div className="text-center mt-4">
+            <a 
+              href="#"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-[hsl(var(--accent-foreground))] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--accent-foreground))] focus-visible:ring-offset-2 rounded"
+              data-testid="link-privacy-details"
+            >
+              <span>Privacy details</span>
+              <ArrowRight className="w-3.5 h-3.5" strokeWidth={1.75} />
+            </a>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

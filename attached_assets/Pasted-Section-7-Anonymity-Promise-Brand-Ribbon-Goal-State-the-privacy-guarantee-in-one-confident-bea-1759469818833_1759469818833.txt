@@ -1,0 +1,96 @@
+Section 7 — Anonymity Promise (Brand Ribbon)
+
+Goal
+State the privacy guarantee in one, confident beat. Visually distinct, lightweight, and unmistakably Teammato.
+
+Framing (ship this)
+
+H2 (visually hidden for a11y, not shown): Anonymity promise
+
+Sentence (displayed): We show themes, not people. Individual comments remain hidden until there’s enough input.
+
+Keep it one sentence. No stats, no jargon.
+
+Layout
+
+Full-width ribbon centered in the content column (not edge-to-edge browser).
+
+Ribbon size: 760–940px wide on desktop, responsive down.
+
+Height: 88–104px (desktop).
+
+Top offset from previous section: var(--space-L) = 72px.
+
+Section padding: pt-20 pb-20.
+
+Visual language
+
+Background: Seafoam (--accent) at 85–90% tint (light).
+
+Text: Deep-teal (--accent-fg) for AA+.
+
+Icon: left-aligned Quad-lock glyph (a small lock inside a rounded cross) at 24–28px.
+
+Quad watermark: a very faint (4–5% opacity) oversized quad embossed inside the ribbon, offset to the far right.
+
+Border: 1px --border with subtle inner shadow (to feel pill-like).
+
+Corners: fully rounded (max radii from your token).
+
+No other icons, badges, or links inside the ribbon.
+
+Motion (meaningful, minimal)
+
+Reveal: slide in 4–6px with a soft fade when entering the viewport.
+
+Quad watermark: static (no parallax here).
+
+Respect prefers-reduced-motion.
+
+Interaction
+
+The ribbon is non-interactive by default. If you must link, add a tiny, right-aligned “Privacy details →” text link outside the ribbon, below it, in muted text.
+
+Spacing & typography
+
+Icon → headline gap: 12–16px.
+
+Line length target: 48–64ch; keep to one line on desktop if possible, two on tablet/mobile.
+
+Text size: same scale as subheads elsewhere (not a giant headline).
+
+Mobile & tablet
+
+Ribbon collapses to full width minus gutters.
+
+Height reduces to 72–84px; icon 20–22px.
+
+Text may wrap to two lines; maintain icon alignment left, watermark still faint on right.
+
+Accessibility
+
+Contrast AA+ for deep-teal on seafoam.
+
+The visually hidden H2 gives the section a semantic landmark.
+
+If a link is present below, ensure a visible teal focus ring and clear target wording (“Privacy details”).
+
+Acceptance checklist
+
+One sentence inside a single seafoam ribbon with a quad-lock icon—no extra UI.
+
+Plenty of air above/below (72px from previous, 20px internal).
+
+Quad watermark only inside the ribbon (not behind the section).
+
+No buttons inside; optional small link sits below the ribbon.
+
+Works at mobile widths without feeling cramped.
+
+Matches color discipline: seafoam as signal, deep-teal text; tomato not used here.
+
+Placeholder(s)
+
+PLACEHOLDER: QUAD_LOCK_ICON (24–28px line icon).
+
+Do not auto-generate art—use a neutral icon box if needed.
