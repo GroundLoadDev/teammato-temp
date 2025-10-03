@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Play, Link2, Lock, CheckCircle2, ArrowRight, Shield, Globe, Database } from "lucide-react";
+import { MessageSquare, Play, Link2, Lock, CheckCircle2, ArrowRight, Shield, Globe, Database, Clock, FileText, Award } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 
 // Quad motif SVG - rounded cross shape
@@ -666,6 +666,51 @@ export default function Landing() {
                     />
                     <span className="text-sm font-medium text-foreground whitespace-nowrap">
                       Isolate by tenant (RLS)
+                    </span>
+                  </button>
+
+                  {/* Pill 4: Control retention */}
+                  <button
+                    className="group flex items-center gap-2.5 px-4 py-2 rounded-lg border border-border bg-transparent hover:bg-[hsl(var(--seafoam)/0.08)] transition-all duration-200 hover:translate-y-[-1px] active:translate-y-0 snap-start shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    data-testid="pill-retention"
+                  >
+                    <Clock 
+                      className="w-4 h-4 shrink-0" 
+                      strokeWidth={1.75}
+                      style={{ color: 'hsl(var(--primary))' }}
+                    />
+                    <span className="text-sm font-medium text-foreground whitespace-nowrap">
+                      Control retention & legal hold
+                    </span>
+                  </button>
+
+                  {/* Pill 5: GDPR/CCPA */}
+                  <button
+                    className="group flex items-center gap-2.5 px-4 py-2 rounded-lg border border-border bg-transparent hover:bg-[hsl(var(--seafoam)/0.08)] transition-all duration-200 hover:translate-y-[-1px] active:translate-y-0 snap-start shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    data-testid="pill-gdpr"
+                  >
+                    <FileText 
+                      className="w-4 h-4 shrink-0" 
+                      strokeWidth={1.75}
+                      style={{ color: 'hsl(var(--primary))' }}
+                    />
+                    <span className="text-sm font-medium text-foreground whitespace-nowrap">
+                      GDPR/CCPA export & deletion
+                    </span>
+                  </button>
+
+                  {/* Pill 6: SOC 2 */}
+                  <button
+                    className="group flex items-center gap-2.5 px-4 py-2 rounded-lg border border-border bg-transparent hover:bg-[hsl(var(--seafoam)/0.08)] transition-all duration-200 hover:translate-y-[-1px] active:translate-y-0 snap-start shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    data-testid="pill-soc2"
+                  >
+                    <Award 
+                      className="w-4 h-4 shrink-0" 
+                      strokeWidth={1.75}
+                      style={{ color: 'hsl(var(--primary))' }}
+                    />
+                    <span className="text-sm font-medium text-foreground whitespace-nowrap">
+                      SOC 2 audited annually
                     </span>
                   </button>
                 </div>
