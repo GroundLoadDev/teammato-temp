@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Play } from "lucide-react";
-import { useEffect, useState } from "react";
+import { MessageSquare, Play, Link2, Lock, CheckCircle2 } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
 
 // Quad motif SVG - rounded cross shape
 const QuadMotif = ({ 
@@ -252,6 +252,163 @@ export default function Landing() {
                 >
                   Submit anonymously
                 </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* INSTALL MOMENTS STRIP */}
+      <section className="relative py-16 bg-background">
+        <div className="mx-auto max-w-7xl px-6">
+          {/* Asymmetric 45/27.5/27.5 grid */}
+          <div className="grid md:grid-cols-[45%_27.5%_27.5%] gap-6">
+            
+            {/* Tile 1: Install - Support Blue side rail */}
+            <div 
+              className="relative bg-card rounded-xl overflow-hidden group"
+              data-testid="tile-install"
+              style={{
+                boxShadow: '0 12px 32px -8px rgba(0, 0, 0, 0.08)',
+              }}
+            >
+              {/* Support Blue side rail */}
+              <div 
+                className="absolute left-0 top-0 bottom-0 w-2 transition-all duration-500 group-hover:w-2.5"
+                style={{ backgroundColor: 'hsl(var(--support-blue))' }}
+              />
+
+              {/* Tiny quad watermark */}
+              <div className="absolute top-4 right-4 opacity-[0.04]">
+                <QuadMotif size={48} opacity={1} className="text-foreground" />
+              </div>
+
+              <div className="p-8 pl-10">
+                <div className="space-y-4">
+                  <div 
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
+                    style={{ 
+                      backgroundColor: 'hsl(var(--support-blue))',
+                      color: 'hsl(var(--support-blue-foreground))'
+                    }}
+                  >
+                    <Link2 className="w-6 h-6" strokeWidth={1.75} />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-serif font-semibold text-foreground">
+                      Connect in seconds
+                    </h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      OAuth flow installs directly to your workspace—no IT required.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tile 2: Capture - Seafoam header strip + Quad Field */}
+            <div 
+              className="relative bg-card rounded-xl overflow-hidden"
+              data-testid="tile-capture"
+              style={{
+                boxShadow: '0 12px 32px -8px rgba(0, 0, 0, 0.08)',
+              }}
+            >
+              {/* Quad Field background (only behind this tile) */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div 
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary"
+                >
+                  <QuadMotif size={120} opacity={0.025} />
+                </div>
+              </div>
+
+              {/* Seafoam header strip */}
+              <div className="bg-[#E6FAF6] p-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {/* Static aggregation meter */}
+                  <div className="flex items-center gap-1">
+                    {[10, 9, 8, 7].map((size, i) => (
+                      <div
+                        key={i}
+                        className="rounded-sm bg-[#0F4F49]"
+                        style={{
+                          width: `${size}px`,
+                          height: `${size}px`,
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <Badge className="bg-[#0F4F49] text-white text-xs">
+                  Safe
+                </Badge>
+              </div>
+
+              <div className="p-6 relative z-10">
+                <div className="space-y-4">
+                  <div 
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#E6FAF6]"
+                  >
+                    <Lock className="w-6 h-6 text-[#0F4F49]" strokeWidth={1.75} />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-serif font-semibold text-foreground">
+                      Behavior & Impact—Situation optional
+                    </h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Guided SBI prompts in Slack. No portals.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tile 3: Publish - Lilac corner lift */}
+            <div 
+              className="relative bg-card rounded-xl overflow-hidden"
+              data-testid="tile-publish"
+              style={{
+                boxShadow: '0 12px 32px -8px rgba(0, 0, 0, 0.08)',
+              }}
+            >
+              {/* Lilac corner lift (top-right) - shadow backplate only */}
+              <div 
+                className="absolute top-0 right-0 w-20 h-20 pointer-events-none rounded-tr-xl"
+                style={{
+                  backgroundColor: 'hsl(var(--support-lilac))',
+                  boxShadow: '-4px 4px 12px -4px rgba(62, 42, 120, 0.15)',
+                }}
+              />
+
+              <div className="p-6 relative z-10">
+                <div className="space-y-4">
+                  <div 
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl relative"
+                    style={{ 
+                      backgroundColor: 'hsl(var(--support-lilac))',
+                      color: 'hsl(var(--support-lilac-foreground))'
+                    }}
+                  >
+                    <CheckCircle2 className="w-6 h-6" strokeWidth={1.75} />
+                    {/* Tomato dot on action icon */}
+                    <div 
+                      className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full"
+                      style={{ background: 'hsl(9, 75%, 61%)' }}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-serif font-semibold text-foreground">
+                      Share actions—without exposing anyone
+                    </h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      "You said → We did" posts close the loop transparently.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
