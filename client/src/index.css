@@ -297,4 +297,17 @@
       transform: translateX(-50%);
     }
   }
+
+  /* Beam animation for final CTA */
+  @keyframes beam {
+    0% {
+      transform: translateY(-10%);
+    }
+    50% {
+      transform: translateY(5%);
+    }
+    100% {
+      transform: translateY(-10%);
+    }
+  }
 }

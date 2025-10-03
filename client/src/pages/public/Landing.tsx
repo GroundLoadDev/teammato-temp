@@ -21,7 +21,8 @@ import {
   FlaskConical,
   Brain,
   Users2,
-  Quote
+  Quote,
+  ArrowRight
 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 
@@ -922,6 +923,87 @@ export default function Landing() {
                 );
               })
             )}
+          </div>
+        </div>
+      </section>
+
+      {/* FINAL CTA BAND */}
+      <section className="relative isolate overflow-hidden bg-neutral-950 text-neutral-50">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10"
+        >
+          <div className="[mask-image:radial-gradient(white,transparent_60%)] absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.06)_1px,transparent_1px)] bg-[size:80px_80px]" />
+          <div className="absolute -inset-x-40 top-0 h-[120%] animate-[beam_12s_linear_infinite] bg-[conic-gradient(from_180deg_at_50%_50%,rgba(16,185,129,0.22),transparent_40%)] opacity-60 blur-3xl [mask-image:radial-gradient(circle_at_center,black,transparent_55%)]" />
+        </div>
+
+        <div className="mx-auto max-w-6xl px-6 py-24 md:py-28">
+          <div className="grid items-center gap-10 md:grid-cols-12">
+            <div className="md:col-span-7">
+              <h2 className="text-5xl font-semibold tracking-tight sm:text-6xl">
+                We show themes, not people.
+              </h2>
+              <p className="mt-4 max-w-xl text-lg text-neutral-300">
+                Install in minutes. Anonymous by default. K-anonymous digests that teams actually act on.
+              </p>
+
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <a
+                  href={slackAuthUrl}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-7 py-3.5 text-base font-medium text-neutral-950 shadow transition hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                >
+                  Add to Slack
+                  <ArrowRight className="h-5 w-5" />
+                </a>
+
+                <a
+                  href="/trust"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-neutral-800 px-7 py-3.5 text-base text-neutral-200 hover:bg-neutral-900"
+                >
+                  Trust &amp; security
+                  <ShieldCheck className="h-5 w-5 text-emerald-400" />
+                </a>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-neutral-400">
+                <span className="inline-flex items-center gap-2 rounded-full border border-neutral-800 bg-neutral-900/60 px-3 py-1">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  k-anonymous by default
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-full border border-neutral-800 bg-neutral-900/60 px-3 py-1">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  ciphertext at rest
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-full border border-neutral-800 bg-neutral-900/60 px-3 py-1">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  no PII in logs
+                </span>
+              </div>
+            </div>
+
+            <div className="md:col-span-5">
+              <div className="rounded-3xl border border-neutral-800 bg-neutral-900/60 p-6 shadow-[0_1px_0_rgba(255,255,255,0.06),0_28px_60px_-28px_rgba(0,0,0,0.6)]">
+                <div className="text-sm text-neutral-400">Weekly digest · #team-general</div>
+                <div className="mt-4 space-y-3">
+                  {[
+                    { title: "Workload & scope creep", posts: 14 },
+                    { title: "Decision clarity", posts: 9 },
+                    { title: "Release coordination", posts: 7 },
+                  ].map((t) => (
+                    <div key={t.title} className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="text-neutral-100">{t.title}</div>
+                        <span className="rounded-full bg-neutral-800 px-2.5 py-1 text-xs text-neutral-300">
+                          {t.posts} posts
+                        </span>
+                      </div>
+                      <div className="mt-1 text-xs text-neutral-500">Meets k-threshold</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 text-xs text-neutral-500">Exports respect the same threshold.</div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
