@@ -3,6 +3,15 @@
 ### Overview
 Teammato is an enterprise-grade, Slack-first SaaS platform designed for anonymous feedback within organizations. It prioritizes privacy through a k-anonymity architecture, per-organization encryption, and multi-tenant isolation. The platform aims to facilitate transparent feedback loops, enhance employee engagement, and provide actionable insights while safeguarding user anonymity. Key capabilities include time-boxed feedback campaigns, robust moderation tools, privacy-preserving analytics, and seamless Slack integration.
 
+### Recent Changes (October 2025)
+**Marketing Website Rebuild - "Show Don't Tell" Philosophy**
+- **Landing Page** (`/`): Rebuilt with interactive SlackPreviewAnimated component showing real feedback examples with typing/deleting animation cycling through 5 scenarios
+- **Pricing Page** (`/pricing`): Surgical fixes including responsive 2/3/4-column grid (replaced horizontal scroller), removed pricing table for cleaner layout, added reassurance text with collapsible disclosure
+- **Features Page** (`/features`): Comprehensive interactive showcase with 6 sections - tabbed Product Showcase, Safety Row with 3 cards, Admin Strip demonstrating controls, all following emerald-600 branding
+- **FAQ Page** (`/faq`): Full rebuild with instant client-side search, 11 topic filter chips (getting-started, product, privacy, security, exports, roles, billing, retention, grid, threshold, troubleshooting), deep link support (`/faq?id=<id>`), 20 Q&As grouped by topic, large hit targets for accessibility
+- **Trust & Security Page** (`/trust`): Enterprise-grade security overview with at-a-glance badges, 4 security feature cards (encryption, isolation, PII, export safety), 6 security controls grid, data flow diagram with 4 steps, k-anonymity explainer with visual example, compliance accordion (SOC 2, GDPR/CCPA, incident response, business continuity), artifact links (DPA, Subprocessors, Status)
+- **Design System**: Consistent emerald-600 accents, rounded-2xl cards, responsive grids, radial gradient heroes, accessibility features (prefers-reduced-motion support), all pages use React + Tailwind only (zero external dependencies for marketing)
+
 ### User Preferences
 I prefer iterative development and clear, concise explanations. Ask before making major changes to the architecture or core functionalities. Ensure all new features align with the privacy-first principle.
 
