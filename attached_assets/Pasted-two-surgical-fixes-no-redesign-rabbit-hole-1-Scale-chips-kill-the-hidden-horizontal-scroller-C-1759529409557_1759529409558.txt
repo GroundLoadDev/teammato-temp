@@ -1,0 +1,74 @@
+two surgical fixes, no redesign rabbit hole.
+
+1) Scale chips: kill the hidden horizontal scroller
+
+Cause: the chip rail used overflow-x-auto inside a bordered container. On desktop it still showed a horizontal scroll area but wasn’t keyboard/drag-friendly.
+
+Fix: make the chips wrap into a responsive grid (2–4 columns) with no overflow.
+Replace your chip rail block with this:
+
+// REPLACE the chip rail inside the Scale card
+
+<p className="text-sm text-muted-foreground">Pick your seat cap</p>
+<div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+  {SCALE.map((b) => {
+    const activeChip = sel === b.key;
+    return (
+      <button
+        key={b.key}
+        onClick={() => setSel(b.key)}
+        aria-pressed={activeChip}
+        className={[
+          "w-full rounded-lg px-3 py-2 text-left text-sm ring-1 ring-black/5 transition",
+          activeChip ? "bg-emerald-600 text-white" : "bg-muted hover:bg-muted/70",
+        ].join(" ")}
+      >
+        {b.label}
+      </button>
+    );
+  })}
+  {/* optional last cell stays as a button link */}
+  <a
+    href="/contact"
+    className="w-full rounded-lg px-3 py-2 text-left text-sm ring-1 ring-black/5 hover:bg-muted"
+  >
+    100k+? Contact us
+  </a>
+</div>
+
+
+This removes overflow entirely, keeps touch/keyboard selection, and looks clean at every breakpoint.
+
+2) Ditch the full price table (it’s noisy + off-center)
+
+You’re right: listing every band line-by-line adds clutter and breaks alignment. The simplest, conversion-safe move is to remove the table and replace it with a single, centered reassurance line under the plans:
+
+// REMOVE the <table> block entirely.
+// ADD this below the Plans section:
+
+<p className="mx-auto mt-4 max-w-3xl text-center text-sm text-muted-foreground">
+  Same product on every plan. Choose a cap now—change size anytime in the Billing Portal.
+  For 100k+ workspaces, <a href="/contact" className="underline underline-offset-4">contact us</a>.
+</p>
+
+
+If procurement ever needs a complete list, tuck it behind a tiny disclosure so it doesn’t dominate the page:
+
+// Optional: compact disclosure for the full band list (kept out of the main flow)
+<details className="mx-auto mt-3 w-full max-w-md text-sm text-muted-foreground">
+  <summary className="cursor-pointer text-center underline underline-offset-4">See all published bands</summary>
+  <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl border bg-background p-4">
+    {[{cap:250, m:99, a:999},{cap:500,m:149,a:1490},{cap:1000,m:199,a:1990},
+      {cap:2500,m:299,a:2990},{cap:5000,m:399,a:3990},{cap:10000,m:599,a:5990},
+      {cap:25000,m:999,a:9990},{cap:50000,m:1499,a:14990},{cap:100000,m:2499,a:24990}]
+      .map(r => (
+        <li key={r.cap} className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
+          <span>{r.cap.toLocaleString()}</span>
+          <span>${r.m}/mo · ${r.a}/yr</span>
+        </li>
+      ))}
+  </ul>
+</details>
+
+
+That’s it—no more phantom scroller, and the page stays focused on the two decisions that matter: Pro vs. Scale and the active band.

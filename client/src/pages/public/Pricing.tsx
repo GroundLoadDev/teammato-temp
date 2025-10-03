@@ -242,26 +242,20 @@ function PlansChooser({ term }: { term: Term }) {
             <span className="rounded-full bg-foreground/5 px-2 py-1 text-xs text-foreground/70">Larger workspaces</span>
           </header>
 
-          {/* Horizontal band chips (accessible segmented control) */}
+          {/* Grid of band chips */}
           <div className="mt-3">
             <p className="text-sm text-muted-foreground">Pick your seat cap</p>
-            <div
-              role="tablist"
-              aria-label="Scale bands"
-              className="mt-2 flex gap-2 overflow-x-auto rounded-xl border bg-muted p-1 [scrollbar-width:none] [-ms-overflow-style:none]"
-              style={{ scrollbarWidth: "none" }}
-            >
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
               {SCALE.map((b) => {
                 const activeChip = sel === b.key;
                 return (
                   <button
                     key={b.key}
-                    role="tab"
-                    aria-selected={activeChip}
                     onClick={() => setSel(b.key)}
+                    aria-pressed={activeChip}
                     className={[
-                      "whitespace-nowrap rounded-lg px-3 py-2 text-sm transition",
-                      activeChip ? "bg-emerald-600 text-white" : "bg-transparent hover:bg-foreground/10",
+                      "w-full rounded-lg px-3 py-2 text-left text-sm ring-1 ring-black/5 transition",
+                      activeChip ? "bg-emerald-600 text-white" : "bg-muted hover:bg-muted/70",
                     ].join(" ")}
                     data-testid={`button-scale-${b.key}`}
                   >
@@ -269,12 +263,9 @@ function PlansChooser({ term }: { term: Term }) {
                   </button>
                 );
               })}
-              {/* Contact chip (beyond published max) */}
               <a
-                role="tab"
-                aria-selected="false"
                 href="/contact"
-                className="whitespace-nowrap rounded-lg px-3 py-2 text-sm hover:bg-foreground/10"
+                className="w-full rounded-lg px-3 py-2 text-left text-sm ring-1 ring-black/5 hover:bg-muted"
                 data-testid="link-contact-enterprise"
               >
                 100k+? Contact us
@@ -310,35 +301,25 @@ function PlansChooser({ term }: { term: Term }) {
         </article>
       </div>
 
-      {/* Condensed "all bands" table for scanners */}
-      <div className="mx-auto mt-6 max-w-3xl overflow-x-auto">
-        <table className="w-full text-sm" data-testid="table-pricing-bands">
-          <thead className="text-left text-muted-foreground">
-            <tr className="border-b">
-              <th className="py-2">Cap</th>
-              <th className="py-2">Monthly</th>
-              <th className="py-2">Annual</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[{ cap: 250, m: 99, a: 999 }, ...SCALE.map(s => ({ cap: s.cap, m: s.monthly, a: s.annual }))].map(r => (
-              <tr key={r.cap} className="border-b last:border-0">
-                <td className="py-2" data-testid={`text-table-cap-${r.cap}`}>{r.cap.toLocaleString()}</td>
-                <td className="py-2">{formatUSD(r.m)}</td>
-                <td className="py-2">{formatUSD(r.a)}</td>
-              </tr>
-            ))}
-            <tr>
-              <td className="py-2 font-medium">100k+</td>
-              <td className="py-2" colSpan={2}><a className="underline underline-offset-4" href="/contact" data-testid="link-table-contact">Contact us</a></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <p className="mx-auto mt-4 max-w-3xl text-center text-sm text-muted-foreground" data-testid="text-parity-reminder">
-        Same product on every plan. We price by workspace size—not features or support tiers.
+      <p className="mx-auto mt-4 max-w-3xl text-center text-sm text-muted-foreground">
+        Same product on every plan. Choose a cap now—change size anytime in the Billing Portal.
+        For 100k+ workspaces, <a href="/contact" className="underline underline-offset-4">contact us</a>.
       </p>
+
+      <details className="mx-auto mt-3 w-full max-w-md text-sm text-muted-foreground">
+        <summary className="cursor-pointer text-center underline underline-offset-4">See all published bands</summary>
+        <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl border bg-background p-4">
+          {[{cap:250, m:99, a:999},{cap:500,m:149,a:1490},{cap:1000,m:199,a:1990},
+            {cap:2500,m:299,a:2990},{cap:5000,m:399,a:3990},{cap:10000,m:599,a:5990},
+            {cap:25000,m:999,a:9990},{cap:50000,m:1499,a:14990},{cap:100000,m:2499,a:24990}]
+            .map(r => (
+              <li key={r.cap} className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
+                <span>{r.cap.toLocaleString()}</span>
+                <span>${r.m}/mo · ${r.a}/yr</span>
+              </li>
+            ))}
+        </ul>
+      </details>
     </section>
   );
 }
