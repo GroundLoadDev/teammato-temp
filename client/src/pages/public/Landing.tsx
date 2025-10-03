@@ -1688,14 +1688,14 @@ export default function Landing() {
                 <div 
                   className="relative w-20 h-20 rounded-lg border-2 flex flex-col items-center justify-center gap-1.5 p-2"
                   style={{ 
-                    borderColor: 'hsl(var(--seafoam))',
-                    backgroundColor: 'hsl(var(--seafoam) / 0.12)'
+                    borderColor: 'hsl(var(--seafoam-foreground))',
+                    backgroundColor: 'hsl(var(--seafoam) / 0.15)'
                   }}
                 >
                   {/* Lock icon */}
                   <Lock 
                     className="w-6 h-6" 
-                    style={{ color: 'hsl(var(--seafoam))' }}
+                    style={{ color: 'hsl(var(--seafoam-foreground))' }}
                     strokeWidth={2}
                   />
                   {/* Mini meter */}
@@ -1704,14 +1704,14 @@ export default function Landing() {
                       <div
                         key={i}
                         className="w-2.5 h-2.5 rounded-sm"
-                        style={{ backgroundColor: 'hsl(var(--seafoam))' }}
+                        style={{ backgroundColor: 'hsl(var(--seafoam-foreground))' }}
                       />
                     ))}
                   </div>
                 </div>
                 <p 
                   className="text-xs font-medium text-center"
-                  style={{ color: 'hsl(var(--seafoam))' }}
+                  style={{ color: 'hsl(var(--seafoam-foreground))' }}
                 >
                   Threshold gate
                 </p>
