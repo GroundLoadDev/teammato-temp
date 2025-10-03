@@ -221,8 +221,12 @@ export default function Landing() {
                 <div className="flex items-center justify-between mb-6">
                   <AggregationMeter />
                   <Badge 
-                    className="bg-[#E6FAF6] text-[#0F4F49] border-[#0F4F49]/20"
                     data-testid="badge-anonymous"
+                    style={{
+                      backgroundColor: 'hsl(var(--seafoam))',
+                      color: 'hsl(var(--seafoam-foreground))',
+                      borderColor: 'hsl(var(--seafoam-foreground) / 0.2)',
+                    }}
                   >
                     Anonymous
                   </Badge>
