@@ -25,6 +25,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
+import Footer from "@/components/Footer";
 
 const STEPS = [
   {
@@ -1007,6 +1008,8 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      <Footer />
     </div>
   );
 }
