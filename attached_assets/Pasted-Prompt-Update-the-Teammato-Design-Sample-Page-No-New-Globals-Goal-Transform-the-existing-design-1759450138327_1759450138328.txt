@@ -1,0 +1,162 @@
+Prompt: Update the Teammato Design Sample Page (No New Globals)
+
+Goal: Transform the existing design sample/preview page into a branded Teammato Design Gallery that looks bespoke (not stock shadcn), demonstrates our Quad system (rounded cross motif), and uses the seafoam accent instead of the current amber/brown. Do not add global CSS; consume only our live theme tokens via CSS variables/Tailwind arbitrary values.
+
+Constraints
+
+No new global styles or resets. Read the live theme tokens (e.g., --bg, --fg, --primary, --accent, --accent-fg, --border, --focus, --card, --card-fg, --danger, --danger-fg, optional --chart-1..5).
+
+Replace accent: use seafoam accent
+
+--accent = #E6FAF6
+
+--accent-fg = #0F4F49
+(If tokens are locked, simulate by using inline style={{ background: 'var(--accent)' }} etc.—but do not overwrite globals.)
+
+Reserve tomato red for tiny highlights only (icons/dots), not banners.
+
+Light mode only.
+
+No yellow/brown UI anywhere.
+
+Page Structure (sections & what to show)
+
+Header (brand sampler)
+
+Left: Teammato wordmark or text.
+
+Right: small legend pill “Reading live theme tokens”.
+
+Subtle background Quad watermark (rounded cross) very low opacity (4–6%), aligned top-right.
+
+Type & Hierarchy panel (editorial look)
+
+Left-aligned serif H1 (our marketing headline).
+
+H2/H3, card title, paragraph, muted paragraph, monospace sample.
+
+Under the H1, faint Quad mask (as a background shape behind text).
+
+Signature Modules (make us look unique)
+
+Aggregate Summary Card (wide):
+
+Quad header (4 small dots or mini-quads).
+
+2–3 “theme” bullets + one “You said → We did” chip.
+
+Seafoam accent strip for the header.
+
+Anonymity Promise Banner (full width):
+
+Seafoam background, deep-teal text:
+“We show themes, not people. Individual comments remain hidden until there’s enough input.”
+
+Security Fact Bar (horizontal):
+
+Three big facts with check icons:
+“Per-org keys • No IPs in feedback tables • Row-level isolation (RLS)”
+
+Buttons sampler
+
+Primary, Accent (secondary), Ghost, Destructive.
+
+Show hover/active/focus states.
+
+Use teal focus ring from token.
+
+Inputs sampler
+
+Text input + textarea + select mock.
+
+Show placeholders from our SBI microcopy (Behavior/Impact/Situation).
+
+Emphasize visible focus state (teal).
+
+Cards & Banners
+
+Basic Card (neutral)
+
+Accent Card (now seafoam, not yellow)
+
+Hoverable Card (subtle elevation change; no scale)
+
+Include a Quad-corner variant: one corner subtly lifted (shadow) to hint “aggregation.”
+
+How It Works (Bento trio)
+
+3 uneven panels (break the grid symmetry):
+
+Capture in Slack (modal crop)
+
+Anonymous by default (quad + lock icon)
+
+You said → We did (example action card)
+
+Each panel uses a different Quad placement (background watermark), keeping motion subtle.
+
+Charts palette chips
+
+Display --chart-1…--chart-5 if defined; otherwise show muted placeholders with labels.
+
+Footer
+
+Small text: “Design Gallery · All components read live theme tokens.”
+
+Visual System & Motions (apply to this page only)
+
+Quad motif = rounded cross; use as low-opacity background mask behind hero text, headers, and one accent card.
+
+Motion: sequential reveal of quadrants (80ms stagger) when the Quad is used. Cards elevate 2px on hover (shadow change only). Buttons depress on click (shadow + translate-y 1px).
+
+Typography: IBM Plex Serif for headings (H1/H2), Inter for others, JetBrains Mono for code.
+
+Spacing: airy; use generous py-12/py-16 between sections.
+
+Alignment: editorial—left-aligned H1; avoid centered everywhere.
+
+Copy to Use (exact strings)
+
+H1: “Hear the truth at work—safely, in Slack.”
+
+Subhead: “Anonymous by default. Behavior-focused by design. Built for action.”
+
+Anonymity Promise: “We show themes, not people. Individual comments remain hidden until there’s enough input.”
+
+Security facts: “Per-org keys • No IPs in feedback tables • Row-level isolation (RLS)”
+
+Aggregate Summary bullets (sample):
+
+“Clarify scope before demos”
+
+“Share sprint goals earlier”
+
+“Add QA sign-off checklist”
+
+Action chip: “You said → We did”
+
+Acceptance Criteria (review checklist)
+
+The accent is seafoam with deep-teal text; no yellow/brown appears.
+
+The Quad motif is visible in at least 3 places (hero/type panel watermark, aggregate card header, one accent card), at low opacity.
+
+Buttons, inputs, cards only use theme tokens (var(--*))—no Tailwind default color classes.
+
+Visible teal focus rings on interactive elements.
+
+At least one asymmetric layout (Bento trio) to avoid “four equal cards” sameness.
+
+Motion is subtle; no large scales or gradient blobs.
+
+Page feels bespoke to Teammato (aggregation/quad + seafoam/teal + editorial headings).
+
+What NOT to include
+
+No gradient blobs, Memphis people, or blue-purple stock gradients.
+
+No center-aligned H1.
+
+No “warning yellow” accent or brown text blocks.
+
+No table-heavy sections; keep it card-based and editorial.

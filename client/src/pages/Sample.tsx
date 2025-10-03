@@ -3,571 +3,478 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle2, Shield, Lock, Users, MessageSquare, TrendingUp, Eye, Zap } from "lucide-react";
-import { useState } from "react";
+import { CheckCircle2, Shield, Lock, MessageSquare, Eye, Zap } from "lucide-react";
+
+// Quad motif SVG component - rounded cross shape
+const QuadMotif = ({ className = "", opacity = 0.04 }: { className?: string; opacity?: number }) => (
+  <svg
+    className={className}
+    width="200"
+    height="200"
+    viewBox="0 0 200 200"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    style={{ opacity }}
+  >
+    <path
+      d="M80 0H120C130 0 140 10 140 20V80H180C190 80 200 90 200 100V100C200 110 190 120 180 120H140V180C140 190 130 200 120 200H80C70 200 60 190 60 180V120H20C10 120 0 110 0 100V100C0 90 10 80 20 80H60V20C60 10 70 0 80 0Z"
+      fill="currentColor"
+    />
+  </svg>
+);
 
 export default function Sample() {
-  const [activeRole, setActiveRole] = useState("hr");
-
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b">
-        <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="font-serif text-xl font-semibold text-foreground">Teammato</div>
-            <Badge variant="secondary" className="text-xs">Design Gallery</Badge>
-          </div>
-          <Button size="sm" variant="ghost">Close Preview</Button>
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Header with Quad watermark */}
+      <header className="border-b relative">
+        <div className="absolute top-0 right-0 text-primary">
+          <QuadMotif className="w-96 h-96" opacity={0.04} />
+        </div>
+        <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between relative z-10">
+          <div className="font-serif text-2xl font-semibold text-foreground">Teammato</div>
+          <Badge variant="secondary" className="text-xs">Reading live theme tokens</Badge>
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-6 py-12 space-y-20">
+      <div className="mx-auto max-w-7xl px-6 space-y-16 py-16">
 
-        {/* Typography Showcase */}
-        <section className="space-y-6">
+        {/* Type & Hierarchy - Editorial look with Quad watermark */}
+        <section className="space-y-8 relative">
+          <div className="absolute left-0 top-0 text-primary pointer-events-none">
+            <QuadMotif className="w-64 h-64" opacity={0.06} />
+          </div>
+          <div className="space-y-4 relative z-10 max-w-4xl">
+            <h1 className="text-6xl font-serif tracking-tight text-foreground leading-[1.1]">
+              Hear the truth at work—safely, in Slack.
+            </h1>
+            <p className="text-2xl text-muted-foreground leading-relaxed">
+              Anonymous by default. Behavior-focused by design. Built for action.
+            </p>
+          </div>
+          
+          {/* Typography samples */}
+          <div className="space-y-4 max-w-3xl relative z-10">
+            <h2 className="text-4xl font-serif text-foreground">Section Heading (H2)</h2>
+            <h3 className="text-3xl font-serif text-foreground">Subsection Heading (H3)</h3>
+            <div className="text-xl font-semibold text-foreground">Card Title / H4</div>
+            <p className="text-base text-foreground leading-relaxed">
+              Body text paragraph at base size. Inter font family for readability and modern aesthetic. We prioritize clarity and trust-first communication.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Secondary / muted text at small size for less emphasis. Used for metadata and supporting details.
+            </p>
+            <code className="inline-block rounded-lg bg-muted px-3 py-1.5 text-sm font-mono text-muted-foreground">
+              JetBrains Mono for code snippets
+            </code>
+          </div>
+        </section>
+
+        {/* HERO SHOT 1: Hero with Quad mask + modal crop breaking frame */}
+        <section className="space-y-4">
           <div className="space-y-2">
-            <Badge variant="secondary">Typography</Badge>
-            <h2 className="text-2xl font-serif font-semibold text-foreground">Type Scale & Hierarchy</h2>
+            <Badge variant="secondary">Hero Shot</Badge>
+            <h2 className="text-2xl font-serif font-semibold text-foreground">Quad Mask + Modal Crop</h2>
+          </div>
+          
+          <Card className="overflow-visible relative">
+            <div className="absolute right-8 top-0 text-primary pointer-events-none">
+              <QuadMotif className="w-48 h-48" opacity={0.08} />
+            </div>
+            <CardContent className="p-12 relative z-10">
+              <div className="grid md:grid-cols-2 gap-8 items-center">
+                <div className="space-y-6">
+                  <h3 className="text-4xl font-serif tracking-tight text-foreground leading-tight">
+                    Submit feedback in seconds
+                  </h3>
+                  <p className="text-lg text-muted-foreground">
+                    Use /feedback in any Slack channel. Our SBI-guided modal keeps input focused on behavior and impact—not venting.
+                  </p>
+                  <div className="flex gap-3">
+                    <Button size="lg" data-testid="button-add-to-slack-hero">
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Add to Slack
+                    </Button>
+                    <Button size="lg" variant="outline" data-testid="button-learn-more">
+                      Learn more
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Modal crop breaking the frame */}
+                <div className="relative -mr-12 -mb-12 -mt-4">
+                  <div className="bg-card border border-border rounded-xl shadow-lg p-6 space-y-4 transform translate-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="font-semibold text-foreground">Submit feedback</div>
+                      <Badge className="bg-[#E6FAF6] text-[#0F4F49] border-[#0F4F49]/20">Anonymous</Badge>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Situation (optional)</label>
+                        <div className="mt-1 text-sm text-foreground bg-muted/50 rounded px-3 py-2">Sprint planning, last Tuesday</div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Behavior</label>
+                        <div className="mt-1 text-sm text-foreground bg-muted/50 rounded px-3 py-2">Demo scope wasn't clear to QA</div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Impact</label>
+                        <div className="mt-1 text-sm text-foreground bg-muted/50 rounded px-3 py-2">Extra back-and-forth delayed release</div>
+                      </div>
+                    </div>
+                    <Button className="w-full" size="sm" data-testid="button-submit-modal">Submit anonymously</Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* HERO SHOT 2: Aggregate Summary Card with Quad header dots + "You said → We did" chip */}
+        <section className="space-y-4">
+          <div className="space-y-2">
+            <Badge variant="secondary">Hero Shot</Badge>
+            <h2 className="text-2xl font-serif font-semibold text-foreground">Aggregate Summary Card</h2>
+          </div>
+          
+          <Card className="relative overflow-hidden">
+            {/* Seafoam accent strip with Quad dots */}
+            <div className="bg-[#E6FAF6] border-b border-[#0F4F49]/10 p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {/* Quad header dots */}
+                  <div className="grid grid-cols-2 gap-1">
+                    <div className="w-2 h-2 rounded-sm bg-[#0F4F49]/40"></div>
+                    <div className="w-2 h-2 rounded-sm bg-[#0F4F49]/40"></div>
+                    <div className="w-2 h-2 rounded-sm bg-[#0F4F49]/40"></div>
+                    <div className="w-2 h-2 rounded-sm bg-[#0F4F49]/40"></div>
+                  </div>
+                  <h3 className="text-xl font-serif font-semibold text-[#0F4F49]">Sprint Planning Topic</h3>
+                </div>
+                <Badge className="bg-[#0F4F49] text-white border-[#0F4F49]">
+                  You said → We did
+                </Badge>
+              </div>
+            </div>
+            
+            <CardContent className="p-6 space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Based on 12 anonymous submissions (k=5 minimum met)
+              </p>
+              <div className="space-y-3">
+                {[
+                  "Clarify scope before demos",
+                  "Share sprint goals earlier",
+                  "Add QA sign-off checklist"
+                ].map((theme, i) => (
+                  <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover-elevate transition-all">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-primary/10 text-primary mt-0.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary"></div>
+                    </div>
+                    <div className="text-sm text-foreground">{theme}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="pt-4 border-t">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <div className="text-sm font-semibold text-foreground">Action taken</div>
+                    <div className="text-sm text-muted-foreground">
+                      We've added a scope review step to our planning template and will share goals 48h before each sprint.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* HERO SHOT 3: Anonymity Promise Banner (seafoam, no yellow) */}
+        <section className="space-y-4">
+          <div className="space-y-2">
+            <Badge variant="secondary">Hero Shot</Badge>
+            <h2 className="text-2xl font-serif font-semibold text-foreground">Anonymity Promise</h2>
+          </div>
+          
+          <div className="bg-[#E6FAF6] border border-[#0F4F49]/20 rounded-xl p-8 relative overflow-hidden">
+            <div className="absolute right-0 bottom-0 text-[#0F4F49]/10">
+              <QuadMotif className="w-64 h-64" opacity={0.3} />
+            </div>
+            <div className="relative z-10 flex items-start gap-4 max-w-4xl">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#0F4F49] text-white">
+                <Shield className="w-6 h-6" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-2xl font-serif font-semibold text-[#0F4F49]">
+                  We show themes, not people.
+                </h3>
+                <p className="text-lg text-[#0F4F49]/80 leading-relaxed">
+                  Individual comments remain hidden until there's enough input. K-anonymity isn't optional—it's enforced by design.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* HERO SHOT 4: Security Fact Bar */}
+        <section className="space-y-4">
+          <div className="space-y-2">
+            <Badge variant="secondary">Hero Shot</Badge>
+            <h2 className="text-2xl font-serif font-semibold text-foreground">Security Fact Bar</h2>
           </div>
           
           <Card>
-            <CardContent className="p-8 space-y-6">
-              <div className="space-y-2">
-                <div className="text-5xl font-serif tracking-tight text-foreground leading-tight">
-                  Hear the truth at work—safely, in Slack.
-                </div>
-                <p className="text-lg text-muted-foreground">
-                  Anonymous by default. Behavior-focused by design. Built for action.
-                </p>
-              </div>
-
-              <div className="border-t pt-6 space-y-4">
-                <div className="text-3xl font-serif text-foreground">Section Heading (H2)</div>
-                <div className="text-2xl font-serif text-foreground">Subsection Heading (H3)</div>
-                <div className="text-xl font-semibold text-foreground">Card Title / H4</div>
-                <p className="text-base text-foreground">Body text paragraph at base size. Inter font family for readability and modern aesthetic.</p>
-                <p className="text-sm text-muted-foreground">Secondary / muted text at small size for less emphasis.</p>
-                <code className="inline-block rounded bg-muted px-2 py-1 text-sm font-mono text-muted-foreground">
-                  JetBrains Mono for code snippets
-                </code>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-
-        {/* Hero Patterns */}
-        <section className="space-y-6">
-          <div className="space-y-2">
-            <Badge variant="secondary">Hero Patterns</Badge>
-            <h2 className="text-2xl font-serif font-semibold text-foreground">Landing Page Hero Options</h2>
-          </div>
-
-          {/* Hero Option 1: Clean */}
-          <Card>
-            <CardContent className="p-12 text-center space-y-6">
-              <div className="space-y-4 max-w-3xl mx-auto">
-                <h1 className="text-5xl font-serif tracking-tight text-foreground leading-tight">
-                  Hear the truth at work—safely, in Slack.
-                </h1>
-                <p className="text-xl text-muted-foreground">
-                  Anonymous by default. Behavior-focused by design. Built for action.
-                </p>
-              </div>
-              <div className="flex items-center justify-center gap-4 flex-wrap">
-                <Button size="lg" data-testid="button-add-to-slack">
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  Add to Slack
-                </Button>
-                <Button size="lg" variant="outline" data-testid="button-see-how-it-works">
-                  See how it works
-                </Button>
-              </div>
-              <p className="text-sm text-muted-foreground">Free 14-day trial · No credit card required</p>
-            </CardContent>
-          </Card>
-
-          {/* Hero Option 2: With Accent Background */}
-          <Card className="bg-accent border-accent-border">
-            <CardContent className="p-12 text-center space-y-6">
-              <div className="space-y-4 max-w-3xl mx-auto">
-                <h1 className="text-5xl font-serif tracking-tight text-accent-foreground leading-tight">
-                  Hear the truth at work—safely, in Slack.
-                </h1>
-                <p className="text-xl text-accent-foreground/80">
-                  Anonymous by default. Behavior-focused by design. Built for action.
-                </p>
-              </div>
-              <div className="flex items-center justify-center gap-4 flex-wrap">
-                <Button size="lg" data-testid="button-add-to-slack-2">
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  Add to Slack
-                </Button>
-                <Button size="lg" variant="outline" data-testid="button-see-how-it-works-2">
-                  See how it works
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-
-        {/* How It Works - 4 Steps */}
-        <section className="space-y-6">
-          <div className="space-y-2">
-            <Badge variant="secondary">Feature Section</Badge>
-            <h2 className="text-2xl font-serif font-semibold text-foreground">How It Works (4-Step)</h2>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {[
-              {
-                icon: MessageSquare,
-                step: "1",
-                title: "Submit in Slack",
-                description: "Employee uses /feedback command, fills SBI-guided modal, submits anonymously"
-              },
-              {
-                icon: Shield,
-                step: "2",
-                title: "K-anonymous aggregation",
-                description: "System waits for minimum submissions, aggregates with pseudonymous handles"
-              },
-              {
-                icon: Eye,
-                step: "3",
-                title: "Review & moderate",
-                description: "Admins see summaries, flag inappropriate content, never individual IDs"
-              },
-              {
-                icon: TrendingUp,
-                step: "4",
-                title: "Action & close loop",
-                description: "Post 'You said → We did' updates, lock topic, measure engagement"
-              }
-            ].map((item) => (
-              <Card key={item.step} className="hover-elevate">
-                <CardContent className="p-6 space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                      <item.icon className="h-5 w-5" />
+            <CardContent className="p-8">
+              <div className="grid md:grid-cols-3 gap-8">
+                <div className="text-center space-y-3">
+                  <div className="flex justify-center">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <Lock className="w-7 h-7" />
                     </div>
-                    <Badge variant="outline">{item.step}</Badge>
                   </div>
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-semibold text-foreground">{item.title}</h3>
-                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                  <div className="space-y-1">
+                    <div className="text-2xl font-serif font-semibold text-foreground">Per-org keys</div>
+                    <p className="text-sm text-muted-foreground">AEAD encryption with isolated key management</p>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
-
-        {/* Why It's Safe - 3 Columns */}
-        <section className="space-y-6">
-          <div className="space-y-2">
-            <Badge variant="secondary">Trust Section</Badge>
-            <h2 className="text-2xl font-serif font-semibold text-foreground">Why It's Safe (3 Proof Points)</h2>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-3">
-            <Card>
-              <CardContent className="p-6 space-y-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <Shield className="h-6 w-6" />
                 </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-serif font-semibold text-foreground">K-anonymity enforced</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Never release individual submissions. Aggregate only when minimum threshold met. No @mentions, no names in open feedback.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6 space-y-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <Lock className="h-6 w-6" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-serif font-semibold text-foreground">Encryption & isolation</h3>
-                  <p className="text-sm text-muted-foreground">
-                    AEAD encryption with per-org keys. Row-level security. No IP/user-agent logged. Audit trails for all moderation.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6 space-y-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <CheckCircle2 className="h-6 w-6" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-serif font-semibold text-foreground">Data minimization</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Coarsen details, 365-day retention default. Only pseudonymous hashes for rate-limiting. Clear legal hold support.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
-
-        {/* Role-Based Benefits Tabs */}
-        <section className="space-y-6">
-          <div className="space-y-2">
-            <Badge variant="secondary">Segmented Messaging</Badge>
-            <h2 className="text-2xl font-serif font-semibold text-foreground">Benefits by Role (Tabs)</h2>
-          </div>
-
-          <Card>
-            <CardContent className="p-6">
-              <Tabs value={activeRole} onValueChange={setActiveRole}>
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="hr" data-testid="tab-hr">For HR Leaders</TabsTrigger>
-                  <TabsTrigger value="managers" data-testid="tab-managers">For Managers</TabsTrigger>
-                  <TabsTrigger value="security" data-testid="tab-security">For Security</TabsTrigger>
-                </TabsList>
                 
-                <TabsContent value="hr" className="space-y-4 mt-6">
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-serif font-semibold text-foreground">Drive retention & engagement</h3>
-                    <p className="text-muted-foreground">
-                      Get actionable signal without surveys. Anonymous intake in Slack = higher completion rates. SBI framework produces behavior-focused feedback you can actually use.
-                    </p>
+                <div className="text-center space-y-3">
+                  <div className="flex justify-center">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <Eye className="w-7 h-7" />
+                    </div>
                   </div>
-                  <ul className="space-y-2">
-                    {[
-                      "Track manager quality through aggregated feedback",
-                      "Identify ER issues before they escalate",
-                      "Close the loop with 'You said → We did' posts",
-                      "Measure engagement with built-in analytics"
-                    ].map((item, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                        <span className="text-muted-foreground">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </TabsContent>
-
-                <TabsContent value="managers" className="space-y-4 mt-6">
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-serif font-semibold text-foreground">Get fast, actionable signal</h3>
-                    <p className="text-muted-foreground">
-                      No more wondering what your team really thinks. Slack-native feedback appears where you work. Behavior-focused prompts prevent venting, produce clear actions.
-                    </p>
+                  <div className="space-y-1">
+                    <div className="text-2xl font-serif font-semibold text-foreground">No IPs logged</div>
+                    <p className="text-sm text-muted-foreground">Zero metadata in feedback tables</p>
                   </div>
-                  <ul className="space-y-2">
-                    {[
-                      "See aggregated themes, not individual complaints",
-                      "Respond with actions, build trust with transparency",
-                      "No portal to check—digest arrives in Slack",
-                      "Light-touch integration with existing workflows"
-                    ].map((item, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                        <span className="text-muted-foreground">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </TabsContent>
-
-                <TabsContent value="security" className="space-y-4 mt-6">
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-serif font-semibold text-foreground">Privacy-first architecture</h3>
-                    <p className="text-muted-foreground">
-                      Built for compliance and serious concerns routing. K-anonymity isn't optional—it's enforced. AEAD encryption, RLS, audit trails, pen-tested.
-                    </p>
+                </div>
+                
+                <div className="text-center space-y-3">
+                  <div className="flex justify-center">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <Shield className="w-7 h-7" />
+                    </div>
                   </div>
-                  <ul className="space-y-2">
-                    {[
-                      "SOC 2 compliant, 24/7 monitoring",
-                      "Per-org encryption keys, tenant isolation via RLS",
-                      "No IP/UA logging, pseudonymous rate-limiting only",
-                      "GDPR/CCPA ready, configurable retention policies"
-                    ].map((item, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                        <span className="text-muted-foreground">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </TabsContent>
-              </Tabs>
+                  <div className="space-y-1">
+                    <div className="text-2xl font-serif font-semibold text-foreground">Row-level isolation</div>
+                    <p className="text-sm text-muted-foreground">Multi-tenant RLS enforced at DB layer</p>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </section>
 
-        {/* Component Library */}
-        <section className="space-y-6">
+        {/* HERO SHOT 5: Bento Trio - Asymmetric layout with different Quad placements */}
+        <section className="space-y-4">
+          <div className="space-y-2">
+            <Badge variant="secondary">Hero Shot</Badge>
+            <h2 className="text-2xl font-serif font-semibold text-foreground">Bento Trio: Capture / Anonymous / Publish</h2>
+          </div>
+          
+          {/* Asymmetric grid */}
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* Capture - tall */}
+            <Card className="md:col-span-1 md:row-span-2 relative overflow-hidden hover-elevate transition-all">
+              <div className="absolute top-4 right-4 text-primary">
+                <QuadMotif className="w-24 h-24" opacity={0.08} />
+              </div>
+              <CardContent className="p-8 space-y-4 relative z-10 h-full flex flex-col">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                  <MessageSquare className="w-6 h-6" />
+                </div>
+                <div className="space-y-2 flex-1">
+                  <h3 className="text-2xl font-serif font-semibold text-foreground">Capture in Slack</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    SBI-guided modal appears instantly. No portal, no email, no friction. Submit in under 60 seconds.
+                  </p>
+                </div>
+                <div className="pt-4 border-t space-y-2">
+                  <div className="text-xs font-medium text-muted-foreground">QUICK PROMPTS</div>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline" className="text-xs">Situation</Badge>
+                    <Badge variant="outline" className="text-xs">Behavior</Badge>
+                    <Badge variant="outline" className="text-xs">Impact</Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Anonymous - wide */}
+            <Card className="md:col-span-2 relative overflow-hidden hover-elevate transition-all">
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-primary">
+                <QuadMotif className="w-32 h-32" opacity={0.06} />
+              </div>
+              <CardContent className="p-8 space-y-4 relative z-10">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#E6FAF6] text-[#0F4F49]">
+                    <Lock className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-2 flex-1">
+                    <h3 className="text-2xl font-serif font-semibold text-foreground">Anonymous by default</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      K-anonymity enforced. No @mentions, no names, no identifiable metadata. Pseudonymous handles for rate-limiting only.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 pt-2">
+                  <CheckCircle2 className="w-4 h-4 text-primary" />
+                  <span className="text-xs text-muted-foreground">Minimum k=5 submissions before aggregation</span>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Publish - wide */}
+            <Card className="md:col-span-2 relative overflow-hidden hover-elevate transition-all">
+              <div className="absolute top-4 left-4 text-primary">
+                <QuadMotif className="w-28 h-28" opacity={0.08} />
+              </div>
+              <CardContent className="p-8 space-y-4 relative z-10">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                    <Zap className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-2 flex-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-2xl font-serif font-semibold text-foreground">You said → We did</h3>
+                      <Badge className="bg-[#E6FAF6] text-[#0F4F49] border-[#0F4F49]/20">Action loop</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Close the loop with transparent action posts. Show themes, announce changes, build trust through visible follow-through.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        {/* Button Sampler */}
+        <section className="space-y-4">
           <div className="space-y-2">
             <Badge variant="secondary">Component Library</Badge>
-            <h2 className="text-2xl font-serif font-semibold text-foreground">Base Components</h2>
+            <h2 className="text-2xl font-serif font-semibold text-foreground">Buttons</h2>
           </div>
-
-          {/* Buttons */}
+          
           <Card>
-            <CardHeader>
-              <CardTitle>Buttons</CardTitle>
-              <CardDescription>All variants with hover states built-in</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-3">
-              <Button data-testid="button-default">Default</Button>
-              <Button variant="secondary" data-testid="button-secondary">Secondary</Button>
-              <Button variant="outline" data-testid="button-outline">Outline</Button>
+            <CardContent className="p-8 flex flex-wrap gap-4">
+              <Button data-testid="button-primary">Primary (Teal)</Button>
+              <Button variant="secondary" data-testid="button-secondary" className="bg-[#E6FAF6] text-[#0F4F49] border-[#0F4F49]/20 hover:bg-[#E6FAF6]">
+                Accent (Seafoam)
+              </Button>
               <Button variant="ghost" data-testid="button-ghost">Ghost</Button>
               <Button variant="destructive" data-testid="button-destructive">Destructive</Button>
+              <Button variant="outline" data-testid="button-outline">Outline</Button>
               <Button size="sm" data-testid="button-small">Small</Button>
               <Button size="lg" data-testid="button-large">Large</Button>
               <Button size="icon" data-testid="button-icon">
-                <Zap className="h-4 w-4" />
+                <MessageSquare className="h-4 w-4" />
               </Button>
             </CardContent>
           </Card>
+        </section>
 
-          {/* Badges */}
+        {/* Input Sampler with SBI microcopy */}
+        <section className="space-y-4">
+          <div className="space-y-2">
+            <Badge variant="secondary">Component Library</Badge>
+            <h2 className="text-2xl font-serif font-semibold text-foreground">Form Inputs (SBI Framework)</h2>
+          </div>
+          
           <Card>
-            <CardHeader>
-              <CardTitle>Badges</CardTitle>
-              <CardDescription>For status, labels, and categories</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-3">
-              <Badge>Default</Badge>
-              <Badge variant="secondary">Secondary</Badge>
-              <Badge variant="outline">Outline</Badge>
-              <Badge variant="destructive">Destructive</Badge>
-            </CardContent>
-          </Card>
-
-          {/* Form Elements */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Form Elements</CardTitle>
-              <CardDescription>Inputs with proper focus states</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 max-w-md">
+            <CardContent className="p-8 space-y-6 max-w-2xl">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Email address</label>
+                <label className="text-sm font-medium text-foreground">Situation (optional)</label>
                 <Input 
-                  type="email" 
-                  placeholder="you@company.com"
-                  data-testid="input-email"
+                  placeholder="When and where did this happen? (e.g., last sprint retro)"
+                  data-testid="input-situation"
+                  className="focus:ring-2 focus:ring-primary"
                 />
               </div>
+              
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Message</label>
+                <label className="text-sm font-medium text-foreground">Behavior (required)</label>
                 <Textarea 
-                  placeholder="Tell us more about your needs..."
-                  rows={4}
-                  data-testid="textarea-message"
+                  placeholder="What specific behavior or action did you observe?"
+                  rows={3}
+                  data-testid="textarea-behavior"
+                  className="focus:ring-2 focus:ring-primary"
                 />
               </div>
-              <Button data-testid="button-submit-form">Submit</Button>
-            </CardContent>
-          </Card>
-
-          {/* Cards */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Card Variants</CardTitle>
-              <CardDescription>Container patterns for content grouping</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-3">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Basic Card</CardTitle>
-                  <CardDescription>With header and content</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Card body content goes here.</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-accent border-accent-border">
-                <CardHeader>
-                  <CardTitle className="text-accent-foreground">Accent Card</CardTitle>
-                  <CardDescription className="text-accent-foreground/80">For highlights</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-accent-foreground/80">Use for soft emphasis and callouts.</p>
-                </CardContent>
-              </Card>
-
-              <Card className="hover-elevate cursor-pointer">
-                <CardHeader>
-                  <CardTitle>Hoverable Card</CardTitle>
-                  <CardDescription>With hover-elevate class</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Subtle elevation on hover.</p>
-                </CardContent>
-              </Card>
-            </CardContent>
-          </Card>
-        </section>
-
-        {/* CTA Patterns */}
-        <section className="space-y-6">
-          <div className="space-y-2">
-            <Badge variant="secondary">CTA Patterns</Badge>
-            <h2 className="text-2xl font-serif font-semibold text-foreground">Call-to-Action Sections</h2>
-          </div>
-
-          {/* Simple CTA */}
-          <Card>
-            <CardContent className="p-12 text-center space-y-6">
-              <div className="space-y-2 max-w-2xl mx-auto">
-                <h3 className="text-3xl font-serif font-semibold text-foreground">Ready to hear the truth?</h3>
-                <p className="text-lg text-muted-foreground">
-                  Start your free 14-day trial. No credit card required.
-                </p>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Impact (required)</label>
+                <Textarea 
+                  placeholder="How did this affect you, the team, or the work?"
+                  rows={3}
+                  data-testid="textarea-impact"
+                  className="focus:ring-2 focus:ring-primary"
+                />
               </div>
-              <div className="flex items-center justify-center gap-4 flex-wrap">
-                <Button size="lg" data-testid="button-cta-primary">
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  Add to Slack
-                </Button>
-                <Button size="lg" variant="outline" data-testid="button-cta-secondary">
-                  Talk to sales
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Contact Form CTA */}
-          <Card>
-            <CardContent className="p-8">
-              <div className="grid gap-8 md:grid-cols-2">
-                <div className="space-y-4">
-                  <h3 className="text-2xl font-serif font-semibold text-foreground">Talk to our team</h3>
-                  <p className="text-muted-foreground">
-                    See how Teammato can help your organization hear feedback safely and act on it transparently.
-                  </p>
-                  <ul className="space-y-2">
-                    {[
-                      "Free 14-day trial",
-                      "Custom onboarding support",
-                      "Dedicated security review",
-                      "Volume pricing available"
-                    ].map((item, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                        <span className="text-muted-foreground">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Work email</label>
-                    <Input type="email" placeholder="you@company.com" data-testid="input-contact-email" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Company size</label>
-                    <Input placeholder="e.g. 200 employees" data-testid="input-company-size" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">How can we help?</label>
-                    <Textarea placeholder="Optional: tell us about your needs" rows={4} data-testid="textarea-help" />
-                  </div>
-                  <Button className="w-full" data-testid="button-contact-submit">Request demo</Button>
-                  <p className="text-xs text-muted-foreground text-center">
-                    We'll respond within 1 business day
-                  </p>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Select (mock)</label>
+                <div className="flex items-center justify-between rounded-lg border border-border bg-background px-4 py-2.5 text-sm focus-within:ring-2 focus-within:ring-primary cursor-pointer">
+                  <span className="text-muted-foreground">Choose topic...</span>
+                  <span className="text-muted-foreground">▾</span>
                 </div>
               </div>
             </CardContent>
           </Card>
         </section>
 
-        {/* Social Proof */}
-        <section className="space-y-6">
+        {/* Card Variants with Quad-corner */}
+        <section className="space-y-4">
           <div className="space-y-2">
-            <Badge variant="secondary">Social Proof</Badge>
-            <h2 className="text-2xl font-serif font-semibold text-foreground">Trust Signals</h2>
+            <Badge variant="secondary">Component Library</Badge>
+            <h2 className="text-2xl font-serif font-semibold text-foreground">Card Variants</h2>
           </div>
-
-          <Card>
-            <CardContent className="p-8 space-y-8">
-              <div className="text-center space-y-2">
-                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Trusted by teams at</p>
-                <div className="flex items-center justify-center gap-8 flex-wrap">
-                  {["Company A", "Company B", "Company C", "Company D"].map((name) => (
-                    <div key={name} className="text-lg font-semibold text-muted-foreground">{name}</div>
-                  ))}
-                </div>
+          
+          <div className="grid gap-6 md:grid-cols-3">
+            <Card className="hover-elevate transition-all">
+              <CardContent className="p-6 space-y-3">
+                <h3 className="text-lg font-semibold text-foreground">Basic Card</h3>
+                <p className="text-sm text-muted-foreground">Neutral background with subtle hover elevation.</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-[#E6FAF6] border-[#0F4F49]/20 hover-elevate transition-all relative overflow-hidden">
+              <div className="absolute bottom-0 right-0 text-[#0F4F49]/10">
+                <QuadMotif className="w-24 h-24" opacity={0.3} />
               </div>
-
-              <div className="border-t pt-8">
-                <div className="grid gap-6 md:grid-cols-2">
-                  <Card>
-                    <CardContent className="p-6 space-y-4">
-                      <p className="text-sm text-muted-foreground italic">
-                        "We needed anonymous feedback that employees would actually use. Teammato delivered—completion rates tripled and the signal is actionable."
-                      </p>
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold">
-                          JS
-                        </div>
-                        <div className="text-sm">
-                          <div className="font-medium text-foreground">Jane Smith</div>
-                          <div className="text-muted-foreground">Head of People, TechCorp</div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardContent className="p-6 space-y-4">
-                      <p className="text-sm text-muted-foreground italic">
-                        "The k-anonymity enforcement and encryption gave our CISO confidence. It's the only tool we found that takes privacy seriously."
-                      </p>
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold">
-                          MJ
-                        </div>
-                        <div className="text-sm">
-                          <div className="font-medium text-foreground">Mike Johnson</div>
-                          <div className="text-muted-foreground">VP Engineering, StartupCo</div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              <CardContent className="p-6 space-y-3 relative z-10">
+                <h3 className="text-lg font-semibold text-[#0F4F49]">Seafoam Accent</h3>
+                <p className="text-sm text-[#0F4F49]/80">For highlights and special emphasis with Quad motif.</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="hover-elevate transition-all shadow-sm hover:shadow-md">
+              <CardContent className="p-6 space-y-3">
+                <h3 className="text-lg font-semibold text-foreground">Elevated Card</h3>
+                <p className="text-sm text-muted-foreground">Subtle shadow increase on hover. No scale transforms.</p>
+              </CardContent>
+            </Card>
+          </div>
         </section>
 
-        {/* Color Swatches (from provided example) */}
-        <section className="space-y-6">
+        {/* Charts Palette */}
+        <section className="space-y-4">
           <div className="space-y-2">
-            <Badge variant="secondary">Theme Tokens</Badge>
-            <h2 className="text-2xl font-serif font-semibold text-foreground">Live Theme Colors</h2>
+            <Badge variant="secondary">Color System</Badge>
+            <h2 className="text-2xl font-serif font-semibold text-foreground">Charts Palette</h2>
           </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {[
-              { name: "Primary", var: "--primary" },
-              { name: "Secondary", var: "--secondary" },
-              { name: "Accent", var: "--accent" },
-              { name: "Destructive", var: "--destructive" },
-              { name: "Muted", var: "--muted" },
-              { name: "Card", var: "--card" },
-              { name: "Border", var: "--border" },
-              { name: "Background", var: "--background" }
-            ].map((color) => (
-              <Card key={color.name}>
+          
+          <div className="grid grid-cols-5 gap-4">
+            {['--chart-1', '--chart-2', '--chart-3', '--chart-4', '--chart-5'].map((varName) => (
+              <Card key={varName}>
                 <CardContent className="p-4 space-y-3">
-                  <div className="h-16 rounded-lg" style={{ background: `hsl(var(${color.var}))` }} />
-                  <div className="space-y-1">
-                    <div className="text-sm font-medium text-foreground">{color.name}</div>
-                    <div className="text-xs font-mono text-muted-foreground">{color.var}</div>
-                  </div>
+                  <div 
+                    className="h-16 rounded-lg" 
+                    style={{ background: `hsl(var(${varName}, 220 13% 91%))` }}
+                  />
+                  <div className="text-xs font-mono text-muted-foreground">{varName}</div>
                 </CardContent>
               </Card>
             ))}
@@ -576,10 +483,10 @@ export default function Sample() {
 
       </div>
 
-      {/* Footer Note */}
+      {/* Footer */}
       <footer className="border-t mt-20">
         <div className="mx-auto max-w-7xl px-6 py-8 text-center text-sm text-muted-foreground">
-          <p>Design Gallery · All components use live theme tokens and can be deleted after review</p>
+          <p>Design Gallery · All components read live theme tokens</p>
         </div>
       </footer>
     </div>
