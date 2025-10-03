@@ -1,4 +1,3 @@
-import { buildSlackAuthorizeUrl } from "@/lib/slackInstall";
 import { 
   Plug, 
   MessageSquareText, 
@@ -251,7 +250,6 @@ export default function Landing() {
   const [compactEvidence, setCompactEvidence] = useState<boolean>(true);
 
   const visible = (t: Theme) => !enforceK || t.count >= k;
-  const slackAuthUrl = buildSlackAuthorizeUrl();
 
   // Support deep linking: /#faq?open=scopes
   useEffect(() => {
@@ -287,7 +285,7 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header authorizeUrl={slackAuthUrl} transparent={true} />
+      <Header authorizeUrl="/api/slack/install" signinUrl="/api/slack/install" transparent={true} />
       
       {/* HERO */}
       <section id="main" className="relative">
@@ -308,7 +306,7 @@ export default function Landing() {
 
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <a
-                  href={slackAuthUrl}
+                  href="/api/slack/install"
                   className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-6 py-3 text-white shadow hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
                   data-testid="button-add-to-slack"
                 >
@@ -953,7 +951,7 @@ export default function Landing() {
 
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <a
-                  href={slackAuthUrl}
+                  href="/api/slack/install"
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-7 py-3.5 text-base font-medium text-neutral-950 shadow transition hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
                 >
                   Add to Slack

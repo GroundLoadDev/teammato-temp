@@ -11,8 +11,8 @@ const NAV: NavItem[] = [
 ];
 
 export default function Header({
-  authorizeUrl = "/api/slack/authorize",
-  signinUrl = "/api/slack/signin",
+  authorizeUrl = "/api/slack/install",
+  signinUrl = "/api/slack/install",
   installed = false,
   transparent = true,
 }: {
