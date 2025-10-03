@@ -26,6 +26,7 @@ import {
 import { useState, useMemo, useEffect } from "react";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
+import SlackPreviewAnimated from "@/components/SlackPreviewAnimated";
 
 const STEPS = [
   {
@@ -328,28 +329,8 @@ export default function Landing() {
 
             {/* Right visual */}
             <div className="relative">
-              <div className="mx-auto w-full max-w-[520px] rounded-2xl border bg-background p-5 shadow-[0_1px_0_rgba(0,0,0,0.06),0_20px_40px_-20px_rgba(0,0,0,0.12)]">
-                <div className="rounded-xl bg-neutral-900 p-5 text-neutral-50">
-                  <div className="flex items-center gap-2 text-xs text-neutral-400">
-                    <div className="h-2 w-2 rounded-full bg-green-500" />
-                    # team-general
-                  </div>
-                  <div className="mt-4 font-mono text-sm">
-                    <span className="opacity-70">/teammato</span> It's hard to ask for help when deadlines pile up…
-                  </div>
-
-                  {/* tiny "system" replies */}
-                  <div className="mt-5 space-y-2 text-xs text-neutral-300">
-                    <div className="flex items-center gap-2">
-                      <div className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                      Anonymity on · meets k-threshold
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-1.5 w-1.5 rounded-full bg-neutral-500" />
-                      Added to weekly digest
-                    </div>
-                  </div>
-                </div>
+              <div className="mx-auto w-full max-w-[520px]">
+                <SlackPreviewAnimated />
               </div>
 
               {/* subtle background shape */}
