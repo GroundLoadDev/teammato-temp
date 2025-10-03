@@ -1,0 +1,92 @@
+// GuaranteesPoster.tsx
+// Bold, poster-style trust row with micro-interactions.
+// npm i lucide-react
+
+import { ShieldCheck, Lock, EyeOff, Layers3 } from "lucide-react";
+
+type Item = {
+  icon: React.ElementType;
+  title: string;        // the bold one-liner
+  proof: string;        // <= 12 words
+  detail: string;       // short expansion on hover/focus
+};
+
+const ITEMS: Item[] = [
+  {
+    icon: ShieldCheck,
+    title: "K-anonymous by default",
+    proof: "No small-n views or exports.",
+    detail: "Topics with count < k are hidden in UI and CSV.",
+  },
+  {
+    icon: Lock,
+    title: "Ciphertext at rest",
+    proof: "Plaintext is never stored.",
+    detail: "Encrypted payloads; keys separate; audited access.",
+  },
+  {
+    icon: EyeOff,
+    title: "No PII in logs",
+    proof: "Scrubbed at ingestion.",
+    detail: "Request/response logs exclude content and identifiers.",
+  },
+  {
+    icon: Layers3,
+    title: "Org-scoped isolation",
+    proof: "Strict RLS by workspace.",
+    detail: "Every query is bounded by org_id row-level security.",
+  },
+];
+
+export default function GuaranteesPoster() {
+  return (
+    <section className="relative">
+      {/* soft backdrop to separate the fold */}
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(1200px_400px_at_50%_-50%,rgba(16,185,129,0.08),transparent)]" />
+
+      <div className="mx-auto max-w-6xl px-6 py-24 lg:py-28">
+        <header className="mb-10">
+          <p className="font-mono text-sm uppercase tracking-wide text-muted-foreground">Trust &amp; safety</p>
+          <h2 className="mt-2 text-3xl font-semibold tracking-tight md:text-4xl">
+            Guarantees you can ship to legal
+          </h2>
+        </header>
+
+        <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {ITEMS.map(({ icon: Icon, title, proof, detail }) => (
+            <li key={title}>
+              <div
+                className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl bg-background p-6 text-left shadow-[0_1px_0_rgba(0,0,0,0.06),0_24px_48px_-24px_rgba(0,0,0,0.25)] ring-1 ring-black/5 transition-transform hover:-translate-y-0.5 focus-within:-translate-y-0.5"
+                tabIndex={0}
+                aria-label={`${title} — ${proof}`}
+              >
+                {/* Icon + title */}
+                <div className="flex items-start gap-4">
+                  <span className="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-foreground/5">
+                    <Icon className="h-6 w-6 text-foreground/80" />
+                  </span>
+                  <div>
+                    <h3 className="text-2xl font-semibold leading-tight">{title}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">{proof}</p>
+                  </div>
+                </div>
+
+                {/* Flip card detail — revealed on hover/focus */}
+                <div className="mt-6 rounded-xl border bg-muted/60 p-4 text-sm text-foreground/80 transition-all duration-200 group-hover:bg-muted group-focus:bg-muted">
+                  <p className="leading-relaxed">{detail}</p>
+                </div>
+
+                {/* subtle corner glow */}
+                <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-emerald-400/10 blur-2xl transition-opacity group-hover:opacity-100" />
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        <footer className="mt-8 text-sm text-muted-foreground">
+          Need the longer version? See <a href="/trust" className="underline decoration-emerald-600 underline-offset-4 hover:decoration-emerald-500">Trust &amp; Security</a>.
+        </footer>
+      </div>
+    </section>
+  );
+}
