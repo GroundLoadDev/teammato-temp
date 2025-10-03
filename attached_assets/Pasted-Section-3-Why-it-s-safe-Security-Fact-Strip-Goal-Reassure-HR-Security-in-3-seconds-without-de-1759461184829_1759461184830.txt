@@ -1,0 +1,84 @@
+Section 3 — “Why it’s safe” (Security Fact Strip)
+
+Goal
+Reassure HR/Security in 3 seconds without derailing the flow. It should feel premium and minimal—not a wall of badges.
+
+Framing (ship this copy)
+
+H2: Why it’s safe
+
+Subhead (1 line): Privacy is enforced in the product—not promised in policy.
+
+Layout
+
+Single neutral rail with three inline pills (icon + verb-led fact).
+
+No cards, no tiles, no big backgrounds.
+
+Pills (exact text):
+
+Encrypt per org (AEAD)
+
+Don’t log IPs in feedback tables
+
+Isolate by tenant (RLS)
+
+Right-aligned small link: Read the details → (anchors to /trust#security)
+
+Visual rules
+
+Rail: neutral background (--card), subtle border (--border), rounded corners (--radius).
+
+Pills: soft fill seafoam tint on hover only; default is outline.
+
+Icons: deep-teal line icons, consistent stroke (≈1.75).
+
+No seafoam blocks; seafoam acts as signal (outlines/hover only).
+
+One tomato micro-dot max in this section (place inside the lock icon or not at all).
+
+Spacing
+
+Top offset from Section 2: var(--space-L) = 72px
+
+Section padding: pt-16 pb-16 (desktop), pt-12 pb-12 (tablet), pt-10 pb-10 (mobile)
+
+Rail internal padding: 16–20px vertical, 20–24px horizontal.
+
+Motion
+
+Pills fade/slide 2–3px on hover; no scale.
+
+Respect prefers-reduced-motion.
+
+Accessibility
+
+Text contrast AA on neutral rail and on seafoam hover.
+
+Each pill is a button/link with a visible teal focus ring.
+
+Link to /trust#security is keyboard reachable and clearly labeled (no “Learn more” ambiguity).
+
+Mobile/Tablet
+
+Pills become horizontal scroll (snap) on mobile.
+
+Keep icons; truncate long labels with ellipsis if needed.
+
+Acceptance checklist
+
+Section has H2 + subhead + one rail with exactly 3 pills and a small right-aligned link.
+
+No extra badges, timelines, or paragraphs.
+
+Seafoam appears only as outline/hover—no big fills.
+
+Icons consistent; stroke weight matches other sections.
+
+Spacing matches tokens; the strip reads in <3 seconds.
+
+If you need placeholders
+
+Use icon placeholders (🔒, 🌐, 🧩) or your line icons—do not generate complex art.
+
+Label the link target clearly: /trust#security.
