@@ -944,7 +944,7 @@ export default function Landing() {
                 Turn anonymous feedback into weekly decisions.
               </h2>
               <p className="mt-4 max-w-xl text-lg text-neutral-300">
-                Install in minutes. Anonymous by default. K-anonymous digests that teams actually act on.
+                Install in Slack in minutes. K-anonymous digests your leaders can act on—no plaintext stored.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-3">
