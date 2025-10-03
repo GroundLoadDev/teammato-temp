@@ -1,0 +1,206 @@
+Teammato Homepage — Experience Blueprint (v1)
+North-star hero (above the fold)
+
+H1: Make it safe to speak up—right in Slack.
+Subhead (≤140 chars): Anonymous by default with behavior-focused prompts and aggregate summaries your leaders can act on.
+CTAs: Primary “Add to Slack” • Secondary “See how it works”
+Proof chips (3): Anonymous by default • Aggregate summaries (not names) • Install in minutes
+
+Design moves
+
+Quad Field: large, sparse, 6–7% opacity; one quad peeks off-edge.
+
+Hero proof card (right): modal crop with aggregation meter (4 quads fill sequentially on load), teal L-frame outline, long soft shadow, micro tomato bead on the modal (one red dot only).
+
+Press physics on primary button; teal focus ring visible.
+
+Acceptance
+
+H1 left-aligned; hero card overlaps section boundary by ~24–32px.
+
+Page passes squint test: one bold object (hero card), not a sea of cards.
+
+Section 1 — “Install moments” strip (90 seconds to value)
+
+A tight 3-panel strip showing the whole journey, no paragraphs:
+
+Install (OAuth screenshot) → label “Connect in seconds”
+
+Capture (SBI modal crop) → label “Behavior & Impact (Situation optional)”
+
+Publish (You said → We did card) → label “Share actions—without exposing anyone”
+
+Design moves
+
+Bento asymmetry: 45% / 27.5% / 27.5%.
+
+Each tile uses a distinct shape cue: seafoam side rail, header strip, corner lift.
+
+Acceptance
+
+No lorem; each label ≤40 chars.
+
+Quad Field only behind the center tile (very faint).
+
+Section 2 — Signature component: Aggregate Summary
+
+This is the poster child. One wide card with:
+
+Seafoam header strip + cohort dots (8–10, fixed width, 2–3 seafoam tones)
+
+“Released Week W##” chip (k-safe batching hint)
+
+2–3 theme bullets + a small “You said → We did” chip
+
+Subtle inner shadow in body; teal L-frame (top/left edges only)
+
+Acceptance
+
+One container, one border; no header/body seam.
+
+Shadow not clipped; dots never wrap; icon stroke = 1.75.
+
+Section 3 — Why it’s safe (security fact strip)
+
+A single neutral rail with three inline pills (icon + verb-led fact):
+
+Encrypt per org (AEAD)
+
+Don’t log IPs in feedback tables
+
+Isolate by tenant (RLS)
+Add “Learn more →” linking to /trust#security.
+
+Acceptance
+
+Pills, not cards.
+
+Seafoam underline on hover; teal focus rings.
+
+Section 4 — Why it’s useful (science + behavior)
+
+Two columns: left = short bullets, right = mini visual.
+
+Bullets (benefit-led)
+
+Clearer input: Light SBI prompts keep it behavior-focused.
+
+Higher participation: In-Slack capture, no portal friction.
+
+Faster fixes: Aggregate themes feed “You said → We did.”
+
+Visual
+
+Little SBI microcard with our final placeholders; one inline rule hint bubble (“Remove names/@—describe the behavior”).
+
+Acceptance
+
+No heavy copy; 3 bullets only; one micro-visual.
+
+Section 5 — For HR / Managers / Security (role tabs)
+
+Tabs (3) with persona-specific value and one module each:
+
+HR: “Drive retention & engagement” + Aggregate Summary example + link to /faq#hr.
+
+Managers: “Fewer surprises, faster fixes” + Action Post example.
+
+Security: “Privacy-first by design” + Security Fact Bar condensed + link to /trust.
+
+Design moves
+
+Active tab uses seafoam underline and small quad icon; tab panels vary layout slightly so the page doesn’t feel templated.
+
+Acceptance
+
+Each tab <150 words; one screenshot per tab; visible focus ring on tabs.
+
+Section 6 — How it works (4-step)
+
+Row of 4 compact cards:
+
+Open in Slack
+
+Write Behavior & Impact
+
+We aggregate when there’s enough input
+
+Publish actions
+
+Design moves
+
+Steps use the quad-corner form factor for #3 only (aggregation cue).
+
+Replace checklists with verb-first titles; one line of support text only.
+
+Acceptance
+
+Uniform height; hover = subtle shadow lift only; no zooms.
+
+Section 7 — Anonymity Promise (brand banner)
+
+Full-width seafoam ribbon with quad stamp (embossed). One sentence:
+
+We show themes, not people. Individual comments remain hidden until there’s enough input.
+
+Acceptance
+
+Single sentence; readable on non-Retina; one quad watermark inside the pill.
+
+Section 8 — Feature grid (compact, scannable)
+
+6 tiles, two rows (3 + 3), not long paragraphs. Each tile = icon + 2 lines:
+
+Slack-native modal
+
+Anonymous by default
+
+Aggregate summaries
+
+Topic workflows (including General feedback rolling instance)
+
+Admin review & action posts
+
+Data controls (retention, export, legal hold)
+
+Design moves
+
+Icons are line + soft fill; micro tomato dot appears in exactly one tile (Action posts icon), nowhere else in the section.
+
+Acceptance
+
+Tiles 160–200px high; consistent strokes; equal gutter spacing.
+
+Section 9 — Trust preview (link out)
+
+Two stacked elements:
+
+Audit & compliance strip: SOC 2 / pen tests / 24×7 monitoring badges (text-only pills).
+
+Mini diagram: Parent topic → time-boxed instances (W41/W42) → release gate (k met) → Aggregate Summary. No numbers, just shapes.
+
+Acceptance
+
+Diagram uses quads + arrows; no body copy beyond labels.
+
+Section 10 — Social proof (swap when you have it)
+
+Either:
+
+Logo bar (monochrome) or
+
+2 short outcomes in “Signals we shipped” format: date + one-line result.
+
+Acceptance
+
+Keep monochrome; no moving carousels.
+
+Section 11 — Pricing CTA (light)
+
+Neutral card with single line:
+“Start free • Add to Slack in minutes • No credit card.”
+Button: “Add to Slack” (primary) + “Pricing” (ghost).
+
+Acceptance
+
+Short; no feature matrix here.
