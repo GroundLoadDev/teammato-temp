@@ -1,0 +1,105 @@
+PROMPT — Replace Section 3 (“Why it’s safe”) With a Clean Fact Strip
+
+Objective: Rebuild Section 3 so it’s a single neutral rail with three inline pills and a right-aligned link. It must never show a scrollbar on desktop. Only on small screens may it horizontally scroll (with the scrollbar hidden).
+
+Framing (keep exactly)
+
+H2: Why it’s safe
+
+Subhead: Privacy is enforced in the product—not promised in policy.
+
+Layout (desktop & tablet: no scrollbars)
+
+One full-width neutral rail (rounded, subtle border, soft shadow).
+
+Inside the rail:
+
+Left group: three pills in one row (gap: 12–16px, flex-wrap: wrap enabled).
+
+Right: “Read the details →” link.
+
+Rail internal padding: 16–20px vertical, 20–24px horizontal.
+
+Pills (exact text; icon + label)
+
+Encrypt per org (AEAD)
+
+Don’t log IPs in feedback tables
+
+Isolate by tenant (RLS)
+
+Visual:
+
+Default = outline pill (neutral border).
+
+Hover = seafoam tint background, deep-teal text/icon.
+
+Focus = teal focus ring (2px).
+
+Icon stroke ~1.75, consistent.
+
+Behavior rules
+
+Desktop & tablet (≥768px):
+
+overflow-x: visible on the rail.
+
+Pills wrap to a second line if space is tight (no scrollbar, ever).
+
+Keep the link right-aligned (space-between layout).
+
+Mobile (<768px):
+
+Rail becomes a horizontal scroll for the pills only.
+
+Hide native scrollbar (scrollbar-width: none; -ms-overflow-style: none; and WebKit thumb hidden).
+
+Ensure snap behavior (scroll-snap-type: x mandatory; scroll-snap-align: start on pills).
+
+Spacing tokens (apply precisely)
+
+Top offset from Section 2: 72px
+
+Section padding: pt-16 pb-16 (desktop), pt-12 pb-12 (mobile)
+
+H2 → Subhead: 8–12px
+
+Subhead → Rail: 16–20px
+
+Color discipline
+
+Rail: --card bg with --border stroke; no seafoam fill.
+
+Seafoam only appears on pill hover (signal).
+
+One tomato micro-accent allowed inside the lock icon or omit entirely.
+
+Motion (subtle)
+
+Pill hover: fade + translate-y 1px (no scale).
+
+Link hover: underline + slight color lift.
+
+Respect prefers-reduced-motion.
+
+Accessibility
+
+Pill text contrast AA on both neutral and seafoam hover.
+
+All pills are links or buttons with visible focus rings.
+
+The right link is keyboard-reachable after the pills.
+
+Acceptance checklist (must pass)
+
+No horizontal scrollbar on desktop/tablet, period.
+
+Three pills visible in one row on wide screens; they wrap if space is tight.
+
+On mobile, pills scroll horizontally with hidden scrollbar and snap.
+
+Icons consistent; stroke ≈1.75; teal focus rings show.
+
+Seafoam used only on hover; rail stays neutral.
+
+Section reads in <3 seconds.

@@ -602,11 +602,11 @@ export default function Landing() {
       </section>
 
       {/* SECTION 3: SECURITY FACT STRIP */}
-      <section className="relative pt-16 pb-16" style={{ marginTop: '72px' }}>
+      <section className="relative pt-16 pb-16 md:pt-16 md:pb-16" style={{ marginTop: '72px' }}>
         <div className="mx-auto max-w-7xl px-6">
           {/* Section heading */}
-          <div className="mx-auto max-w-4xl mb-10">
-            <h2 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-4">
+          <div className="mx-auto max-w-4xl mb-5">
+            <h2 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-3">
               Why it's safe
             </h2>
             <p className="text-lg text-muted-foreground">
@@ -617,15 +617,16 @@ export default function Landing() {
           {/* Security rail */}
           <div className="mx-auto max-w-4xl">
             <div 
-              className="bg-card border border-border rounded-xl px-6 py-5"
+              className="bg-card border border-border rounded-xl px-5 py-4"
+              style={{ boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)' }}
               data-testid="rail-security"
             >
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                {/* Pills container */}
-                <div className="flex flex-wrap md:flex-nowrap items-center gap-3 overflow-x-auto snap-x snap-mandatory">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                {/* Pills container - wraps on desktop, scrolls on mobile */}
+                <div className="flex items-center gap-3 overflow-x-auto md:overflow-visible md:flex-wrap scrollbar-hide snap-x md:snap-none snap-mandatory">
                   {/* Pill 1: Encrypt */}
                   <button
-                    className="group flex items-center gap-2.5 px-4 py-2.5 rounded-lg border border-border bg-background hover:bg-[hsl(var(--seafoam)/0.08)] transition-all duration-200 hover:translate-y-[-2px] active:translate-y-0 snap-start shrink-0"
+                    className="group flex items-center gap-2.5 px-4 py-2 rounded-lg border border-border bg-transparent hover:bg-[hsl(var(--seafoam)/0.08)] transition-all duration-200 hover:translate-y-[-1px] active:translate-y-0 snap-start shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     data-testid="pill-encrypt"
                   >
                     <Shield 
@@ -640,7 +641,7 @@ export default function Landing() {
 
                   {/* Pill 2: Don't log IPs */}
                   <button
-                    className="group flex items-center gap-2.5 px-4 py-2.5 rounded-lg border border-border bg-background hover:bg-[hsl(var(--seafoam)/0.08)] transition-all duration-200 hover:translate-y-[-2px] active:translate-y-0 snap-start shrink-0"
+                    className="group flex items-center gap-2.5 px-4 py-2 rounded-lg border border-border bg-transparent hover:bg-[hsl(var(--seafoam)/0.08)] transition-all duration-200 hover:translate-y-[-1px] active:translate-y-0 snap-start shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     data-testid="pill-ip-logging"
                   >
                     <Globe 
@@ -655,7 +656,7 @@ export default function Landing() {
 
                   {/* Pill 3: Isolate by tenant */}
                   <button
-                    className="group flex items-center gap-2.5 px-4 py-2.5 rounded-lg border border-border bg-background hover:bg-[hsl(var(--seafoam)/0.08)] transition-all duration-200 hover:translate-y-[-2px] active:translate-y-0 snap-start shrink-0"
+                    className="group flex items-center gap-2.5 px-4 py-2 rounded-lg border border-border bg-transparent hover:bg-[hsl(var(--seafoam)/0.08)] transition-all duration-200 hover:translate-y-[-1px] active:translate-y-0 snap-start shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     data-testid="pill-tenant-isolation"
                   >
                     <Database 
@@ -672,7 +673,7 @@ export default function Landing() {
                 {/* Right-aligned link */}
                 <a
                   href="/trust#security"
-                  className="text-sm font-medium shrink-0 flex items-center gap-1.5 group"
+                  className="text-sm font-medium shrink-0 flex items-center gap-1.5 group hover:underline"
                   style={{ color: 'hsl(var(--primary))' }}
                   data-testid="link-trust-security"
                 >
