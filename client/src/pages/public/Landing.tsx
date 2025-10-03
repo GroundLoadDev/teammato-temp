@@ -1748,6 +1748,104 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* SECTION 10: CONVERSION STRIP (Final CTA) */}
+      <section className="relative pt-28 pb-36" style={{ marginTop: '72px' }}>
+        <div className="mx-auto max-w-7xl px-6">
+          
+          {/* CTA Card */}
+          <div 
+            className="relative mx-auto max-w-[920px] rounded-xl border bg-card"
+            style={{ 
+              boxShadow: '0 12px 24px rgba(0, 0, 0, 0.08)',
+              padding: '28px'
+            }}
+            data-testid="card-final-cta"
+          >
+            {/* Headline & Subhead */}
+            <div className="text-center mb-6">
+              <h2 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-3">
+                Start free in Slack
+                {/* Optional seafoam underline accent */}
+                <div 
+                  className="mx-auto mt-2 h-0.5 rounded-full"
+                  style={{ 
+                    width: '80px',
+                    backgroundColor: 'hsl(var(--seafoam-foreground))' 
+                  }}
+                />
+              </h2>
+              <p className="text-lg text-muted-foreground">
+                Install in minutes. Anonymous by default. Built for action.
+              </p>
+            </div>
+
+            {/* Primary CTA Button */}
+            <div className="flex justify-center mb-5">
+              <Button
+                size="lg"
+                className="gap-2 active:translate-y-[1px] transition-transform"
+                data-testid="button-add-to-slack"
+              >
+                <MessageSquare className="w-5 h-5" strokeWidth={1.75} />
+                <span>Add to Slack</span>
+              </Button>
+            </div>
+
+            {/* Secondary actions (inline, muted) */}
+            <div className="flex items-center justify-center gap-4 mb-4">
+              <a 
+                href="/pricing"
+                className="text-sm text-muted-foreground hover:text-foreground hover:underline transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--accent-foreground))] focus-visible:ring-offset-2 rounded"
+                data-testid="link-view-pricing"
+              >
+                View pricing
+              </a>
+              <span className="text-muted-foreground">·</span>
+              <a 
+                href="/contact"
+                className="text-sm text-muted-foreground hover:text-foreground hover:underline transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--accent-foreground))] focus-visible:ring-offset-2 rounded"
+                data-testid="link-talk-to-sales"
+              >
+                Talk to sales
+              </a>
+            </div>
+
+            {/* Mini reassurance row */}
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-3 border-t border-border">
+              <div className="flex items-center gap-1.5">
+                <EyeOff 
+                  className="w-3.5 h-3.5 text-muted-foreground" 
+                  strokeWidth={1.75}
+                />
+                <span className="text-xs text-muted-foreground">
+                  Anonymous by default
+                </span>
+              </div>
+              <span className="text-muted-foreground">·</span>
+              <div className="flex items-center gap-1.5">
+                <Shield 
+                  className="w-3.5 h-3.5 text-muted-foreground" 
+                  strokeWidth={1.75}
+                />
+                <span className="text-xs text-muted-foreground">
+                  SOC 2 audited
+                </span>
+              </div>
+              <span className="text-muted-foreground">·</span>
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 
+                  className="w-3.5 h-3.5 text-muted-foreground" 
+                  strokeWidth={1.75}
+                />
+                <span className="text-xs text-muted-foreground">
+                  Remove anytime
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

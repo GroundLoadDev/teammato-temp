@@ -1,0 +1,118 @@
+Section 10 — Conversion Strip (Final CTA)
+
+Goal
+Make the next step obvious (“Add to Slack”), reduce risk with one privacy reminder, and avoid clutter. This is not a pricing table—just a confident handoff.
+
+Framing (ship this)
+
+Headline (H2 scale): Start free in Slack
+
+Subhead (one line): Install in minutes. Anonymous by default. Built for action.
+
+Layout
+
+Container: one centered CTA card on a neutral background.
+
+Card width: 760–920px (desktop).
+
+Card padding: 24–28px; internal gap 16–20px.
+
+Top offset from Trust preview: var(--space-L) = **72px`.
+
+Section padding: pt-28 pb-36.
+
+Inside the card (vertical stack):
+
+Headline + subhead (centered on desktop only)
+
+Primary CTA button: Add to Slack
+
+Secondary actions (inline, muted):
+
+View pricing
+
+Talk to sales
+
+Mini reassurance row (muted, tiny icons):
+
+Anonymous by default
+
+SOC 2 audited
+
+Remove anytime
+
+Keep it to these four layers—no extra badges or screenshots here.
+
+Visual language
+
+Card: --card bg, 1px --border, long soft shadow (12–18px blur, low opacity), rounded corners (your token).
+
+Primary button: --primary bg with press physics (translate-y 1px on active).
+
+Secondary links: muted text with underline on hover (no buttons).
+
+Seafoam usage: tiny underline under the headline or a small chip that reads “No credit card” (optional).
+
+Tomato micro-accent: 1 tiny dot in the Slack icon on the primary button or omit if it clashes.
+
+Motion
+
+Section fade-in + 4–6px upward slide.
+
+Button hover = shadow lift only (no scale).
+
+Respect prefers-reduced-motion.
+
+Spacing rules
+
+Headline → subhead: 8–12px
+
+Subhead → primary CTA: 16–20px
+
+CTA → secondary links row: 12–16px
+
+Links row → reassurance row: 12px
+
+Generous whitespace above/below the card so it reads as the final step.
+
+Microcopy (ship as written or adjust minimally)
+
+Secondary links: View pricing · Talk to sales
+
+Reassurance items (tiny): Anonymous by default · SOC 2 audited · Remove anytime
+
+Mobile & tablet
+
+Full-width card minus gutters.
+
+Stack secondary links on a single line if they fit; otherwise stack to two lines with equal spacing.
+
+Keep the reassurance row as three small chips; they can wrap (no scrollbar).
+
+Accessibility
+
+Primary CTA has visible teal focus ring and accessible name “Add to Slack”.
+
+Links have clear targets and focus rings.
+
+Contrast AA+ for all text; deep-teal text on any seafoam chip.
+
+Button area is large enough for touch (≥44px height).
+
+Acceptance checklist (must pass)
+
+Section contains one CTA card with headline, subhead, one primary button, two secondary links, and one reassurance row—nothing else.
+
+No pricing tables or extra badges here; it’s a single call to action.
+
+Seafoam appears only as a small signal (underline or chip).
+
+Exactly zero or one tomato micro-accent (inside Slack icon only).
+
+Shadow not clipped; generous whitespace around the card.
+
+Desktop centers the block; mobile scales gracefully.
+
+Placeholders (if needed)
+
+None required (no screenshots). If your button includes a Slack icon, use PLACEHOLDER: ICON_SLACK.
