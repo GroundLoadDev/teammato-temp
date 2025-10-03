@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Play, Link2, Lock, CheckCircle2, ArrowRight, Shield, Globe, Database, Clock, FileText, Award } from "lucide-react";
+import { MessageSquare, Play, Link2, Lock, CheckCircle2, ArrowRight, Shield, Globe, Database, Clock, FileText, Award, BookOpen, Check } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 
 // Quad motif SVG - rounded cross shape
@@ -723,6 +723,270 @@ export default function Landing() {
                   data-testid="link-trust-security"
                 >
                   <span>Read the details</span>
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" strokeWidth={1.75} />
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 4: WHY IT WORKS */}
+      <section className="relative pt-28 pb-36 md:pt-28 md:pb-36" style={{ marginTop: '72px' }}>
+        <div className="mx-auto max-w-7xl px-6">
+          {/* Section heading */}
+          <div className="mb-6">
+            <h2 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-3">
+              Why it works
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Lower risk, clearer input, and in-flow capture—so feedback turns into action.
+            </p>
+          </div>
+
+          {/* ROW A: Three mechanism tiles (45/27.5/27.5) */}
+          <div className="grid grid-cols-1 lg:grid-cols-[45%_27.5%_27.5%] gap-5 mt-6">
+            {/* Tile 1: Lower risk */}
+            <div 
+              className="relative bg-card rounded-xl p-6 border border-border overflow-hidden"
+              data-testid="tile-lower-risk"
+              style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)' }}
+            >
+              {/* Seafoam side rail */}
+              <div 
+                className="absolute left-0 top-0 bottom-0 w-2"
+                style={{ backgroundColor: 'hsl(var(--seafoam))' }}
+              />
+              
+              <div className="relative pl-3">
+                <h3 className="text-base font-bold text-foreground mb-4">
+                  Anonymous by default → more people speak up
+                </h3>
+                
+                <AggregationMeter />
+                
+                <p className="text-xs text-muted-foreground mt-4">
+                  Individual comments remain hidden until there's enough input.
+                </p>
+              </div>
+            </div>
+
+            {/* Tile 2: Clearer input */}
+            <div 
+              className="relative bg-card rounded-xl overflow-hidden border border-border"
+              data-testid="tile-clearer-input"
+              style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)' }}
+            >
+              {/* Support Blue header strip */}
+              <div 
+                className="h-2"
+                style={{ backgroundColor: 'hsl(var(--support-blue))' }}
+              />
+              
+              <div className="p-6">
+                <h3 className="text-base font-bold text-foreground mb-4">
+                  SBI prompts → behavior, not blame
+                </h3>
+                
+                {/* Mini SBI card */}
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Behavior
+                  </div>
+                  <div className="text-xs text-foreground bg-muted/30 rounded px-3 py-2">
+                    Demo scope wasn't clear
+                  </div>
+                  
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mt-3">
+                    Impact
+                  </div>
+                  <div className="text-xs text-foreground bg-muted/30 rounded px-3 py-2">
+                    Extra rework delayed release
+                  </div>
+                </div>
+                
+                <div className="mt-4">
+                  <Badge variant="outline" className="text-xs">
+                    No names/@
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            {/* Tile 3: In-flow capture */}
+            <div 
+              className="relative bg-card rounded-xl p-6 border border-border overflow-hidden"
+              data-testid="tile-in-flow"
+              style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)' }}
+            >
+              {/* Lilac corner lift (shadow backplate) */}
+              <div 
+                className="absolute top-0 right-0 w-16 h-16 rounded-tr-xl pointer-events-none"
+                style={{
+                  backgroundColor: 'hsl(var(--support-lilac))',
+                  boxShadow: '-3px 3px 10px -3px rgba(62, 42, 120, 0.12)',
+                }}
+              />
+              
+              <div className="relative z-10">
+                <h3 className="text-base font-bold text-foreground mb-4">
+                  Slack-native → higher completion
+                </h3>
+                
+                {/* Three-step flow */}
+                <div className="flex items-center gap-2 justify-center py-4">
+                  <div className="flex flex-col items-center">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Link2 className="w-4 h-4" style={{ color: 'hsl(var(--primary))' }} strokeWidth={1.75} />
+                    </div>
+                    <span className="text-xs text-muted-foreground mt-1">Install</span>
+                  </div>
+                  
+                  <ArrowRight className="w-3 h-3 text-muted-foreground" strokeWidth={1.5} />
+                  
+                  <div className="flex flex-col items-center">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <MessageSquare className="w-4 h-4" style={{ color: 'hsl(var(--primary))' }} strokeWidth={1.75} />
+                    </div>
+                    <span className="text-xs text-muted-foreground mt-1">Modal</span>
+                  </div>
+                  
+                  <ArrowRight className="w-3 h-3 text-muted-foreground" strokeWidth={1.5} />
+                  
+                  <div className="flex flex-col items-center">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <CheckCircle2 className="w-4 h-4" style={{ color: 'hsl(var(--primary))' }} strokeWidth={1.75} />
+                    </div>
+                    <span className="text-xs text-muted-foreground mt-1">Submit</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ROW B: Before/After transformation */}
+          <div className="mt-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+              {/* Before card */}
+              <div 
+                className="bg-card rounded-xl p-6 border border-border"
+                data-testid="card-before"
+                style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)' }}
+              >
+                <div className="text-sm font-medium text-muted-foreground mb-3">
+                  Before
+                </div>
+                <p className="text-sm text-foreground">
+                  "The launch was bad and stressful."
+                </p>
+              </div>
+
+              {/* After card */}
+              <div 
+                className="bg-card rounded-xl overflow-hidden border border-border"
+                data-testid="card-after"
+                style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)' }}
+              >
+                <div 
+                  className="px-6 py-3 flex items-center justify-between"
+                  style={{ backgroundColor: 'hsl(var(--seafoam))' }}
+                >
+                  <span className="text-sm font-medium" style={{ color: 'hsl(var(--seafoam-foreground))' }}>
+                    After (behavior + impact)
+                  </span>
+                </div>
+                <div className="p-6">
+                  <p className="text-sm text-foreground">
+                    "Rescheduling the handoff <span className="underline decoration-primary/40 decoration-2">twice</span> caused rework; QA <span className="underline decoration-primary/40 decoration-2">rushed fixes late Friday</span>."
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Prompt nudges applied chip */}
+            <div className="flex justify-center mt-6">
+              <div className="inline-flex items-center gap-3 px-4 py-2.5 rounded-lg border border-border bg-card">
+                <span className="text-sm font-medium text-foreground">Prompt nudges applied</span>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Check className="w-3 h-3" style={{ color: 'hsl(var(--primary))' }} strokeWidth={2} />
+                    <span>Start with a verb</span>
+                  </div>
+                  <span>·</span>
+                  <div className="flex items-center gap-1">
+                    <Check className="w-3 h-3" style={{ color: 'hsl(var(--primary))' }} strokeWidth={2} />
+                    <span>Describe the behavior</span>
+                  </div>
+                  <span>·</span>
+                  <div className="flex items-center gap-1">
+                    <Check className="w-3 h-3" style={{ color: 'hsl(var(--primary))' }} strokeWidth={2} />
+                    <span>Include the impact</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Guardrails inline checklist */}
+            <div className="flex justify-center mt-6">
+              <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5" style={{ color: 'hsl(var(--primary))' }} strokeWidth={1.75} />
+                  <span>Block @mentions</span>
+                </div>
+                <span>·</span>
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5" style={{ color: 'hsl(var(--primary))' }} strokeWidth={1.75} />
+                  <span>Coarsen dates/places</span>
+                </div>
+                <span>·</span>
+                <div className="flex items-center gap-1.5">
+                  <Database className="w-3.5 h-3.5" style={{ color: 'hsl(var(--primary))' }} strokeWidth={1.75} />
+                  <span>Aggregate before release</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ROW C: Research receipts */}
+          <div className="mt-8 max-w-5xl mx-auto">
+            <div 
+              className="bg-card border border-border rounded-xl px-5 py-4"
+              style={{ boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)' }}
+              data-testid="rail-research"
+            >
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                {/* Receipts - wraps on desktop, scrolls on mobile */}
+                <div className="flex items-center gap-4 overflow-x-auto md:overflow-visible md:flex-wrap scrollbar-hide snap-x md:snap-none snap-mandatory">
+                  <div className="flex items-center gap-2 snap-start shrink-0">
+                    <BookOpen className="w-4 h-4" style={{ color: 'hsl(var(--primary))' }} strokeWidth={1.75} />
+                    <span className="text-sm text-foreground whitespace-nowrap">
+                      Lower perceived risk → higher disclosure
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 snap-start shrink-0">
+                    <BookOpen className="w-4 h-4" style={{ color: 'hsl(var(--primary))' }} strokeWidth={1.75} />
+                    <span className="text-sm text-foreground whitespace-nowrap">
+                      Behavior-focused input → more action taken
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 snap-start shrink-0">
+                    <BookOpen className="w-4 h-4" style={{ color: 'hsl(var(--primary))' }} strokeWidth={1.75} />
+                    <span className="text-sm text-foreground whitespace-nowrap">
+                      In-flow capture → higher completion than portals
+                    </span>
+                  </div>
+                </div>
+
+                {/* Right-aligned link */}
+                <a
+                  href="/trust#research"
+                  className="text-sm font-medium shrink-0 flex items-center gap-1.5 group hover:underline"
+                  style={{ color: 'hsl(var(--primary))' }}
+                  data-testid="link-trust-research"
+                >
+                  <span>Read the research</span>
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" strokeWidth={1.75} />
                 </a>
               </div>
