@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Play, Link2, Lock, CheckCircle2, ArrowRight, Shield, Globe, Database, Clock, FileText, Award, BookOpen, Check, Edit3, BarChart3, EyeOff, Layers } from "lucide-react";
+import { MessageSquare, Play, Link2, Lock, CheckCircle2, ArrowRight, Shield, Globe, Database, Clock, FileText, Award, BookOpen, Check, Edit3, BarChart3, EyeOff, Layers, Activity, Eye, Scale } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 
 // Quad motif SVG - rounded cross shape
@@ -1507,6 +1507,244 @@ export default function Landing() {
               </div>
             </div>
 
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 9: TRUST & SECURITY (Preview) */}
+      <section className="relative pt-24 pb-32" style={{ marginTop: '72px' }}>
+        <div className="mx-auto max-w-7xl px-6">
+          {/* Section heading */}
+          <div className="mb-5 text-center">
+            <h2 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-3">
+              Trust & security
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+              Privacy is enforced in the product—and verified by audits.
+            </p>
+          </div>
+
+          {/* Block A: Audit & compliance strip */}
+          <div 
+            className="relative mx-auto max-w-5xl mt-8 rounded-xl border bg-card"
+            style={{ 
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+              padding: '20px 24px'
+            }}
+            data-testid="strip-audit-compliance"
+          >
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              {/* Pills container */}
+              <div className="flex flex-wrap gap-2 md:gap-3">
+                {/* SOC 2 pill */}
+                <button 
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-transparent hover:bg-[hsl(var(--accent)/0.1)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--accent-foreground))] focus-visible:ring-offset-2"
+                  data-testid="pill-soc2"
+                >
+                  <Shield 
+                    className="w-4 h-4" 
+                    style={{ color: 'hsl(var(--accent-foreground))' }}
+                    strokeWidth={1.75}
+                  />
+                  <span className="text-sm font-medium text-foreground whitespace-nowrap">
+                    SOC 2 audited annually
+                  </span>
+                </button>
+
+                {/* Pen testing pill */}
+                <button 
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-transparent hover:bg-[hsl(var(--accent)/0.1)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--accent-foreground))] focus-visible:ring-offset-2"
+                  data-testid="pill-pentest"
+                >
+                  <Activity 
+                    className="w-4 h-4" 
+                    style={{ color: 'hsl(var(--accent-foreground))' }}
+                    strokeWidth={1.75}
+                  />
+                  <span className="text-sm font-medium text-foreground whitespace-nowrap">
+                    Regular pen testing
+                  </span>
+                </button>
+
+                {/* 24/7 monitoring pill */}
+                <button 
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-transparent hover:bg-[hsl(var(--accent)/0.1)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--accent-foreground))] focus-visible:ring-offset-2"
+                  data-testid="pill-monitoring"
+                >
+                  <Eye 
+                    className="w-4 h-4" 
+                    style={{ color: 'hsl(var(--accent-foreground))' }}
+                    strokeWidth={1.75}
+                  />
+                  <span className="text-sm font-medium text-foreground whitespace-nowrap">
+                    24/7 monitoring
+                  </span>
+                </button>
+
+                {/* GDPR/CCPA pill */}
+                <button 
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-transparent hover:bg-[hsl(var(--accent)/0.1)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--accent-foreground))] focus-visible:ring-offset-2"
+                  data-testid="pill-gdpr"
+                >
+                  <Scale 
+                    className="w-4 h-4" 
+                    style={{ color: 'hsl(var(--accent-foreground))' }}
+                    strokeWidth={1.75}
+                  />
+                  <span className="text-sm font-medium text-foreground whitespace-nowrap">
+                    GDPR/CCPA-ready controls
+                  </span>
+                </button>
+              </div>
+
+              {/* Right-aligned link */}
+              <a 
+                href="/trust#security"
+                className="inline-flex items-center gap-1.5 text-sm font-medium hover:text-[hsl(var(--accent-foreground))] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--accent-foreground))] focus-visible:ring-offset-2 rounded whitespace-nowrap"
+                style={{ color: 'hsl(var(--accent-foreground))' }}
+                data-testid="link-trust-details"
+              >
+                <span>Read the details</span>
+                <ArrowRight className="w-4 h-4" strokeWidth={1.75} />
+              </a>
+            </div>
+          </div>
+
+          {/* Block B: How privacy is enforced (mini diagram) */}
+          <div 
+            className="relative mx-auto max-w-[920px] rounded-xl border bg-card overflow-hidden"
+            style={{ 
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+              marginTop: '48px',
+              padding: '24px'
+            }}
+            data-testid="card-privacy-diagram"
+          >
+            {/* Faint quad watermark in corner */}
+            <div className="absolute top-4 right-4 pointer-events-none">
+              <QuadMotif 
+                size={100} 
+                opacity={0.045} 
+                className="text-[hsl(var(--seafoam))]" 
+              />
+            </div>
+
+            {/* Diagram title */}
+            <h3 className="text-sm font-bold text-foreground mb-6">
+              How privacy is enforced
+            </h3>
+
+            {/* Diagram flow (left to right) */}
+            <div 
+              className="relative flex items-center justify-between gap-4 md:gap-6"
+              style={{ minHeight: '240px' }}
+              aria-label="How privacy is enforced"
+            >
+              {/* 1. Topic instance */}
+              <div className="flex flex-col items-center gap-2 flex-1">
+                <div 
+                  className="w-20 h-20 rounded-lg border-2 flex items-center justify-center"
+                  style={{ borderColor: 'hsl(var(--border))' }}
+                >
+                  <span className="text-sm font-mono font-bold text-muted-foreground">
+                    W##
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  Topic instance
+                </p>
+              </div>
+
+              {/* Arrow */}
+              <ArrowRight 
+                className="w-5 h-5 text-muted-foreground flex-shrink-0" 
+                strokeWidth={1.75}
+              />
+
+              {/* 2. Submissions (multiple small quads) */}
+              <div className="flex flex-col items-center gap-2 flex-1">
+                <div className="flex flex-wrap gap-1.5 justify-center max-w-[100px]">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div
+                      key={i}
+                      className="w-6 h-6 rounded"
+                      style={{ backgroundColor: 'hsl(var(--muted))' }}
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  Submissions
+                </p>
+              </div>
+
+              {/* Arrow */}
+              <ArrowRight 
+                className="w-5 h-5 text-muted-foreground flex-shrink-0" 
+                strokeWidth={1.75}
+              />
+
+              {/* 3. Threshold gate (lock + meter) - Seafoam signal */}
+              <div className="flex flex-col items-center gap-2 flex-1">
+                <div 
+                  className="relative w-20 h-20 rounded-lg border-2 flex flex-col items-center justify-center gap-1 p-2"
+                  style={{ 
+                    borderColor: 'hsl(var(--seafoam))',
+                    backgroundColor: 'hsl(var(--accent) / 0.05)'
+                  }}
+                >
+                  {/* Lock icon */}
+                  <Lock 
+                    className="w-5 h-5" 
+                    style={{ color: 'hsl(var(--seafoam))' }}
+                    strokeWidth={1.75}
+                  />
+                  {/* Mini meter */}
+                  <div className="flex gap-0.5">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div
+                        key={i}
+                        className="w-2 h-2 rounded-sm"
+                        style={{ backgroundColor: 'hsl(var(--seafoam))' }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <p 
+                  className="text-xs font-medium text-center"
+                  style={{ color: 'hsl(var(--seafoam))' }}
+                >
+                  Threshold gate
+                </p>
+              </div>
+
+              {/* Arrow */}
+              <ArrowRight 
+                className="w-5 h-5 text-muted-foreground flex-shrink-0" 
+                strokeWidth={1.75}
+              />
+
+              {/* 4. Aggregate summary */}
+              <div className="flex flex-col items-center gap-2 flex-1">
+                <div 
+                  className="w-20 h-20 rounded-lg border-2 flex items-center justify-center p-2"
+                  style={{ borderColor: 'hsl(var(--border))' }}
+                >
+                  <BarChart3 
+                    className="w-6 h-6" 
+                    style={{ color: 'hsl(var(--primary))' }}
+                    strokeWidth={1.75}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  Aggregate summary
+                </p>
+              </div>
+            </div>
+
+            {/* Caption */}
+            <p className="text-sm text-muted-foreground text-center mt-6">
+              Themes release in aggregate once the minimum threshold is met.
+            </p>
           </div>
         </div>
       </section>

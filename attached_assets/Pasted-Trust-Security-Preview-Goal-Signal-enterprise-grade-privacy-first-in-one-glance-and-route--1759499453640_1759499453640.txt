@@ -1,0 +1,119 @@
+Trust & Security (Preview)
+
+Goal
+Signal “enterprise-grade + privacy-first” in one glance, and route serious buyers to /trust for the deep dive.
+
+Framing (ship this)
+
+H2: Trust & security
+
+Subhead (one line): Privacy is enforced in the product—and verified by audits.
+
+Layout (two stacked blocks, compact)
+Block A — Audit & compliance strip
+
+Format: one neutral rail with 4 inline pills (icon + short label).
+
+Pills (exact text):
+
+SOC 2 audited annually
+
+Regular pen testing
+
+24/7 monitoring
+
+GDPR/CCPA-ready controls
+
+Right-aligned link: Read the details → (to /trust#security)
+
+Visual rules
+
+Rail: --card bg, --border stroke, soft shadow, rounded corners.
+
+Pills default = outline; hover = seafoam tint; teal focus ring on keyboard focus.
+
+Icons: deep-teal, stroke ≈ 1.75.
+
+No seafoam fills for the rail; just on pill hover.
+
+Spacing
+
+Top offset from Feature Grid: var(--space-L) = 72px
+
+Rail padding: 16–20px vertical, 20–24px horizontal.
+
+Behavior
+
+Desktop/tablet: pills wrap (no scrollbar).
+
+Mobile: pills horizontal snap with hidden scrollbar.
+
+Placeholders
+
+PLACEHOLDER: ICON_SOC2
+
+PLACEHOLDER: ICON_PENTEST
+
+PLACEHOLDER: ICON_MONITORING
+
+PLACEHOLDER: ICON_GDPR
+
+Block B — How privacy is enforced (mini diagram)
+
+Format: a single compact diagram card (max width 920px) that illustrates the release logic.
+
+Title (inside card, small): How privacy is enforced
+
+Diagram (left→right flow):
+
+Topic instance (W##) → Submissions (multiple small quads) → Threshold gate (lock + meter) → Aggregate summary
+
+Caption (muted, under the diagram): Themes release in aggregate once the minimum threshold is met.
+
+Visual rules
+
+Card: neutral background, subtle border, faint quad watermark in one corner (4–5% opacity).
+
+Use the seafoam only on the threshold gate (lock + meter) to signal the privacy moment.
+
+One tomato micro-accent allowed inside the lock icon or skip entirely if noisy.
+
+Placeholders
+
+PLACEHOLDER: DIAGRAM_TOPIC_TO_SUMMARY (simple boxes/arrows—not detailed UI)
+
+Spacing
+
+Gap between Block A and B: var(--space-M) = 48px
+
+Card padding: 24px; diagram area ~240–280px tall (desktop).
+
+Motion (subtle, meaningful)
+
+In the diagram, animate the small quads filling the meter (80ms stagger) then reveal the “Aggregate summary” box.
+
+Pills: light fade/translate-y 1px on hover (no scale).
+
+Respect prefers-reduced-motion.
+
+Accessibility
+
+AA contrast for text on neutral and on seafoam hover.
+
+Pills and the “Read the details →” link have visible teal focus rings.
+
+Diagram has aria-label="How privacy is enforced"; caption is plain text under it.
+
+Acceptance checklist (must pass)
+
+Section shows H2 + subhead + one audit rail + one mini diagram card—nothing else.
+
+No desktop scrollbars; pills wrap on smaller widths; mobile uses horizontal snap.
+
+Seafoam appears only on pill hover and the threshold gate in the diagram.
+
+Icons consistent (stroke ≈ 1.75); focus rings visible.
+
+Diagram reads in 3 seconds: Topic → Submissions → Gate → Summary.
+
+If tomato appears, it’s a single tiny dot inside the lock; otherwise omit.
