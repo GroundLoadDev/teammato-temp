@@ -994,6 +994,299 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* SECTION 5: ROLE TABS (HR / Managers / Security) */}
+      <section className="relative pt-28 pb-36" style={{ marginTop: '72px' }}>
+        <div className="mx-auto max-w-7xl px-6">
+          {/* Section heading */}
+          <div className="mb-6 text-center">
+            <h2 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-3">
+              Built for your team
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              The same safe capture—tailored outcomes for HR, managers, and security.
+            </p>
+          </div>
+
+          {/* Tabs */}
+          <RoleTabs />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// Role Tabs Component
+function RoleTabs() {
+  const [activeTab, setActiveTab] = useState<'hr' | 'managers' | 'security'>('hr');
+
+  const tabs = [
+    { id: 'hr' as const, label: 'HR' },
+    { id: 'managers' as const, label: 'Managers' },
+    { id: 'security' as const, label: 'Security' },
+  ];
+
+  return (
+    <div className="mt-8 max-w-[980px] mx-auto">
+      {/* Tab buttons */}
+      <div 
+        role="tablist" 
+        className="flex items-center justify-center gap-2 mb-5"
+        aria-label="Role perspectives"
+      >
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls={`panel-${tab.id}`}
+            onClick={() => setActiveTab(tab.id)}
+            className="relative px-5 py-2.5 rounded-full text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            style={{
+              color: activeTab === tab.id ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
+            }}
+            data-testid={`tab-${tab.id}`}
+          >
+            <span className="flex items-center gap-2">
+              {activeTab === tab.id && (
+                <QuadMotif size={12} className="text-[hsl(var(--seafoam))]" />
+              )}
+              <span>{tab.label}</span>
+            </span>
+            {activeTab === tab.id && (
+              <div 
+                className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full transition-all duration-200"
+                style={{ 
+                  width: '60%',
+                  backgroundColor: 'hsl(var(--seafoam))' 
+                }}
+              />
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Panels */}
+      <div className="relative">
+        {/* HR Panel */}
+        <div
+          role="tabpanel"
+          id="panel-hr"
+          aria-labelledby="tab-hr"
+          className={`transition-opacity duration-150 ${
+            activeTab === 'hr' ? 'opacity-100' : 'opacity-0 absolute inset-0 pointer-events-none'
+          }`}
+          data-testid="panel-hr"
+        >
+          <div className="space-y-6">
+            {/* Lead statement */}
+            <p className="text-lg font-medium text-foreground text-center">
+              Raise participation and retention—without risky open comments.
+            </p>
+
+            {/* Proof module: Aggregate Summary Mini */}
+            <div className="bg-card border border-border rounded-xl overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)' }}>
+              <div 
+                className="px-5 py-3"
+                style={{ backgroundColor: 'hsl(var(--seafoam))' }}
+              >
+                <h4 className="text-sm font-bold" style={{ color: 'hsl(var(--seafoam-foreground))' }}>
+                  Weekly themes
+                </h4>
+              </div>
+              <div className="p-5 space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    Meeting prep efficiency
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    Async communication clarity
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2 mt-3">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <ArrowRight className="w-3 h-3" style={{ color: 'hsl(var(--primary))' }} strokeWidth={2} />
+                    <span>You said → We did</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Micro-list */}
+            <ul className="space-y-2 text-sm text-foreground">
+              <li className="flex items-start gap-2">
+                <Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'hsl(var(--primary))' }} strokeWidth={2} />
+                <span>Anonymous by default (themes, not names)</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'hsl(var(--primary))' }} strokeWidth={2} />
+                <span>Clearer, behavior-focused input</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'hsl(var(--primary))' }} strokeWidth={2} />
+                <span>Action loop builds trust</span>
+              </li>
+            </ul>
+
+            {/* CTA link */}
+            <div className="text-center pt-2">
+              <a
+                href="/faq#hr"
+                className="inline-flex items-center gap-1.5 text-sm font-medium group hover:underline"
+                style={{ color: 'hsl(var(--primary))' }}
+                data-testid="link-hr-faq"
+              >
+                <span>See HR FAQ</span>
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" strokeWidth={1.75} />
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Managers Panel */}
+        <div
+          role="tabpanel"
+          id="panel-managers"
+          aria-labelledby="tab-managers"
+          className={`transition-opacity duration-150 ${
+            activeTab === 'managers' ? 'opacity-100' : 'opacity-0 absolute inset-0 pointer-events-none'
+          }`}
+          data-testid="panel-managers"
+        >
+          <div className="space-y-6">
+            {/* Lead statement */}
+            <p className="text-lg font-medium text-foreground text-center">
+              Fewer surprises, faster fixes—right in Slack.
+            </p>
+
+            {/* Proof module: Action Post Card */}
+            <div className="relative bg-card border border-border rounded-xl p-5 overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)' }}>
+              {/* Support Blue side rail */}
+              <div 
+                className="absolute left-0 top-0 bottom-0 w-2"
+                style={{ backgroundColor: 'hsl(var(--support-blue))' }}
+              />
+              
+              <div className="pl-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <ArrowRight className="w-4 h-4" style={{ color: 'hsl(var(--primary))' }} strokeWidth={2} />
+                  <span className="text-sm font-bold text-foreground">You said → We did</span>
+                </div>
+                <p className="text-sm text-foreground">
+                  Adopted 25-min meeting default; added 5-min buffer slots in shared calendar.
+                </p>
+              </div>
+            </div>
+
+            {/* Micro-list */}
+            <ul className="space-y-2 text-sm text-foreground">
+              <li className="flex items-start gap-2">
+                <Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'hsl(var(--primary))' }} strokeWidth={2} />
+                <span>Capture in Slack, &lt;60s from intent to submit</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'hsl(var(--primary))' }} strokeWidth={2} />
+                <span>Themes in one place—no hunting in threads</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'hsl(var(--primary))' }} strokeWidth={2} />
+                <span>Share outcomes in-channel</span>
+              </li>
+            </ul>
+
+            {/* CTA link */}
+            <div className="text-center pt-2">
+              <a
+                href="#how-it-works"
+                className="inline-flex items-center gap-1.5 text-sm font-medium group hover:underline"
+                style={{ color: 'hsl(var(--primary))' }}
+                data-testid="link-how-it-works"
+              >
+                <span>See how it works</span>
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" strokeWidth={1.75} />
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Security Panel */}
+        <div
+          role="tabpanel"
+          id="panel-security"
+          aria-labelledby="tab-security"
+          className={`transition-opacity duration-150 ${
+            activeTab === 'security' ? 'opacity-100' : 'opacity-0 absolute inset-0 pointer-events-none'
+          }`}
+          data-testid="panel-security"
+        >
+          <div className="space-y-6">
+            {/* Lead statement */}
+            <p className="text-lg font-medium text-foreground text-center">
+              Privacy is enforced in the product—not promised in policy.
+            </p>
+
+            {/* Proof module: Security Fact Strip Mini */}
+            <div className="relative">
+              {/* Lilac corner lift backplate */}
+              <div 
+                className="absolute top-0 right-0 w-20 h-20 rounded-tr-xl pointer-events-none"
+                style={{
+                  backgroundColor: 'hsl(var(--support-lilac))',
+                  boxShadow: '-4px 4px 12px -4px rgba(62, 42, 120, 0.15)',
+                }}
+              />
+              
+              <div className="relative bg-card border border-border rounded-xl px-5 py-4" style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)' }}>
+                <div className="flex flex-wrap items-center gap-3 justify-center text-xs text-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5" style={{ color: 'hsl(var(--primary))' }} strokeWidth={1.75} />
+                    <span>Encrypt per org (AEAD)</span>
+                  </div>
+                  <span className="text-muted-foreground">·</span>
+                  <div className="flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5" style={{ color: 'hsl(var(--primary))' }} strokeWidth={1.75} />
+                    <span>Don't log IPs in feedback tables</span>
+                  </div>
+                  <span className="text-muted-foreground">·</span>
+                  <div className="flex items-center gap-1.5">
+                    <Database className="w-3.5 h-3.5" style={{ color: 'hsl(var(--primary))' }} strokeWidth={1.75} />
+                    <span>Isolate by tenant (RLS)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Micro-list */}
+            <ul className="space-y-2 text-sm text-foreground">
+              <li className="flex items-start gap-2">
+                <Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'hsl(var(--primary))' }} strokeWidth={2} />
+                <span>Per-org keys; tenant isolation (RLS)</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'hsl(var(--primary))' }} strokeWidth={2} />
+                <span>No IPs/UA in feedback tables</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'hsl(var(--primary))' }} strokeWidth={2} />
+                <span>SOC 2 audits + pen tests</span>
+              </li>
+            </ul>
+
+            {/* CTA link */}
+            <div className="text-center pt-2">
+              <a
+                href="/trust#security"
+                className="inline-flex items-center gap-1.5 text-sm font-medium group hover:underline"
+                style={{ color: 'hsl(var(--primary))' }}
+                data-testid="link-trust-security-panel"
+              >
+                <span>Read the details</span>
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" strokeWidth={1.75} />
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,0 +1,147 @@
+Section 5 — For HR · Managers · Security (Role Tabs)
+
+Goal
+Let each buyer persona see their value in ~10 seconds. Keep it compact, premium, and consistent with our system (seafoam as signal, quad cues, no big fills).
+
+Framing (ship this)
+
+H2: Built for your team
+
+Subhead (one line): The same safe capture—tailored outcomes for HR, managers, and security.
+
+Layout
+
+Tabs row (desktop)
+
+Three tabs: HR, Managers, Security.
+
+Tabs are pills with underlines (no full fills).
+
+Active tab uses a seafoam underline + tiny quad icon to the left of the label.
+
+Visible teal focus ring on keyboard focus.
+
+Panels
+
+Exactly one panel visible at a time.
+
+Panel width: max 980px, centered.
+
+Panel structure:
+
+Lead statement (1 sentence, ≤120 chars)
+
+Proof module (one visual, not multiple cards)
+
+Micro-list (3 bullets, one line each)
+
+CTA link (small) to the most relevant deep page
+
+Spacing
+
+Top offset from Section 4: var(--space-L) = 72px
+
+Section padding: pt-28 pb-36
+
+Tabs → Panel: 16–20px
+
+Inside panel: 16px gutters; 24px between elements
+
+Panel content (copy + placeholders)
+Tab 1 — HR
+
+Lead: “Raise participation and retention—without risky open comments.”
+
+Proof module: Aggregate Summary mini (condensed: header strip + two theme chips + small “You said → We did” chip).
+
+Placeholder: PLACEHOLDER: AGG_SUMMARY_MINI
+
+Micro-list:
+
+Anonymous by default (themes, not names)
+
+Clearer, behavior-focused input
+
+Action loop builds trust
+
+CTA link: See HR FAQ → (/faq#hr)
+
+Shape cue: Seafoam header strip in the mini summary (signal = privacy).
+Optional tomato: tiny dot inside the action icon only.
+
+Tab 2 — Managers
+
+Lead: “Fewer surprises, faster fixes—right in Slack.”
+
+Proof module: Action Post card (“You said → We did”) with one concise action.
+
+Placeholder: PLACEHOLDER: ACTION_POST_CARD
+
+Micro-list:
+
+Capture in Slack, < 60s from intent to submit
+
+Themes in one place—no hunting in threads
+
+Share outcomes in-channel
+
+CTA link: See how it works → (#how-it-works)
+
+Shape cue: Support Blue side rail (6–8px) on the left of the card.
+No seafoam block fills.
+
+Tab 3 — Security
+
+Lead: “Privacy is enforced in the product—not promised in policy.”
+
+Proof module: Security fact strip (mini)—the same three pills used earlier, condensed in a narrow rail.
+
+Pills: Encrypt per org (AEAD) · Don’t log IPs in feedback tables · Isolate by tenant (RLS)
+
+Placeholder: PLACEHOLDER: SECURITY_FACT_STRIP_MINI
+
+Micro-list:
+
+Per-org keys; tenant isolation (RLS)
+
+No IPs/UA in feedback tables
+
+SOC 2 audits + pen tests
+
+CTA link: Read the details → (/trust#security)
+
+Shape cue: Lilac corner lift backplate behind the mini rail (shadow only).
+
+Color discipline
+
+Seafoam only as underlines/chips/mini header strip—not full panels.
+
+Support Blue (header/rail) and Lilac (corner backplate) used in small surfaces only; combined coverage ≤10% of viewport.
+
+Tomato appears at most once inside whichever proof module is active.
+
+Motion
+
+Tab switch: Crossfade panel content (120–180ms) with a subtle slide (±4px).
+
+Underline animates from center outward on active tab.
+
+Respect prefers-reduced-motion.
+
+Mobile & Tablet
+
+Tabs become a segmented control (scrollable on small screens, scrollbar hidden).
+
+Panels stack vertically; proof module scales to full width.
+
+Keep copy line lengths tight; truncate micro-list bullets if needed.
+
+Accessibility
+
+Tabs are proper tablist/tab semantics with keyboard navigation.
+
+Active tab is announced to screen readers; panel content is linked via aria-controls.
+
+Pill focus rings are teal and visible.
+
+Contrast AA+ on all text over tints.
