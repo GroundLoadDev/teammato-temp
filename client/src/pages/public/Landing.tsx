@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Play, Link2, Lock, CheckCircle2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { MessageSquare, Play, Link2, Lock, CheckCircle2, ArrowRight } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
 
 // Quad motif SVG - rounded cross shape
 const QuadMotif = ({ 
@@ -96,6 +96,56 @@ const AggregationMeter = () => {
           <QuadMotif size={quad.size} opacity={0.3} className="text-primary-foreground" />
         </div>
       ))}
+    </div>
+  );
+};
+
+// Cohort dots for Aggregate Summary - stagger left to right
+const CohortDots = () => {
+  const [isVisible, setIsVisible] = useState(false);
+  const dotsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.3 }
+    );
+
+    if (dotsRef.current) {
+      observer.observe(dotsRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  const dots = 8;
+  const seafoamTones = [
+    'hsl(var(--seafoam))',
+    'hsl(var(--seafoam-foreground) / 0.3)',
+    'hsl(var(--seafoam-foreground) / 0.5)',
+  ];
+
+  return (
+    <div ref={dotsRef} className="flex items-center gap-1.5" data-testid="cohort-dots">
+      {Array.from({ length: dots }).map((_, i) => {
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        return (
+          <div
+            key={i}
+            className="w-2 h-2 rounded-full"
+            style={{
+              backgroundColor: seafoamTones[i % seafoamTones.length],
+              opacity: isVisible || prefersReducedMotion ? 1 : 0,
+              transform: isVisible || prefersReducedMotion ? 'scale(1)' : 'scale(0)',
+              transition: prefersReducedMotion ? 'none' : `opacity 300ms ease ${i * 80}ms, transform 300ms ease ${i * 80}ms`,
+            }}
+          />
+        );
+      })}
     </div>
   );
 };
@@ -434,6 +484,130 @@ export default function Landing() {
                     <p className="text-sm text-muted-foreground leading-relaxed">
                       "You said → We did" posts close the loop transparently.
                     </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 2: AGGREGATE SUMMARY POSTER */}
+      <section className="relative pt-40 pb-36 mt-56 bg-background">
+        <div className="mx-auto max-w-7xl px-6">
+          {/* Wide poster card - centered */}
+          <div className="mx-auto max-w-[920px]">
+            <div 
+              className="relative bg-card rounded-xl overflow-visible"
+              data-testid="card-aggregate-summary"
+              style={{
+                boxShadow: '0 16px 48px -12px rgba(15, 79, 73, 0.1), -4px -4px 16px -8px rgba(15, 79, 73, 0.08)',
+                borderTop: '1px solid hsl(var(--primary))',
+                borderLeft: '1px solid hsl(var(--primary))',
+              }}
+            >
+              {/* Seafoam header strip */}
+              <div 
+                className="flex items-center justify-between px-8 h-14"
+                style={{ backgroundColor: 'hsl(var(--seafoam))' }}
+                data-testid="header-aggregate"
+              >
+                <div className="flex items-center gap-3">
+                  <h3 
+                    className="text-base font-serif font-semibold"
+                    style={{ color: 'hsl(var(--seafoam-foreground))' }}
+                  >
+                    Q2 Roadmap Clarity
+                  </h3>
+                  <span 
+                    className="text-xs"
+                    style={{ color: 'hsl(var(--seafoam-foreground) / 0.6)' }}
+                  >
+                    k met
+                  </span>
+                </div>
+                <CohortDots />
+              </div>
+
+              {/* Body */}
+              <div className="p-8 space-y-6">
+                {/* Disclaimer */}
+                <p className="text-sm text-muted-foreground">
+                  Based on anonymous submissions (min threshold reached).
+                </p>
+
+                {/* Theme bullets */}
+                <div className="space-y-3">
+                  <div 
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50"
+                    data-testid="theme-bullet-1"
+                  >
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span className="text-sm text-foreground">
+                      Engineering wants more visibility into design timelines
+                    </span>
+                  </div>
+                  
+                  <div 
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50"
+                    data-testid="theme-bullet-2"
+                  >
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span className="text-sm text-foreground">
+                      Cross-team dependencies aren't surfaced early enough
+                    </span>
+                  </div>
+
+                  <div 
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50"
+                    data-testid="theme-bullet-3"
+                  >
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span className="text-sm text-foreground">
+                      Weekly sync agendas could be more focused
+                    </span>
+                  </div>
+                </div>
+
+                {/* Action row */}
+                <div className="pt-4 border-t border-border">
+                  <div className="flex items-start gap-4">
+                    <div 
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg relative"
+                      style={{ 
+                        backgroundColor: 'hsl(142 71% 45% / 0.1)',
+                      }}
+                    >
+                      <ArrowRight className="w-5 h-5" style={{ color: 'hsl(142 71% 45%)' }} />
+                      {/* Tomato micro-dot */}
+                      <div 
+                        className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full"
+                        style={{ background: 'hsl(9, 75%, 61%)' }}
+                        data-testid="dot-action-tomato"
+                      />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-muted-foreground">
+                          You said → We did
+                        </span>
+                        <Badge 
+                          variant="outline"
+                          className="text-xs"
+                          style={{ 
+                            backgroundColor: 'hsl(142 71% 45% / 0.1)',
+                            borderColor: 'hsl(142 71% 45% / 0.3)',
+                            color: 'hsl(142 71% 35%)',
+                          }}
+                          data-testid="badge-action-status"
+                        >
+                          Actioned
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-foreground leading-relaxed">
+                        Added 2-week lookahead board + dependency tags to weekly planning
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
