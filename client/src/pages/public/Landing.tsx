@@ -493,84 +493,74 @@ export default function Landing() {
       </section>
 
       {/* SECTION 2: AGGREGATE SUMMARY POSTER */}
-      <section className="relative pt-40 pb-36 mt-56 bg-background">
+      <section className="relative pt-40 pb-36 mt-28 bg-background">
         <div className="mx-auto max-w-7xl px-6">
+          {/* Section heading */}
+          <div className="mx-auto max-w-[920px] mb-12">
+            <h2 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-4">
+              Themes at a glance.
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              When enough teammates weigh in, Teammato delivers a single, anonymized summary you can act on.
+            </p>
+          </div>
+
           {/* Wide poster card - centered */}
           <div className="mx-auto max-w-[920px]">
             <div 
               className="relative bg-card rounded-xl overflow-visible"
               data-testid="card-aggregate-summary"
               style={{
-                boxShadow: '0 16px 48px -12px rgba(15, 79, 73, 0.1), -4px -4px 16px -8px rgba(15, 79, 73, 0.08)',
+                boxShadow: '0 20px 60px -30px rgba(15, 79, 73, 0.15)',
                 borderTop: '1px solid hsl(var(--primary))',
                 borderLeft: '1px solid hsl(var(--primary))',
               }}
             >
               {/* Seafoam header strip */}
               <div 
-                className="flex items-center justify-between px-8 h-14"
+                className="flex items-center justify-between px-8 py-4"
                 style={{ backgroundColor: 'hsl(var(--seafoam))' }}
                 data-testid="header-aggregate"
               >
-                <div className="flex items-center gap-3">
+                <div className="space-y-0.5">
                   <h3 
-                    className="text-base font-serif font-semibold"
+                    className="text-base font-bold"
                     style={{ color: 'hsl(var(--seafoam-foreground))' }}
                   >
-                    Q2 Roadmap Clarity
+                    Aggregate summary
                   </h3>
-                  <span 
+                  <p 
                     className="text-xs"
                     style={{ color: 'hsl(var(--seafoam-foreground) / 0.6)' }}
                   >
-                    k met
-                  </span>
+                    Topic · Roadmap clarity
+                  </p>
                 </div>
                 <CohortDots />
               </div>
 
               {/* Body */}
               <div className="p-8 space-y-6">
-                {/* Disclaimer */}
-                <p className="text-sm text-muted-foreground">
-                  Based on anonymous submissions (min threshold reached).
+                {/* Label */}
+                <p className="text-sm font-medium text-muted-foreground">
+                  Anonymized themes
                 </p>
 
-                {/* Theme bullets */}
-                <div className="space-y-3">
-                  <div 
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50"
-                    data-testid="theme-bullet-1"
-                  >
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    <span className="text-sm text-foreground">
-                      Engineering wants more visibility into design timelines
-                    </span>
+                {/* Theme chips - simple one-liners */}
+                <div className="space-y-2.5">
+                  <div className="text-sm text-foreground" data-testid="theme-chip-1">
+                    Clarify scope before demos
                   </div>
-                  
-                  <div 
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50"
-                    data-testid="theme-bullet-2"
-                  >
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    <span className="text-sm text-foreground">
-                      Cross-team dependencies aren't surfaced early enough
-                    </span>
+                  <div className="text-sm text-foreground" data-testid="theme-chip-2">
+                    Share sprint goals earlier
                   </div>
-
-                  <div 
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50"
-                    data-testid="theme-bullet-3"
-                  >
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    <span className="text-sm text-foreground">
-                      Weekly sync agendas could be more focused
-                    </span>
+                  <div className="text-sm text-foreground" data-testid="theme-chip-3">
+                    Add QA sign-off checklist
                   </div>
                 </div>
 
-                {/* Action row */}
-                <div className="pt-4 border-t border-border">
+                {/* Action bar */}
+                <div className="pt-6 border-t border-border">
                   <div className="flex items-start gap-4">
                     <div 
                       className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg relative"
@@ -581,35 +571,30 @@ export default function Landing() {
                       <ArrowRight className="w-5 h-5" style={{ color: 'hsl(142 71% 45%)' }} />
                       {/* Tomato micro-dot */}
                       <div 
-                        className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full"
+                        className="absolute top-0 right-0 w-1.5 h-1.5 rounded-full"
                         style={{ background: 'hsl(9, 75%, 61%)' }}
                         data-testid="dot-action-tomato"
                       />
                     </div>
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
                         <span className="text-sm font-medium text-muted-foreground">
                           You said → We did
                         </span>
-                        <Badge 
-                          variant="outline"
-                          className="text-xs"
-                          style={{ 
-                            backgroundColor: 'hsl(142 71% 45% / 0.1)',
-                            borderColor: 'hsl(142 71% 45% / 0.3)',
-                            color: 'hsl(142 71% 35%)',
-                          }}
-                          data-testid="badge-action-status"
-                        >
-                          Actioned
-                        </Badge>
                       </div>
-                      <p className="text-sm text-foreground leading-relaxed">
-                        Added 2-week lookahead board + dependency tags to weekly planning
+                      <p className="text-sm text-foreground">
+                        Added QA sign-off to Friday release checklist
                       </p>
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Optional micro-note */}
+              <div className="px-8 pb-6">
+                <p className="text-xs text-muted-foreground text-right">
+                  Individual comments are never shown
+                </p>
               </div>
             </div>
           </div>
