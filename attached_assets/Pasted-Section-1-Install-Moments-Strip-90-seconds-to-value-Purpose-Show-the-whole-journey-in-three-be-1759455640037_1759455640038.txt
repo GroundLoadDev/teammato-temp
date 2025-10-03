@@ -1,0 +1,105 @@
+Section 1: “Install Moments” Strip (90 seconds to value)
+Purpose
+
+Show the whole journey in three beats—Install → Capture → Publish—using distinct shapes and subtle color tints so it feels lively, not monochrome.
+
+Layout
+
+Asymmetric bento: 45% / 27.5% / 27.5% (desktop).
+
+Order: Install • Capture • Publish.
+
+Height: medium-tall tiles (so imagery breathes).
+
+Visual language & color (small global upgrade)
+
+Keep teal/seafoam as primary, and introduce two supporting tints used only for small surfaces:
+
+Support Blue (mist): #E9F3FF (text on it: #093B76)
+Use for header strips, small icon containers, and thin rails.
+
+Support Lilac (soft): #F3EEFF (text on it: #3E2A78)
+Use for corner-lift backplates, tiny badges, and chart chips.
+
+Rules
+
+Tints appear on <15% of any screen combined.
+
+Never use Support tints as full section backgrounds.
+
+Seafoam remains the accent for “safety / privacy” signals; teal remains action.
+
+Tomato stays micro-only (1 tiny dot per viewport).
+
+Tile designs (one unique cue per tile)
+Tile 1 — Install
+
+Shape cue: Support Blue side rail (6–8px) running full height on the left.
+
+Imagery: OAuth screenshot crop (button row visible).
+
+Micro-elements: tiny quad watermark in upper-right of the tile (very faint).
+
+Copy style: short label only, e.g., “Connect in seconds”.
+
+Tile 2 — Capture
+
+Shape cue: Seafoam header strip (signals safety).
+
+Imagery: SBI modal crop (Behavior & Impact visible).
+
+Micro-elements: “Aggregation meter” mini (4 quads; static here).
+
+Copy style: “Behavior & Impact—Situation optional”.
+
+Tile 3 — Publish
+
+Shape cue: Lilac corner lift (top-right only) as a backplate shadow (not a different radius).
+
+Imagery: “You said → We did” action post card.
+
+Micro-elements: 1 tomato-red dot in the action icon (and nowhere else on the strip).
+
+Copy style: “Share actions—without exposing anyone”.
+
+Background
+
+Quad Field only behind Tile 2 (lightest of the three).
+
+No additional patterns behind Tiles 1 and 3 (they rely on their shape cues).
+
+Motion (meaningful, subtle)
+
+On scroll-in: tiles stagger 80ms left→right.
+
+Side rail slides in 4–6px; header strip reveals with a soft wipe; corner lift raises via shadow only (no scale).
+
+Respect prefers-reduced-motion.
+
+Mobile & tablet
+
+Tablet: Keep three tiles in a row; reduce rail thickness and header height slightly.
+
+Mobile: Stack tiles vertically; preserve shape cues (rail becomes a top bar on Tile 1; corner lift becomes a small lifted corner shadow on Tile 3).
+
+Accessibility
+
+Text on Support Blue/Lilac uses deep-blue/deep-violet specified above to maintain AA contrast.
+
+All interactive elements show teal focus rings.
+
+Acceptance checklist (quick review)
+
+Clear asymmetry (first tile wider).
+
+Each tile uses one distinct cue: rail / header / corner-lift—no mixing.
+
+Support Blue & Lilac appear as small surfaces only (strips, rails, badges).
+
+Seafoam appears in the Capture tile header; teal remains action.
+
+Exactly one tomato micro-dot in the strip (on Publish icon).
+
+Motion uses stagger + reveal, no zooms.
+
+Quad Field visible only behind the center tile.

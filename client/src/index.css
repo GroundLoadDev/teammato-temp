@@ -48,6 +48,12 @@
   --destructive: 0deg 73.71% 41.76%;
   --destructive-foreground: 0 0% 100%;
 
+  --support-blue: 212 100% 95%;
+  --support-blue-foreground: 212 86% 25%;
+
+  --support-lilac: 267 100% 96%;
+  --support-lilac-foreground: 267 48% 32%;
+
   --input: 0deg 0% 100%;
   --ring: 180deg 84.36% 35.1%;
 
@@ -138,6 +144,12 @@
 
   --destructive: 356.3033 90.5579% 54.3137%;
   --destructive-foreground: 0 0% 100%;
+
+  --support-blue: 212 60% 15%;
+  --support-blue-foreground: 212 80% 75%;
+
+  --support-lilac: 267 50% 15%;
+  --support-lilac-foreground: 267 70% 75%;
 
   --input: 20 14% 18%;
   --ring: 9 75% 61%;
