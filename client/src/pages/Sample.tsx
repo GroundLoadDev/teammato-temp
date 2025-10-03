@@ -235,25 +235,26 @@ export default function Sample() {
           {/* Hero card with lifted top-left corner and L-shaped frame */}
           <div className="relative">
             <Card 
-              className="relative overflow-visible bg-card"
+              className="relative overflow-visible bg-card border-0"
               style={{
                 boxShadow: '0 32px 64px -16px rgba(15, 79, 73, 0.10), inset 0 1px 2px 0 rgba(15, 79, 73, 0.04)',
+                borderTop: '2px solid hsl(var(--primary))',
+                borderLeft: '2px solid hsl(var(--primary))',
               }}
             >
-              {/* L-shaped teal frame (top + left) */}
-              <div className="absolute -top-[2px] left-0 right-0 h-[2px] bg-primary rounded-t-xl" />
-              <div className="absolute top-0 -left-[2px] bottom-0 w-[2px] bg-primary rounded-l-xl" />
-              
               {/* Lifted top-left corner */}
               <div 
-                className="absolute -top-2 -left-2 w-24 h-24 bg-card border-l-2 border-t-2 border-primary rounded-tl-xl pointer-events-none"
+                className="absolute -top-3 -left-3 w-20 h-20 bg-card pointer-events-none"
                 style={{
-                  boxShadow: '-4px -4px 12px -4px rgba(15, 79, 73, 0.08)',
+                  boxShadow: '-6px -6px 16px -4px rgba(15, 79, 73, 0.12)',
+                  borderTop: '2px solid hsl(var(--primary))',
+                  borderLeft: '2px solid hsl(var(--primary))',
+                  borderRadius: '0.75rem 0 0 0',
                 }}
               />
 
-              {/* Seafoam header strip - tightened spacing */}
-              <div className="bg-[#E6FAF6] border-b border-[#0F4F49]/10 p-5">
+              {/* Seafoam header strip - tightened spacing, no bottom border */}
+              <div className="bg-[#E6FAF6] p-5 rounded-t-xl">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <CohortDots />

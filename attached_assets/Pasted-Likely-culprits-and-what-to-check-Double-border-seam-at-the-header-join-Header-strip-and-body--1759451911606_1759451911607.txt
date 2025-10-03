@@ -1,0 +1,61 @@
+Likely culprits (and what to check)
+
+Double border / seam at the header join
+
+Header strip and body card probably each have their own border/radius, creating a faint seam.
+
+Fix: one border for the whole component; header sits inside the card with matching radius.
+
+Clipped shadow
+
+Parent container may have overflow: hidden or the card is inside a masked section (quad field).
+
+Fix: allow overflow on the parent of the card so the long, soft shadow renders cleanly.
+
+Mismatched radii
+
+Header radius ≠ body radius (or the “lifted corner” has a different value).
+
+Fix: ensure top-left/top-right radii on header match the card exactly; lifted corner is a shadow trick, not a different radius.
+
+L-frame outline misalignment
+
+The teal L outline can be 1–2px off due to padding/positioning, creating an optical wobble.
+
+Fix: ensure it’s anchored to the card’s outer box, not to the header’s inner content box.
+
+Cohort dots wrapping
+
+If those dots are in a flex row, they may wrap or jitter at certain widths.
+
+Fix: make them a fixed-width group (no wrap), or cap the count for the demo.
+
+Inner shadow on content area too strong
+
+A subtle inner shadow helps separation, but too much reads as a “dent.”
+
+Fix: reduce opacity/blur; keep it barely perceptible.
+
+Seafoam band contrast
+
+Seafoam header text/icons might be using muted slate; looks washed on some displays.
+
+Fix: use deep-teal text for anything on seafoam.
+
+Z-index / stacking collisions with the quad field
+
+The background quad might be sitting above the card’s header in the stacking order, causing odd overlaps.
+
+Fix: put the quad field behind the section content (lower z), or tuck it into a separate pseudo-element.
+
+Spacing rhythm off by ~8–12px
+
+The gap between header strip and checklist might be too big, making the header feel “detached.”
+
+Fix: tighten that gap slightly so the strip feels bonded to the content.
+
+Tomato micro-dots visible in awkward spots
+
+I see tiny red dots mid-page (good brand touch), but one appears under the promise banner—reads like an error.
+
+Fix: keep only one tomato dot per screen, and anchor it to a component (e.g., action icon), not free-floating.
