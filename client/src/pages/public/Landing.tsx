@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Play, Link2, Lock, CheckCircle2, ArrowRight, Shield, Globe, Database, Clock, FileText, Award, BookOpen, Check } from "lucide-react";
+import { MessageSquare, Play, Link2, Lock, CheckCircle2, ArrowRight, Shield, Globe, Database, Clock, FileText, Award, BookOpen, Check, Edit3, BarChart3 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 
 // Quad motif SVG - rounded cross shape
@@ -1010,6 +1010,180 @@ export default function Landing() {
 
           {/* Tabs */}
           <RoleTabs />
+        </div>
+      </section>
+
+      {/* SECTION 6: HOW IT WORKS (4-step) */}
+      <section className="relative pt-24 pb-28" style={{ marginTop: '72px' }}>
+        <div className="mx-auto max-w-7xl px-6">
+          {/* Section heading */}
+          <div className="mb-5 text-center">
+            <h2 className="text-4xl md:text-5xl font-serif font-bold text-foreground mb-3">
+              How it works
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Capture in Slack, release in aggregate, share actions—done.
+            </p>
+          </div>
+
+          {/* 4-step cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mt-5 max-w-6xl mx-auto">
+            {/* Step 1: Open in Slack */}
+            <div 
+              className="relative bg-card border border-border rounded-xl overflow-hidden"
+              style={{ 
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                minHeight: '160px' 
+              }}
+              data-testid="card-step-open"
+            >
+              {/* Support Blue header strip */}
+              <div 
+                className="h-2"
+                style={{ backgroundColor: 'hsl(var(--support-blue))' }}
+              />
+              
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <MessageSquare 
+                      className="w-5 h-5" 
+                      style={{ color: 'hsl(var(--primary))' }} 
+                      strokeWidth={1.75}
+                    />
+                  </div>
+                  <h3 className="text-base font-bold text-foreground">
+                    Open in Slack
+                  </h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Launch the feedback modal from App Home or /teammato.
+                </p>
+              </div>
+            </div>
+
+            {/* Step 2: Write Behavior & Impact */}
+            <div 
+              className="relative bg-card border border-border rounded-xl overflow-hidden"
+              style={{ 
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                minHeight: '160px' 
+              }}
+              data-testid="card-step-write"
+            >
+              {/* Seafoam side rail */}
+              <div 
+                className="absolute left-0 top-0 bottom-0 w-2"
+                style={{ backgroundColor: 'hsl(var(--seafoam))' }}
+              />
+              
+              <div className="p-6 pl-8">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Edit3 
+                      className="w-5 h-5" 
+                      style={{ color: 'hsl(var(--primary))' }} 
+                      strokeWidth={1.75}
+                    />
+                  </div>
+                  <h3 className="text-base font-bold text-foreground">
+                    Write Behavior & Impact
+                  </h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Guided SBI prompts keep it specific and constructive.
+                </p>
+              </div>
+            </div>
+
+            {/* Step 3: We aggregate when safe */}
+            <div 
+              className="relative bg-card border border-border rounded-xl overflow-hidden"
+              style={{ 
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                minHeight: '160px' 
+              }}
+              data-testid="card-step-aggregate"
+            >
+              {/* Quad-corner lift (shadow only) */}
+              <div 
+                className="absolute top-0 right-0 w-16 h-16 rounded-tr-xl pointer-events-none"
+                style={{
+                  backgroundColor: 'transparent',
+                  boxShadow: '-3px 3px 10px -3px rgba(0, 0, 0, 0.12)',
+                }}
+              />
+              
+              <div className="p-6 relative z-10">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <BarChart3 
+                      className="w-5 h-5" 
+                      style={{ color: 'hsl(var(--primary))' }} 
+                      strokeWidth={1.75}
+                    />
+                  </div>
+                  <h3 className="text-base font-bold text-foreground">
+                    We aggregate when safe
+                  </h3>
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Individual comments stay hidden until enough teammates weigh in.
+                </p>
+                {/* Mini aggregation meter */}
+                <div className="flex gap-1.5">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div
+                      key={i}
+                      className="w-5 h-5 rounded"
+                      style={{ backgroundColor: 'hsl(var(--seafoam))' }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Step 4: Publish "You said → We did" */}
+            <div 
+              className="relative bg-card border border-border rounded-xl overflow-hidden"
+              style={{ 
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                minHeight: '160px' 
+              }}
+              data-testid="card-step-publish"
+            >
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  {/* Icon with lilac backplate and tomato dot */}
+                  <div className="relative">
+                    {/* Lilac corner backplate */}
+                    <div 
+                      className="absolute -top-1 -right-1 w-12 h-12 rounded-lg"
+                      style={{ backgroundColor: 'hsl(var(--support-lilac))' }}
+                    />
+                    <div className="relative w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <CheckCircle2 
+                        className="w-5 h-5" 
+                        style={{ color: 'hsl(var(--primary))' }} 
+                        strokeWidth={1.75}
+                      />
+                      {/* Tomato micro-accent dot */}
+                      <div 
+                        className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full"
+                        style={{ backgroundColor: 'hsl(var(--tomato))' }}
+                      />
+                    </div>
+                  </div>
+                  <h3 className="text-base font-bold text-foreground">
+                    Publish "You said → We did"
+                  </h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Share outcomes in Slack; build trust with visible follow-through.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </div>

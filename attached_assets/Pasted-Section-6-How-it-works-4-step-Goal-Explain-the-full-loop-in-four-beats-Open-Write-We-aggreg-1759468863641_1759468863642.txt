@@ -1,0 +1,124 @@
+Section 6 — How it works (4-step)
+
+Goal
+Explain the full loop in four beats—Open → Write → We aggregate → Publish—without walls of text. This section should feel like a clean, premium “process snapshot,” not a tutorial.
+
+Framing (ship this)
+
+H2: How it works
+
+Subhead (1 line): Capture in Slack, release in aggregate, share actions—done.
+
+Layout
+
+Row of 4 compact cards, equal width.
+
+Top offset from previous section: 72px (var(--space-L)).
+
+Section padding: pt-24 pb-28.
+
+Card padding: 20–24px; gap: 16–20px.
+
+Card height target: 160–190px (desktop).
+
+The 4 steps (titles + one-line)
+
+Open in Slack
+One line: “Launch the feedback modal from App Home or /teammato.”
+
+Shape cue: Support Blue header strip (#E9F3FF).
+
+Placeholder: PLACEHOLDER: STEP_OPEN_ICON
+
+Write Behavior & Impact
+One line: “Guided SBI prompts keep it specific and constructive.”
+
+Shape cue: Seafoam side rail (6–8px) — privacy signal.
+
+Placeholder: PLACEHOLDER: STEP_SBI_ICON
+
+We aggregate when safe
+One line: “Individual comments stay hidden until enough teammates weigh in.”
+
+Shape cue: Quad-corner lift (shadow only; no radius change).
+
+Visual: small aggregation meter (4 quads).
+
+Placeholder: PLACEHOLDER: STEP_METER_ICON
+
+Publish “You said → We did”
+One line: “Share outcomes in Slack; build trust with visible follow-through.”
+
+Shape cue: Lilac corner backplate (#F3EEFF) behind the icon only.
+
+Placeholder: PLACEHOLDER: STEP_ACTION_ICON
+
+Tomato micro-accent: tiny dot inside the action icon (this section only).
+
+Visual rules
+
+No full tint fills. Blue/Lilac/Seafoam appear on strips/rails/backplates only.
+
+Icons: line + soft fill, consistent stroke (~1.75).
+
+Focus rings: teal, visible on each card when navigated by keyboard.
+
+No badges, timestamps, or extra chrome.
+
+Motion (meaningful, subtle)
+
+Cards reveal with 80ms stagger left→right.
+
+Step 3’s meter fills (80ms per quad) on enter.
+
+Hover = shadow lift only (no scale).
+
+Respect prefers-reduced-motion.
+
+Mobile & tablet
+
+Tablet: 2×2 grid; keep shape cues.
+
+Mobile: 1 column stacked; ensure titles stay one line (truncate if needed).
+
+Maintain the tomato micro-accent on Step 4 only.
+
+Spacing details
+
+H2 → Subhead: 8–12px
+
+Subhead → Card row: 16–20px
+
+Card title → one-line: 8px
+
+Accessibility
+
+AA contrast on text over tints (deep blue/violet on Support tints, deep-teal on seafoam).
+
+Each card is a focusable element (or contains a focusable “Learn more” link) with a visible teal focus ring.
+
+Icon alt text or aria-label per step if icons are interactive.
+
+Acceptance checklist
+
+Section shows H2 + subhead + exactly 4 cards; equal widths on desktop.
+
+Each card uses one shape cue max; Step 3 includes a meter; Step 4 has the only tomato dot.
+
+No paragraphs; each step has one sentence.
+
+Seafoam/Blue/Lilac used as signals only (no big fills).
+
+Motion = stagger + meter fill; no zoom/bounce.
+
+Desktop has clean alignment and consistent heights; tablet=2×2; mobile=stacked.
+
+Placeholder icons used (no generated UI):
+
+PLACEHOLDER: STEP_OPEN_ICON
+
+PLACEHOLDER: STEP_SBI_ICON
+
+PLACEHOLDER: STEP_METER_ICON
+
+PLACEHOLDER: STEP_ACTION_ICON
