@@ -1,0 +1,231 @@
+// ObjectionFAQ.tsx
+// A bold, searchable, filterable FAQ with deep links and large hit targets.
+// Drop this after GuaranteesPoster. No external deps.
+
+import { useMemo, useState, useEffect } from "react";
+import { Search, ShieldCheck, FileDown, Plug, Trash2, Database, Lock, Users } from "lucide-react";
+
+type Topic = "slack" | "privacy" | "exports" | "retention" | "threshold" | "admin";
+type QA = {
+  id: string;
+  q: string;
+  a: string;
+  topics: Topic[];
+  icon?: React.ElementType;
+};
+
+const FAQ: QA[] = [
+  {
+    id: "scopes",
+    q: "What Slack scopes are required?",
+    a: "We use commands and chat:write. No channel history or user identity scopes are requested.",
+    topics: ["slack", "privacy"],
+    icon: Plug,
+  },
+  {
+    id: "uninstall",
+    q: "What happens if we uninstall?",
+    a: "Tokens are revoked immediately, scheduled digests are paused, and admin export remains available for 7 days unless disabled.",
+    topics: ["slack", "admin"],
+    icon: Trash2,
+  },
+  {
+    id: "kthreshold",
+    q: "How does the k-threshold protect people?",
+    a: "Any topic with fewer than k posts is suppressed across UI, analytics, and exports. Small-n views never render.",
+    topics: ["threshold", "privacy"],
+    icon: ShieldCheck,
+  },
+  {
+    id: "plaintext",
+    q: "Do you store plaintext anywhere?",
+    a: "No. Payloads are encrypted at rest; operational logs exclude message content and PII.",
+    topics: ["privacy"],
+    icon: Lock,
+  },
+  {
+    id: "exports",
+    q: "Can we export data?",
+    a: "Yes—CSV exports respect the same k-threshold and exclude suppressed topics.",
+    topics: ["exports", "admin"],
+    icon: FileDown,
+  },
+  {
+    id: "retention",
+    q: "How do retention and legal hold work?",
+    a: "Admins can set 30/90/365 or custom; legal hold freezes deletion. Threshold rules still apply during hold.",
+    topics: ["retention", "admin"],
+    icon: Database,
+  },
+  {
+    id: "roles",
+    q: "Who can see what?",
+    a: "Owner/Admin manage settings and exports; Analysts view themes; no role can access identities.",
+    topics: ["admin", "privacy"],
+    icon: Users,
+  },
+  {
+    id: "pii",
+    q: "Do you log PII?",
+    a: "No. PII is scrubbed at ingestion. Request/response logs are metadata-only.",
+    topics: ["privacy"],
+    icon: Lock,
+  },
+];
+
+const TOPIC_LABEL: Record<Topic, string> = {
+  slack: "Slack",
+  privacy: "Privacy",
+  exports: "Exports",
+  retention: "Retention",
+  threshold: "Threshold",
+  admin: "Admin",
+};
+
+export default function ObjectionFAQ() {
+  const [query, setQuery] = useState("");
+  const [activeTopics, setActiveTopics] = useState<Topic[]>([]);
+
+  // Support deep linking: /#faq?open=scopes
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const open = url.searchParams.get("open");
+    if (open) {
+      const el = document.getElementById(`faq-${open}`);
+      if (el) {
+        el.setAttribute("open", "true");
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  }, []);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return FAQ.filter((item) => {
+      const matchesQuery =
+        !q ||
+        item.q.toLowerCase().includes(q) ||
+        item.a.toLowerCase().includes(q) ||
+        item.topics.some((t) => TOPIC_LABEL[t].toLowerCase().includes(q));
+      const matchesTopic =
+        activeTopics.length === 0 || activeTopics.every((t) => item.topics.includes(t));
+      return matchesQuery && matchesTopic;
+    });
+  }, [query, activeTopics]);
+
+  const toggleTopic = (t: Topic) =>
+    setActiveTopics((curr) =>
+      curr.includes(t) ? curr.filter((x) => x !== t) : [...curr, t]
+    );
+
+  return (
+    <section className="relative">
+      <div className="mx-auto max-w-6xl px-6 py-24 lg:py-28">
+        <header className="mb-8">
+          <p className="font-mono text-sm uppercase tracking-wide text-muted-foreground">FAQ</p>
+          <h2 className="mt-2 text-3xl font-semibold tracking-tight md:text-4xl">
+            Objections—answered plainly
+          </h2>
+        </header>
+
+        {/* Search + filter bar */}
+        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="relative w-full md:max-w-lg">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search privacy, exports, uninstall…"
+              className="w-full rounded-xl border bg-background py-3 pl-10 pr-3 text-base shadow-[0_1px_0_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {(Object.keys(TOPIC_LABEL) as Topic[]).map((t) => {
+              const active = activeTopics.includes(t);
+              return (
+                <button
+                  key={t}
+                  onClick={() => toggleTopic(t)}
+                  className={[
+                    "rounded-full px-3 py-1.5 text-sm ring-1 transition",
+                    active
+                      ? "bg-emerald-600 text-white ring-emerald-600"
+                      : "bg-muted text-foreground/80 ring-black/10 hover:bg-muted/70",
+                  ].join(" ")}
+                  aria-pressed={active}
+                >
+                  {TOPIC_LABEL[t]}
+                </button>
+              );
+            })}
+            {activeTopics.length > 0 && (
+              <button
+                onClick={() => setActiveTopics([])}
+                className="rounded-full px-3 py-1.5 text-sm text-foreground/70 underline underline-offset-4"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* FAQ list */}
+        <div className="divide-y divide-border rounded-2xl border bg-background shadow-[0_1px_0_rgba(0,0,0,0.06)]">
+          {filtered.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              No results—try another term or clear filters.
+            </div>
+          ) : (
+            filtered.map((item) => {
+              const Icon = item.icon ?? ShieldCheck;
+              return (
+                <details
+                  key={item.id}
+                  id={`faq-${item.id}`}
+                  className="group"
+                >
+                  <summary className="flex cursor-pointer list-none items-center gap-4 p-6 text-left hover:bg-muted/50 focus:bg-muted/50 focus:outline-none">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-foreground/5">
+                      <Icon className="h-5 w-5 text-foreground/80" />
+                    </span>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold leading-tight">{item.q}</h3>
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        {item.topics.map((t) => (
+                          <span
+                            key={t}
+                            className="rounded-full bg-foreground/5 px-2.5 py-1 text-xs text-foreground/70"
+                          >
+                            {TOPIC_LABEL[t]}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <span
+                      aria-hidden
+                      className="ml-2 h-5 w-5 rounded-full bg-foreground/10 transition group-open:rotate-45"
+                    />
+                  </summary>
+
+                  <div className="px-6 pb-6 pt-0 text-base text-muted-foreground">
+                    <p className="max-w-prose leading-relaxed">{item.a}</p>
+                    <div className="mt-3 text-sm">
+                      <a
+                        href={`#faq?open=${item.id}`}
+                        className="text-emerald-700 underline underline-offset-4 hover:text-emerald-600"
+                      >
+                        Link to this answer
+                      </a>
+                    </div>
+                  </div>
+                </details>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
