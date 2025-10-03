@@ -54,6 +54,9 @@
   --support-lilac: 267 100% 96%;
   --support-lilac-foreground: 267 48% 32%;
 
+  --seafoam: 171 67% 94%;
+  --seafoam-foreground: 174 68% 18%;
+
   --input: 0deg 0% 100%;
   --ring: 180deg 84.36% 35.1%;
 
@@ -150,6 +153,9 @@
 
   --support-lilac: 267 50% 15%;
   --support-lilac-foreground: 267 70% 75%;
+
+  --seafoam: 174 40% 20%;
+  --seafoam-foreground: 171 60% 80%;
 
   --input: 20 14% 18%;
   --ring: 9 75% 61%;

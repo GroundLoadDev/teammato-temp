@@ -152,7 +152,19 @@ export default function Landing() {
                   size="lg"
                   variant="ghost"
                   data-testid="button-see-how-it-works"
-                  className="active:translate-y-[1px] transition-all hover:bg-[#E6FAF6] hover:text-[#0F4F49] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="active:translate-y-[1px] transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  style={{
+                    ['--hover-bg' as string]: 'hsl(var(--seafoam))',
+                    ['--hover-text' as string]: 'hsl(var(--seafoam-foreground))',
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'hsl(var(--seafoam))';
+                    (e.currentTarget as HTMLButtonElement).style.color = 'hsl(var(--seafoam-foreground))';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = '';
+                    (e.currentTarget as HTMLButtonElement).style.color = '';
+                  }}
                 >
                   <Play className="w-5 h-5 mr-2" strokeWidth={1.75} />
                   See how it works
@@ -325,23 +337,33 @@ export default function Landing() {
               </div>
 
               {/* Seafoam header strip */}
-              <div className="bg-[#E6FAF6] p-4 flex items-center justify-between">
+              <div 
+                className="p-4 flex items-center justify-between"
+                style={{ backgroundColor: 'hsl(var(--seafoam))' }}
+              >
                 <div className="flex items-center gap-2">
                   {/* Static aggregation meter */}
                   <div className="flex items-center gap-1">
                     {[10, 9, 8, 7].map((size, i) => (
                       <div
                         key={i}
-                        className="rounded-sm bg-[#0F4F49]"
+                        className="rounded-sm"
                         style={{
                           width: `${size}px`,
                           height: `${size}px`,
+                          backgroundColor: 'hsl(var(--seafoam-foreground))',
                         }}
                       />
                     ))}
                   </div>
                 </div>
-                <Badge className="bg-[#0F4F49] text-white text-xs">
+                <Badge 
+                  className="text-xs"
+                  style={{ 
+                    backgroundColor: 'hsl(var(--seafoam-foreground))',
+                    color: 'hsl(var(--seafoam))'
+                  }}
+                >
                   Safe
                 </Badge>
               </div>
@@ -349,9 +371,10 @@ export default function Landing() {
               <div className="p-6 relative z-10">
                 <div className="space-y-4">
                   <div 
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#E6FAF6]"
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
+                    style={{ backgroundColor: 'hsl(var(--seafoam))' }}
                   >
-                    <Lock className="w-6 h-6 text-[#0F4F49]" strokeWidth={1.75} />
+                    <Lock className="w-6 h-6" strokeWidth={1.75} style={{ color: 'hsl(var(--seafoam-foreground))' }} />
                   </div>
                   
                   <div className="space-y-2">
