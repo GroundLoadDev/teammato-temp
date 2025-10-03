@@ -941,7 +941,7 @@ export default function Landing() {
           <div className="grid items-center gap-10 md:grid-cols-12">
             <div className="md:col-span-7">
               <h2 className="text-5xl font-semibold tracking-tight sm:text-6xl">
-                We show themes, not people.
+                Turn anonymous feedback into weekly decisions.
               </h2>
               <p className="mt-4 max-w-xl text-lg text-neutral-300">
                 Install in minutes. Anonymous by default. K-anonymous digests that teams actually act on.
