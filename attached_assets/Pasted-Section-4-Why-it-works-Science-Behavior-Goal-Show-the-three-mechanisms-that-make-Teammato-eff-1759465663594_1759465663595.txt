@@ -1,0 +1,152 @@
+Section 4 — Why it works (Science + Behavior)
+
+Goal
+Show the three mechanisms that make Teammato effective and safe—lower risk, clearer input, in-flow capture—and demonstrate them visually (not with essays).
+
+Framing (ship this)
+
+H2: Why it works
+
+Subhead (one line): Lower risk, clearer input, and in-flow capture—so feedback turns into action.
+
+Layout (one tall section, three rows)
+Row A — Mechanisms (3 tiles, asymmetric)
+
+Grid: 45% / 27.5% / 27.5%
+
+Spacing: mt: 24px, tile padding 24px, gap 20px
+
+Tile 1 — Lower risk
+
+Title: Anonymous by default → more people speak up
+
+Visual: Aggregation meter (4 quads) aligned under the title.
+
+Shape cue: Seafoam side rail (6–8px) on the left (signal = safety).
+
+Micro note (tiny): Individual comments remain hidden until there’s enough input.
+
+Placeholder: PLACEHOLDER: METER_STRIP
+
+Tile 2 — Clearer input
+
+Title: SBI prompts → behavior, not blame
+
+Visual: miniature SBI microcard with Behavior/Impact rows (no text entry fields).
+
+Guardrail tag: small pill: No names/@ (muted).
+
+Shape cue: Support Blue header strip (#E9F3FF).
+
+Placeholder: PLACEHOLDER: SBI_MICROCARD
+
+Tile 3 — In-flow capture
+
+Title: Slack-native → higher completion
+
+Visual: tiny Install → Modal → Submit strip (three icons with arrows).
+
+Shape cue: Lilac corner lift (shadow backplate, no radius change).
+
+Placeholder: PLACEHOLDER: THREE_STEP_STRIP
+
+Color discipline
+
+Seafoam only as rail/strip signals; Blue/Lilac used sparingly (≤10% of viewport combined).
+
+No full-tint backgrounds.
+
+Motion
+
+Tiles stagger in (80ms).
+
+Meter quads fill sequentially (80ms per quad).
+
+Respect prefers-reduced-motion.
+
+Row B — Transform (Before → After)
+
+Proves the prompting improves quality.
+
+Layout: two cards side-by-side (Before / After), equal width.
+
+Before card (neutral):
+
+Header: “Before”
+
+Body line: “The launch was bad and stressful.” (vague)
+
+After card (seafoam header strip):
+
+Header: “After (behavior + impact)”
+
+Body line: “Rescheduling the handoff twice caused rework; QA rushed fixes late Friday.” (specific)
+
+Between cards: a small chip: Prompt nudges applied with a mini checklist (3 items):
+
+Start with a verb
+
+Describe the behavior
+
+Include the impact
+
+Motion: a soft underline sweep highlights the changed words in the After card (single pass, ~300ms).
+
+Placeholders:
+
+PLACEHOLDER: BEFORE_CARD
+
+PLACEHOLDER: AFTER_CARD
+
+Guardrails (below the pair, compact list)
+
+Inline checklist (single row):
+Block @mentions, Coarsen dates/places, Aggregate before release
+
+Do not turn this into a big card; keep it a single-line checklist with icons.
+
+Row C — Receipts (Fact strip)
+
+A slim rail with three receipts (mini book icons + labels). Link to deep dive.
+
+Receipts:
+
+Lower perceived risk → higher disclosure
+
+Behavior-focused input → more action taken
+
+In-flow capture → higher completion than portals
+
+Right-aligned link: Read the research → (to /trust#research)
+
+Behavior: desktop wraps (no scrollbar); mobile horizontal snap with hidden scrollbar.
+
+Spacing
+
+Top offset from Section 3: var(--space-L) = 72px
+
+Section padding: pt-28 pb-36 (desktop), pt-20 pb-28 (tablet), pt-16 pb-24 (mobile)
+
+Row gaps: 32px between Row A/B and Row B/C.
+
+Accessibility
+
+AA contrast on all tints (deep-teal text on seafoam; deep blue/violet on support tints).
+
+All chips and pills have visible teal focus rings.
+
+Motion respects reduced-motion.
+
+Acceptance checklist (must pass)
+
+Section contains exactly: H2, one-line subhead, Row A (3 asymmetric tiles), Row B (Before/After + guardrails inline), Row C (receipts rail).
+
+No paragraphs longer than one line.
+
+Seafoam/Blue/Lilac used as signals only (rails/headers/backplates).
+
+Aggregation meter and Before→After animations are subtle and meaningful; no zooms.
+
+No “example” wording anywhere; labels are product-tone, not mockup-tone.
+
+One tomato micro-accent total in this section (e.g., a tiny dot in the guardrails lock icon), or skip if distracting.
