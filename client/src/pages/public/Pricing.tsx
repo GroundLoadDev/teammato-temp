@@ -48,7 +48,7 @@ export default function PricingPage() {
     <main id="main">
       <PricingHero term={term} onTermChange={setTerm} />
       <SeatSizer seats={seats} setSeats={setSeats} recommended={recommended} term={term} />
-      <PlansTwoUp term={term} />
+      <PlansChooser term={term} />
       <FeatureParity />
       <BillingExplainer />
       <PricingFAQ />
@@ -175,58 +175,57 @@ function SeatSizer({
   );
 }
 
-function PlansTwoUp({ term }: { term: Term }) {
-  type ScaleBandKey = "scale_500" | "scale_1000" | "scale_2500" | "scale_5000";
+function PlansChooser({ term }: { term: Term }) {
+  const PRO = { key: "pro_250", cap: 250, monthly: 99, annual: 999 };
 
   type ScaleBand = {
-    key: ScaleBandKey;
+    key: string;
     cap: number;
     monthly: number;
     annual: number;
     label: string;
   };
 
-  const PRO = { key: "pro_250", name: "Pro", cap: 250, monthly: 99, annual: 999 };
-
-  const SCALE_BANDS: ScaleBand[] = [
-    { key: "scale_500",  cap: 500,  monthly: 149, annual: 1490, label: "Up to 500" },
-    { key: "scale_1000", cap: 1000, monthly: 199, annual: 1990, label: "Up to 1,000" },
-    { key: "scale_2500", cap: 2500, monthly: 299, annual: 2990, label: "Up to 2,500" },
-    { key: "scale_5000", cap: 5000, monthly: 399, annual: 3990, label: "Up to 5,000" },
+  const SCALE: ScaleBand[] = [
+    { key: "scale_500",    cap: 500,    monthly: 149,  annual: 1490,  label: "Up to 500" },
+    { key: "scale_1000",   cap: 1000,   monthly: 199,  annual: 1990,  label: "Up to 1k" },
+    { key: "scale_2500",   cap: 2500,   monthly: 299,  annual: 2990,  label: "Up to 2.5k" },
+    { key: "scale_5000",   cap: 5000,   monthly: 399,  annual: 3990,  label: "Up to 5k" },
+    { key: "scale_10000",  cap: 10000,  monthly: 599,  annual: 5990,  label: "Up to 10k" },
+    { key: "scale_25000",  cap: 25000,  monthly: 999,  annual: 9990,  label: "Up to 25k" },
+    { key: "scale_50000",  cap: 50000,  monthly: 1499, annual: 14990, label: "Up to 50k" },
+    { key: "scale_100000", cap: 100000, monthly: 2499, annual: 24990, label: "Up to 100k" },
   ];
 
-  const [selected, setSelected] = useState<ScaleBandKey>("scale_500");
-  const active = SCALE_BANDS.find((b) => b.key === selected)!;
-  const price = term === "annual" ? active.annual : active.monthly;
+  const [sel, setSel] = useState<string>("scale_500");
+  const active = SCALE.find(b => b.key === sel)!;
+
+  const scalePrice = term === "annual" ? active.annual : active.monthly;
+  const scaleSuffix = term === "annual" ? "/yr" : "/mo";
 
   return (
-    <section className="mx-auto max-w-6xl px-6 py-6 md:py-8">
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* PRO column */}
+    <section className="mx-auto max-w-6xl px-6 py-8">
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* PRO */}
         <article className="rounded-2xl border bg-background p-6 shadow-[0_1px_0_rgba(0,0,0,0.06)]" data-testid="card-plan-pro">
           <header className="flex items-center justify-between">
             <h3 className="text-lg font-semibold" data-testid="text-plan-name-pro">Pro</h3>
             <span className="rounded-full bg-foreground/5 px-2 py-1 text-xs text-foreground/70">For most teams</span>
           </header>
-
           <div className="mt-2 text-3xl font-semibold" data-testid="text-plan-price-pro">
             {formatUSD(term === "annual" ? PRO.annual : PRO.monthly)}
-            <span className="ml-1 text-sm font-normal text-muted-foreground">/{term === "annual" ? "yr" : "mo"}</span>
+            <span className="ml-1 text-sm font-normal text-muted-foreground">{scaleSuffix}</span>
           </div>
-
           <ul className="mt-4 space-y-2 text-sm">
             <li className="flex items-center justify-between">
               <span>Max workspace users</span>
-              <span className="rounded-lg bg-foreground/5 px-2 py-0.5 text-xs text-foreground/70" data-testid="text-plan-cap-pro">
-                {PRO.cap.toLocaleString()}
-              </span>
+              <span className="rounded-lg bg-foreground/5 px-2 py-0.5 text-xs text-foreground/70" data-testid="text-plan-cap-pro">{PRO.cap.toLocaleString()}</span>
             </li>
             <li className="text-muted-foreground">Anonymous posts & comments</li>
             <li className="text-muted-foreground">Weekly digests & analytics</li>
             <li className="text-muted-foreground">K-anonymity & retention controls</li>
             <li className="text-muted-foreground">Email support</li>
           </ul>
-
           <a
             href={`/api/billing/checkout?plan=${PRO.key}&term=${term}`}
             className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
@@ -236,32 +235,33 @@ function PlansTwoUp({ term }: { term: Term }) {
           </a>
         </article>
 
-        {/* SCALE column */}
+        {/* SCALE with band rail */}
         <article className="rounded-2xl border bg-background p-6 shadow-[0_1px_0_rgba(0,0,0,0.06)]" data-testid="card-plan-scale">
           <header className="flex items-center justify-between">
             <h3 className="text-lg font-semibold" data-testid="text-plan-name-scale">Scale</h3>
             <span className="rounded-full bg-foreground/5 px-2 py-1 text-xs text-foreground/70">Larger workspaces</span>
           </header>
 
-          <div className="mt-2 text-3xl font-semibold" data-testid="text-plan-price-scale">
-            {formatUSD(price)}
-            <span className="ml-1 text-sm font-normal text-muted-foreground">/{term === "annual" ? "yr" : "mo"}</span>
-          </div>
-
-          {/* size selector (interactive chips) */}
-          <div className="mt-4">
+          {/* Horizontal band chips (accessible segmented control) */}
+          <div className="mt-3">
             <p className="text-sm text-muted-foreground">Pick your seat cap</p>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              {SCALE_BANDS.map((b) => {
-                const activeChip = selected === b.key;
+            <div
+              role="tablist"
+              aria-label="Scale bands"
+              className="mt-2 flex gap-2 overflow-x-auto rounded-xl border bg-muted p-1 [scrollbar-width:none] [-ms-overflow-style:none]"
+              style={{ scrollbarWidth: "none" }}
+            >
+              {SCALE.map((b) => {
+                const activeChip = sel === b.key;
                 return (
                   <button
                     key={b.key}
-                    onClick={() => setSelected(b.key)}
-                    aria-pressed={activeChip}
+                    role="tab"
+                    aria-selected={activeChip}
+                    onClick={() => setSel(b.key)}
                     className={[
-                      "w-full rounded-xl px-3 py-2 text-left text-sm ring-1 ring-black/5 transition",
-                      activeChip ? "bg-emerald-600 text-white" : "bg-muted hover:bg-muted/70",
+                      "whitespace-nowrap rounded-lg px-3 py-2 text-sm transition",
+                      activeChip ? "bg-emerald-600 text-white" : "bg-transparent hover:bg-foreground/10",
                     ].join(" ")}
                     data-testid={`button-scale-${b.key}`}
                   >
@@ -269,12 +269,26 @@ function PlansTwoUp({ term }: { term: Term }) {
                   </button>
                 );
               })}
+              {/* Contact chip (beyond published max) */}
+              <a
+                role="tab"
+                aria-selected="false"
+                href="/contact"
+                className="whitespace-nowrap rounded-lg px-3 py-2 text-sm hover:bg-foreground/10"
+                data-testid="link-contact-enterprise"
+              >
+                100k+? Contact us
+              </a>
             </div>
-            <div className="mt-3 flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Max workspace users</span>
-              <span className="rounded-lg bg-foreground/5 px-2 py-0.5 text-xs text-foreground/70" data-testid="text-plan-cap-scale">
-                {active.cap.toLocaleString()}
-              </span>
+          </div>
+
+          {/* Live price/cap */}
+          <div className="mt-4 flex items-baseline justify-between">
+            <div className="text-3xl font-semibold" data-testid="text-plan-price-scale">
+              {formatUSD(scalePrice)} <span className="ml-1 text-sm font-normal text-muted-foreground">{scaleSuffix}</span>
+            </div>
+            <div className="rounded-lg bg-foreground/5 px-2 py-1 text-xs text-foreground/70" data-testid="text-plan-cap-scale">
+              Max {active.cap.toLocaleString()} users
             </div>
           </div>
 
@@ -292,13 +306,36 @@ function PlansTwoUp({ term }: { term: Term }) {
           >
             Choose Scale
           </a>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Change size anytime in the Billing Portal.
-          </p>
+          <p className="mt-2 text-xs text-muted-foreground">Change size anytime in the Billing Portal.</p>
         </article>
       </div>
 
-      {/* parity reminder */}
+      {/* Condensed "all bands" table for scanners */}
+      <div className="mx-auto mt-6 max-w-3xl overflow-x-auto">
+        <table className="w-full text-sm" data-testid="table-pricing-bands">
+          <thead className="text-left text-muted-foreground">
+            <tr className="border-b">
+              <th className="py-2">Cap</th>
+              <th className="py-2">Monthly</th>
+              <th className="py-2">Annual</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[{ cap: 250, m: 99, a: 999 }, ...SCALE.map(s => ({ cap: s.cap, m: s.monthly, a: s.annual }))].map(r => (
+              <tr key={r.cap} className="border-b last:border-0">
+                <td className="py-2" data-testid={`text-table-cap-${r.cap}`}>{r.cap.toLocaleString()}</td>
+                <td className="py-2">{formatUSD(r.m)}</td>
+                <td className="py-2">{formatUSD(r.a)}</td>
+              </tr>
+            ))}
+            <tr>
+              <td className="py-2 font-medium">100k+</td>
+              <td className="py-2" colSpan={2}><a className="underline underline-offset-4" href="/contact" data-testid="link-table-contact">Contact us</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
       <p className="mx-auto mt-4 max-w-3xl text-center text-sm text-muted-foreground" data-testid="text-parity-reminder">
         Same product on every plan. We price by workspace size—not features or support tiers.
       </p>
