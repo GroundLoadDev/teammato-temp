@@ -242,14 +242,11 @@ export default function Sample() {
                 borderLeft: '2px solid hsl(var(--primary))',
               }}
             >
-              {/* Lifted top-left corner */}
+              {/* Lifted top-left corner - borderless, shadow only */}
               <div 
-                className="absolute -top-3 -left-3 w-20 h-20 bg-card pointer-events-none"
+                className="absolute -top-2.5 -left-2.5 w-16 h-16 bg-card rounded-tl-xl pointer-events-none"
                 style={{
-                  boxShadow: '-6px -6px 16px -4px rgba(15, 79, 73, 0.12)',
-                  borderTop: '2px solid hsl(var(--primary))',
-                  borderLeft: '2px solid hsl(var(--primary))',
-                  borderRadius: '0.75rem 0 0 0',
+                  boxShadow: '-8px -8px 20px -6px rgba(15, 79, 73, 0.18)',
                 }}
               />
 
