@@ -1,5 +1,18 @@
 import { buildSlackAuthorizeUrl } from "@/lib/slackInstall";
-import { Plug, MessageSquareText, LineChart, ShieldCheck, Lock, EyeOff, CheckCircle2 } from "lucide-react";
+import { 
+  Plug, 
+  MessageSquareText, 
+  LineChart, 
+  ShieldCheck, 
+  Lock, 
+  EyeOff, 
+  CheckCircle2,
+  MailCheck,
+  BarChart3,
+  Settings2,
+  Ban,
+  Inbox
+} from "lucide-react";
 import { useState } from "react";
 
 const STEPS = [
@@ -39,9 +52,48 @@ const THEMES: Theme[] = [
   { id: 4, label: "On-call burnout", count: 2 }, // small-n example
 ];
 
+type TabKey = "digests" | "moderation" | "analytics" | "admin";
+
+const TABS: {
+  key: TabKey;
+  icon: React.ElementType;
+  title: string;
+  blurb: string;
+}[] = [
+  {
+    key: "digests",
+    icon: MailCheck,
+    title: "Weekly digests that drive action",
+    blurb:
+      "We group related posts and send a clean summary—only if it meets the k-threshold.",
+  },
+  {
+    key: "moderation",
+    icon: ShieldCheck,
+    title: "Moderation that protects people",
+    blurb:
+      "Flag risky phrasing, auto-hide small-n topics, and keep things constructive.",
+  },
+  {
+    key: "analytics",
+    icon: BarChart3,
+    title: "Theme analytics, not people analytics",
+    blurb:
+      "Track topics and movement over time—without identity or guesswork.",
+  },
+  {
+    key: "admin",
+    icon: Settings2,
+    title: "Admin controls that fit your policies",
+    blurb:
+      "Retention windows, legal hold, and exports that honor the same thresholds.",
+  },
+];
+
 export default function Landing() {
   const [k, setK] = useState<number>(5);
   const [enforceK, setEnforceK] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<TabKey>("digests");
 
   const visible = (t: Theme) => !enforceK || t.count >= k;
   const slackAuthUrl = buildSlackAuthorizeUrl();
@@ -305,6 +357,204 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* FEATURE SHOWCASE */}
+      <section className="relative">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 items-start gap-10 px-6 py-24 md:grid-cols-12 lg:py-28">
+          {/* LEFT: Big tabs */}
+          <aside className="md:col-span-5">
+            <header className="mb-6">
+              <p className="font-mono text-sm uppercase tracking-wide text-muted-foreground">
+                What you get
+              </p>
+              <h2 className="mt-2 text-3xl font-semibold tracking-tight md:text-4xl">
+                The essentials—done right
+              </h2>
+            </header>
+
+            <nav className="space-y-2">
+              {TABS.map(({ key, icon: Icon, title, blurb }) => {
+                const isActive = activeTab === key;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setActiveTab(key)}
+                    className={[
+                      "w-full rounded-2xl p-5 text-left transition-all",
+                      "ring-1 ring-black/5 shadow-[0_1px_0_rgba(0,0,0,0.06),0_20px_40px_-20px_rgba(0,0,0,0.12)]",
+                      isActive ? "bg-background" : "bg-muted hover:bg-muted/70",
+                    ].join(" ")}
+                    aria-pressed={isActive}
+                  >
+                    <div className="flex items-start gap-4">
+                      <span
+                        className={[
+                          "flex h-11 w-11 flex-none items-center justify-center rounded-xl",
+                          isActive ? "bg-emerald-600 text-white" : "bg-foreground/10 text-foreground/80",
+                        ].join(" ")}
+                      >
+                        <Icon className="h-6 w-6" />
+                      </span>
+                      <div>
+                        <h3 className="text-lg font-semibold leading-tight">{title}</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">{blurb}</p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </nav>
+          </aside>
+
+          {/* RIGHT: Preview panel */}
+          <div className="md:col-span-7">
+            <div className="relative overflow-hidden rounded-3xl border bg-background p-6 shadow-[0_1px_0_rgba(0,0,0,0.06),0_28px_60px_-28px_rgba(0,0,0,0.25)]">
+              {activeTab === "digests" && <PreviewDigests />}
+              {activeTab === "moderation" && <PreviewModeration />}
+              {activeTab === "analytics" && <PreviewAnalytics />}
+              {activeTab === "admin" && <PreviewAdmin />}
+
+              {/* decorative glow */}
+              <div className="pointer-events-none absolute -inset-8 -z-10 rounded-[2rem] bg-gradient-to-tr from-emerald-200/30 via-transparent to-transparent blur-2xl dark:from-emerald-900/20" />
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/* ---------- Preview Components ---------- */
+
+function Tag({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:ring-emerald-800">
+      {children}
+    </span>
+  );
+}
+
+function PreviewDigests() {
+  return (
+    <div>
+      <header className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Inbox className="h-4 w-4" />
+          Weekly digest · #team-general
+        </div>
+        <Tag>Meets k-threshold</Tag>
+      </header>
+
+      <div className="grid gap-3">
+        {[
+          { title: "Workload & scope creep", posts: 14 },
+          { title: "Decision clarity", posts: 9 },
+          { title: "Release coordination", posts: 7 },
+        ].map((t) => (
+          <div key={t.title} className="rounded-2xl border p-4">
+            <div className="flex items-center justify-between">
+              <div className="text-base font-medium">{t.title}</div>
+              <span className="rounded-full bg-foreground/5 px-2.5 py-1 text-xs">
+                {t.posts} posts
+              </span>
+            </div>
+            <div className="mt-2 text-xs text-muted-foreground">
+              Sent Mondays at 9am · Reply to comment in Slack
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PreviewModeration() {
+  return (
+    <div>
+      <header className="mb-4 flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">Moderation rules</div>
+        <Tag>Protects people</Tag>
+      </header>
+
+      <ul className="space-y-3">
+        <li className="flex items-center justify-between rounded-2xl border p-4">
+          <div>
+            <div className="font-medium">Enforce k-anonymity</div>
+            <p className="text-xs text-muted-foreground">Hide topics with <span className="font-mono">n &lt; k</span></p>
+          </div>
+          <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+        </li>
+        <li className="flex items-center justify-between rounded-2xl border p-4">
+          <div>
+            <div className="font-medium">Sensitive phrase detector</div>
+            <p className="text-xs text-muted-foreground">Flag risky language for review</p>
+          </div>
+          <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+        </li>
+        <li className="flex items-center justify-between rounded-2xl border p-4">
+          <div>
+            <div className="font-medium">No small-n exports</div>
+            <p className="text-xs text-muted-foreground">Suppress low counts in CSVs</p>
+          </div>
+          <Ban className="h-5 w-5 text-rose-600" />
+        </li>
+      </ul>
+    </div>
+  );
+}
+
+function PreviewAnalytics() {
+  return (
+    <div>
+      <header className="mb-4 flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">Theme analytics</div>
+        <Tag>Identity-free</Tag>
+      </header>
+
+      <div className="rounded-2xl border p-4">
+        {/* lightweight faux chart */}
+        <div className="h-40 w-full rounded-xl bg-gradient-to-b from-foreground/10 to-transparent" />
+        <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
+          {["Workload", "Clarity", "Release"].map((l) => (
+            <div key={l} className="rounded-lg bg-foreground/5 px-2 py-1 text-center">
+              {l}
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Track topics over time—never individuals.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function PreviewAdmin() {
+  return (
+    <div>
+      <header className="mb-4 flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">Admin controls</div>
+        <Tag>Policy-ready</Tag>
+      </header>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="rounded-2xl border p-4">
+          <div className="font-medium">Retention</div>
+          <p className="mt-1 text-xs text-muted-foreground">30/90/365 days or custom</p>
+        </div>
+        <div className="rounded-2xl border p-4">
+          <div className="font-medium">Legal hold</div>
+          <p className="mt-1 text-xs text-muted-foreground">Freeze digests & posts</p>
+        </div>
+        <div className="rounded-2xl border p-4">
+          <div className="font-medium">Exports</div>
+          <p className="mt-1 text-xs text-muted-foreground">CSV respects thresholds</p>
+        </div>
+        <div className="rounded-2xl border p-4">
+          <div className="font-medium">Workspace roles</div>
+          <p className="mt-1 text-xs text-muted-foreground">Owner, admin, analyst</p>
+        </div>
+      </div>
     </div>
   );
 }
