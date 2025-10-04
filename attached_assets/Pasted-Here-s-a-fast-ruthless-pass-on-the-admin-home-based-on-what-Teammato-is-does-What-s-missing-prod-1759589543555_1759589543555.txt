@@ -1,0 +1,76 @@
+Here’s a fast, ruthless pass on the admin home based on what Teammato is/does.
+
+What’s missing (product-level)
+
+Trial/plan status & usage meter. Top-right chip (“Trial: X days left” or “Pro • Annual”), plus a meter: Detected Slack members N / Seat cap. Warn at 90%, grace to 110%, then read-only messaging. Add “Upgrade” CTA inline.
+
+Digest & channel status. Surface the configured channel, next scheduled digest time, and a “Send sample now” action. If unset, turn the “Setup Progress” item into a guided step.
+
+K-anonymity context. A small explainer next to “Ready Threads” with the active threshold (e.g., “k=5”) and a link to why some items aren’t shown yet. Allow quick edit of k in Settings.
+
+Moderation health. Card for flags in the last 7 days (toxicity/PII/spam), with a “Review queue” button.
+
+Retention/legal-hold badge. Show current retention window and whether legal hold is on; link to Settings → Retention.
+
+Export & audit. Tiny utilities strip: “Export data” (metadata-only, signed URL) and “View admin audit.”
+
+Environment banner. If APP_ENV=test, show a subtle “Test Mode” ribbon for owners/admins.
+
+What’s missing (activation UX)
+
+Post-install checklist, not a generic list. Replace “Setup Progress” with stateful steps:
+
+Slack connected ✔ (show team & installer)
+
+Pick channel ➜
+
+Seed topics ➜
+
+Submit a test via /teammato ➜
+
+Schedule digest ➜
+
+Invite a moderator ➜
+
+Review analytics
+Each step should show live state + one obvious next action.
+
+Inline Slack tips. A mini “How to post” with /teammato <message>, and “help/about” examples.
+
+Card/metric nits
+
+Metric framing. “Ready Threads” is great; add “New this week” and “Active participants” (k-safe counts). Make each metric clickable to its filtered view.
+
+Recent activity. Expand “Recent Feedback” to include comments/reactions (still anonymous), with tiny topic chips and k-status icons.
+
+Empty states. When counts are zero, use action-oriented empties (“Connect Slack”, “Seed topics”, “Try /teammato in Slack”).
+
+Billing UI you’ll want soon
+
+Billing summary tile. Plan name, term, next bill date, “Manage billing” (Stripe portal), and the usage meter mentioned above. Trigger upgrade from here and from warnings.
+
+Over-cap/read-only banners. Global, dismissible banners for “approaching cap”, “over cap (grace)”, and “trial expired (read-only)”.
+
+Reliability/ops surfacing
+
+Slack connection health. Timestamp of last successful command/event, and a quick “Re-check” action. Show uninstall protection (events handler) status.
+
+Status/health link. Tiny footer link to health check + status page for outages.
+
+Microcopy / layout tweaks
+
+Tone: empower, not police. The current copy is neutral (good). Keep the “no meetings” ethos off this page; focus on guidance and next actions.
+
+Button affordances. The lone “Start” button on “Review Analytics” is easy to miss. Make each step’s primary action full-width on the row, with a secondary “Learn more”.
+
+Quick wins you can ship immediately
+
+Add a top ribbon with Trial/Plan + Stripe portal + seat meter.
+
+Replace “Setup Progress” with the stateful post-install checklist (with live statuses and one-click actions).
+
+Add a Digest status card with channel, schedule, and “Send sample now.”
+
+Add Retention badge + link; add Export and Audit quick actions.
+
+Show k= threshold inline on “Ready Threads” with an info tooltip + link to Trust.

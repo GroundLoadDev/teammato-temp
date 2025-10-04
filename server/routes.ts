@@ -206,6 +206,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Billing API
+  app.get('/api/billing/usage', requireAuth, async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const org = await storage.getOrg(orgId);
+      const slackTeam = await storage.getSlackTeamByOrgId(orgId);
+      
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+
+      const settings = org.settings as any || {};
+      const plan = settings.plan || 'trial';
+      const trialEndsAt = settings.trialEndsAt;
+      
+      // Count Slack workspace members if connected
+      let detectedMembers = 0;
+      if (slackTeam && slackTeam.accessToken) {
+        try {
+          const client = new WebClient(slackTeam.accessToken);
+          const result = await client.users.list({});
+          detectedMembers = result.members?.filter((m: any) => !m.is_bot && !m.deleted).length || 0;
+        } catch (error) {
+          console.error('Failed to count Slack members:', error);
+        }
+      }
+      
+      // Determine seat cap based on plan
+      let seatCap = 0;
+      if (plan === 'trial') {
+        seatCap = 250; // Trial gets Pro features
+      } else if (plan === 'pro_250') {
+        seatCap = 250;
+      } else if (plan === 'scale_500') {
+        seatCap = 500;
+      } else if (plan === 'scale_1000') {
+        seatCap = 1000;
+      } else if (plan === 'scale_2500') {
+        seatCap = 2500;
+      } else if (plan === 'scale_5000') {
+        seatCap = 5000;
+      }
+      
+      // Calculate trial days left
+      let trialDaysLeft = null;
+      if (plan === 'trial' && trialEndsAt) {
+        const now = new Date();
+        const endsAt = new Date(trialEndsAt);
+        const diff = endsAt.getTime() - now.getTime();
+        trialDaysLeft = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+      }
+      
+      // Calculate usage percentage
+      const usagePercent = seatCap > 0 ? Math.round((detectedMembers / seatCap) * 100) : 0;
+      
+      res.json({
+        detectedMembers,
+        seatCap,
+        plan,
+        trialDaysLeft,
+        usagePercent,
+        isOverCap: detectedMembers > seatCap,
+        isNearCap: usagePercent >= 90,
+      });
+    } catch (error) {
+      console.error('Billing usage error:', error);
+      res.status(500).json({ error: 'Failed to fetch billing usage' });
+    }
+  });
+
+  app.get('/api/billing/subscription', requireAuth, async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const org = await storage.getOrg(orgId);
+      
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+
+      const settings = org.settings as any || {};
+      const plan = settings.plan || 'trial';
+      const term = settings.term || 'monthly';
+      
+      // Mock Stripe data for now - will integrate real Stripe later
+      res.json({
+        plan,
+        term,
+        nextBillDate: null,
+        amount: null,
+        paymentMethod: null,
+      });
+    } catch (error) {
+      console.error('Billing subscription error:', error);
+      res.status(500).json({ error: 'Failed to fetch subscription' });
+    }
+  });
+
+  // Slack digest preview
+  app.post('/api/slack/digest-preview', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const slackTeam = await storage.getSlackTeamByOrgId(orgId);
+      const settings = await storage.getSlackSettings(orgId);
+      
+      if (!slackTeam || !settings?.digestChannel) {
+        return res.status(400).json({ error: 'Slack not connected or digest channel not configured' });
+      }
+
+      const client = new WebClient(slackTeam.accessToken);
+      
+      // Send a sample digest message
+      await client.chat.postMessage({
+        channel: settings.digestChannel,
+        text: '📊 Sample Daily Digest from Teammato',
+        blocks: [
+          {
+            type: 'header',
+            text: {
+              type: 'plain_text',
+              text: '📊 Sample Daily Digest',
+            },
+          },
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: '*This is a preview of your daily digest.* Real digests will include:\n\n• New feedback threads ready for review\n• Recent activity summary\n• Topics that need attention\n\nYou can customize this in your Slack settings.',
+            },
+          },
+        ],
+      });
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Digest preview error:', error);
+      res.status(500).json({ error: 'Failed to send digest preview' });
+    }
+  });
+
   // Analytics API (admin-only)
   app.get('/api/analytics/topic-activity', requireRole('owner', 'admin'), async (req, res) => {
     try {
