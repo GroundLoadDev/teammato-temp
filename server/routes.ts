@@ -162,8 +162,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/dashboard/stats', requireAuth, async (req, res) => {
     try {
       const orgId = req.session.orgId!;
-      const stats = await storage.getOrgStats(orgId);
-      res.json(stats);
+      const [stats, newThisWeek, activeParticipants] = await Promise.all([
+        storage.getOrgStats(orgId),
+        storage.getNewThisWeek(orgId),
+        storage.getUniqueParticipantCount(orgId)
+      ]);
+      res.json({ ...stats, newThisWeek, activeParticipants });
     } catch (error) {
       console.error('Dashboard stats error:', error);
       res.status(500).json({ error: 'Failed to fetch stats' });

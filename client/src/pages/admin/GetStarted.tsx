@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   CheckCircle2, Circle, MessageSquare, FileText, Tag, CheckCheck, 
   Slack, ArrowRight, Info, Download, History, AlertTriangle, Clock,
-  Send, ChevronRight, Copy
+  Send, ChevronRight, Copy, TrendingUp, Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +18,8 @@ interface DashboardStats {
   totalFeedbackItems: number;
   totalTopics: number;
   readyThreads: number;
+  newThisWeek: number;
+  activeParticipants: number;
 }
 
 interface SlackStatus {
@@ -196,7 +198,7 @@ export default function GetStarted() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Link href="/admin/feedback">
           <Card className="hover-elevate cursor-pointer" data-testid="card-stat-threads">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -267,6 +269,32 @@ export default function GetStarted() {
             </CardContent>
           </Card>
         </Link>
+
+        <Card data-testid="card-stat-new-week">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">New This Week</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" data-testid="text-new-week">
+              {statsLoading ? '...' : stats?.newThisWeek || 0}
+            </div>
+            <p className="text-xs text-muted-foreground">Items in last 7 days</p>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-stat-participants">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Participants</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" data-testid="text-participants">
+              {statsLoading ? '...' : stats?.activeParticipants || 0}
+            </div>
+            <p className="text-xs text-muted-foreground">K-safe unique contributors</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Digest Status Card */}

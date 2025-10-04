@@ -91,6 +91,7 @@ export interface IStorage {
     readyThreads: number;
   }>;
   getRecentThreads(orgId: string, limit: number): Promise<Array<FeedbackThread & { topicName: string | null }>>;
+  getNewThisWeek(orgId: string): Promise<number>;
   
   // Analytics
   getTopicActivity(orgId: string): Promise<Array<{
@@ -626,6 +627,21 @@ export class PgStorage implements IStorage {
       .limit(limit);
     
     return result;
+  }
+
+  async getNewThisWeek(orgId: string): Promise<number> {
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    
+    const result = await db.select({ count: sqlOperator<number>`count(*)::int` })
+      .from(feedbackItems)
+      .innerJoin(feedbackThreads, eq(feedbackItems.threadId, feedbackThreads.id))
+      .where(and(
+        eq(feedbackThreads.orgId, orgId),
+        sqlOperator`${feedbackItems.createdAt} >= ${oneWeekAgo}`
+      ));
+    
+    return result[0]?.count || 0;
   }
 
   // Analytics
