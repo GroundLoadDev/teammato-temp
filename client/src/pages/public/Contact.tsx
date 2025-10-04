@@ -25,12 +25,12 @@ function Hero() {
     <section className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(1100px_360px_at_50%_-60px,rgba(16,185,129,0.10),transparent)]" />
       <div className="mx-auto max-w-6xl px-6 pb-10 pt-16 md:pt-20">
-        <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground" data-testid="text-contact-async">Async only</p>
+        <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground" data-testid="text-contact-async">Self-serve</p>
         <h1 className="mt-1 text-4xl font-semibold tracking-tight md:text-5xl" data-testid="text-contact-title">
-          Get answers—without a meeting
+          Get answers fast
         </h1>
         <p className="mt-3 max-w-2xl text-lg text-muted-foreground" data-testid="text-contact-subtitle">
-          We publish docs, artifacts, and pricing so you can move fast. Still stuck? Send us a note and we'll reply by email.
+          Most questions are covered in our docs and pricing. If you still need help, send a note—we'll reply by email.
         </p>
 
         {/* quick search → /faq?query=... */}
@@ -70,7 +70,7 @@ function SearchToFAQ() {
         </button>
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
-        Tip: most questions are answered in our FAQ and Trust pages.
+        Tip: start with our FAQ and Trust pages.
       </p>
     </form>
   );
@@ -123,7 +123,7 @@ function SelfServe() {
       <div className="rounded-3xl border bg-muted/40 p-6 md:p-8">
         <h2 className="text-xl font-semibold" data-testid="text-self-serve-title">Before you write us</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Most teams finish evaluation without contacting us. These links solve 90% of requests:
+          Teams usually finish evaluation without contacting us. These links cover the most common requests:
         </p>
         <div className="mt-5 grid gap-3 md:grid-cols-3">
           {cards.map((c) => (
@@ -142,7 +142,7 @@ function SelfServe() {
           ))}
         </div>
         <p className="mt-4 text-xs text-muted-foreground">
-          We don't offer live demos or phone support. Everything is async and document-driven.
+          Everything here is available to review and download at your own pace.
         </p>
       </div>
     </section>
@@ -179,7 +179,7 @@ function ContactForm() {
         <div className="md:col-span-5">
           <h2 className="text-xl font-semibold" data-testid="text-form-title">Still need help?</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            We reply by email—no meetings. If you prefer, write us directly:
+            We reply by email. If you prefer, write us directly:
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <a href="mailto:security@teammato.com" className="rounded-xl border px-3 py-1.5 text-sm hover:bg-muted" data-testid="link-email-security">
@@ -194,11 +194,11 @@ function ContactForm() {
           </div>
 
           <div className="mt-6 rounded-2xl border bg-background p-4 text-sm">
-            <p className="font-medium">No meetings needed</p>
+            <p className="font-medium">Quick things to know</p>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
-              <li>Security artifacts and DPA are downloadable—no NDA required.</li>
-              <li>Pricing and plans are public; upgrades/downgrades are self-serve.</li>
-              <li>Most issues are answered in the FAQ. We'll point you to the exact doc if needed.</li>
+              <li>Security artifacts and the DPA are downloadable.</li>
+              <li>Plans and billing are self-serve in the portal.</li>
+              <li>Most product questions are answered in the FAQ.</li>
             </ul>
           </div>
         </div>
@@ -248,7 +248,7 @@ function ContactForm() {
                   value={msg}
                   onChange={(e) => setMsg(e.target.value)}
                   rows={6}
-                  placeholder="Share context so we can get you the right doc or fix quickly—no zoom required."
+                  placeholder="Share context so we can point you to the right doc or fix quickly."
                   className="mt-1 w-full resize-y rounded-xl border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   data-testid="textarea-message"
                 />
@@ -257,7 +257,7 @@ function ContactForm() {
 
             <div className="mt-5 flex items-center justify-between">
               <div className="text-xs text-muted-foreground">
-                We respond asynchronously by email. No calls or live chat.
+                We'll follow up by email.
               </div>
               <button
                 type="submit"
@@ -295,7 +295,7 @@ function FooterStrip() {
         <div className="md:col-span-8">
           <h3 className="text-xl font-semibold" data-testid="text-footer-title">Know before you contact</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            We don't schedule calls. Everything is designed to be self-serve and async. If you need something not covered, we'll help by email.
+            Everything is designed to be self-serve and easy to review. If you need something not covered, we're happy to help by email.
           </p>
         </div>
         <div className="md:col-span-4">
