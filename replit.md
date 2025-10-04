@@ -43,6 +43,26 @@ Teammato is an enterprise-grade, Slack-first SaaS platform designed for anonymou
 - **Error Tracking**: Recent incidents display, system component health indicators, operational status badges.
 - **Performance Metrics**: Response time monitoring, uptime percentage tracking, error rate analysis.
 
+**Encryption Implementation (October 2025)**
+- **Application-Layer Encryption**: All feedback content (situation, behavior, impact fields) encrypted at rest using XChaCha20-Poly1305 AEAD cipher from libsodium-wrappers.
+- **Key Architecture**: 
+  - Master Key (TM_MASTER_KEY_V1) stored in Replit Secrets, never in database
+  - Per-organization Data Encryption Keys (DEK) generated using cryptographically secure random bytes (32 bytes)
+  - DEKs wrapped/unwrapped by Master Key using AEAD with org_id as additional authenticated data
+  - Wrapped DEKs stored in `org_keys` table, cached in-memory for performance
+- **Encryption Schema**:
+  - New `org_keys` table: `org_id`, `wrapped_dek` (base64), `key_version`, `created_at`
+  - Updated `feedback_items` table: `content_ct`, `behavior_ct`, `impact_ct` (base64 ciphertexts), `nonce` (base64), `aad_hash` (SHA-256 of AAD for verification)
+  - AAD format: `{org_id}|{thread_id}` ensures ciphertext cannot be moved between orgs/threads
+- **Implementation**:
+  - `server/utils/encryption.ts`: Core AEAD enc/dec, DEK wrap/unwrap, cryptoReady initialization
+  - `server/utils/keys.ts`: Key management with LRU cache, ensureOrgDEK, loadOrgDEK, rewrapOrgDEK
+  - `server/utils/encryptFeedback.ts`: High-level encrypt/decrypt for feedback fields
+  - Storage layer (`server/storage.ts`): Transparent encryption on write, decryption on read
+  - Admin endpoints (`/api/admin/keys`): Key management for ops team (requires ADMIN_TOKEN)
+  - Backfill script (`scripts/backfill-encrypt.ts`): Batch encryption of existing plaintext data
+- **Testing**: Comprehensive test suite (`scripts/test-encryption.ts`) validates DEK wrap/unwrap, AEAD enc/dec, multi-field encryption, AAD tampering protection
+
 ### User Preferences
 I prefer iterative development and clear, concise explanations. Ask before making major changes to the architecture or core functionalities. Ensure all new features align with the privacy-first principle.
 
@@ -56,8 +76,8 @@ The frontend uses React, TypeScript, Vite, and Tailwind CSS, focusing on a clean
 - **Backend**: Express.js handles API requests, integrated with PostgreSQL (Neon) via Drizzle ORM for data management.
 - **Authentication & Authorization**: Session-based authentication, integrated with Slack OAuth v2. Role-based access control (Owner, Admin, Moderator, Viewer) with Row-Level Security (RLS) ensures multi-tenant data isolation and proper permissions.
 - **Privacy Architecture**:
-    - **K-anonymity**: Implemented through database views and careful data handling to prevent re-identification.
-    - **Per-Org Encryption**: Content is encrypted with per-organization AEAD keys (planned).
+    - **K-anonymity**: Implemented through database views and careful data handling to prevent re-identification (k=5 threshold).
+    - **Application-Layer Encryption**: All feedback content encrypted at rest with XChaCha20-Poly1305 AEAD using per-organization 256-bit DEKs wrapped by master key.
     - **Pseudonymity**: No real names or directly identifiable information stored in content tables.
     - **Content Filtering**: PII and `@mention` blocking within feedback submissions.
     - **Submitter Hash**: Daily-rotating hash for deduplication and rate-limiting without storing identifying info.
@@ -80,6 +100,7 @@ The frontend uses React, TypeScript, Vite, and Tailwind CSS, focusing on a clean
 
 - **Database**: PostgreSQL (Neon)
 - **ORM**: Drizzle ORM
+- **Encryption**: libsodium-wrappers (XChaCha20-Poly1305 AEAD)
 - **Billing**: Stripe
 - **Integration Platform**: Slack (OAuth v2, Slash Commands, Events API)
 - **Session Store**: Redis (for production environments)
