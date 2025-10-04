@@ -13,6 +13,15 @@ Teammato is an enterprise-grade, Slack-first SaaS platform designed for anonymou
 - **Contact Page** (`/contact`): Async-first contact experience with self-serve deflection (6 resource cards before form), FAQ search integration, contextual topic tips, direct email shortcuts (security@, privacy@, contact@), minimal form with topic dropdown, backend validation, placeholder for Cloudflare Recaptcha integration
 - **Design System**: Consistent emerald-600 accents, rounded-2xl cards, responsive grids, radial gradient heroes, accessibility features (prefers-reduced-motion support), all pages use React + Tailwind only (zero external dependencies for marketing)
 
+**Admin Dashboard Redesign - Phase 1 Complete (October 2025)**
+- **Billing Integration**: Top ribbon displays plan status (Trial/Pro/Scale), live usage meter (members/cap), and upgrade CTA. API endpoints for `/api/billing/usage` with Slack workspace member counting and `/api/billing/subscription` with seat cap logic (Pro: 250, Scale: 500/1000/2500/5000).
+- **Post-Install Checklist**: Replaced setup progress bar with stateful 7-step checklist showing live status (Connected, In Progress, Not Yet) and one-click actions: Connect Slack, Activate digest, Create first topic, Add team members, Customize settings, Schedule check-in, Explore exports.
+- **Enhanced Metrics**: Added "New This Week" (feedback items in last 7 days) and "Active Participants" (k-safe unique contributors) cards. Implemented `getNewThisWeek()` and leveraged existing `getUniqueParticipantCount()` storage methods. All 6 metric cards use responsive 3-column grid.
+- **Digest Controls**: Dedicated status card shows channel (#general-feedback), schedule (Daily at 9am), and "Send sample now" action with `/api/slack/digest-preview` endpoint for testing.
+- **Privacy Education**: K-anonymity tooltip on "Ready Threads" metric explains k=5 threshold and protection mechanism with accessible Info icon.
+- **Quick Actions**: Utility strip with Export Data, View Audit Log, and Retention badge (365d) for rapid access to operational features.
+- **Inline Slack Tips**: Command reference section with `/feedback`, `/feedback-topic [name]`, and `/feedback-anon` examples, all copy-to-clipboard enabled.
+
 ### User Preferences
 I prefer iterative development and clear, concise explanations. Ask before making major changes to the architecture or core functionalities. Ensure all new features align with the privacy-first principle.
 
