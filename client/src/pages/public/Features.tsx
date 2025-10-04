@@ -202,11 +202,11 @@ function FinalCTA() {
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <a href="/api/slack/install" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-6 py-3 text-sm font-medium text-neutral-950 hover:bg-emerald-400" data-testid="button-cta-install">
-                <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden>
-                  <rect x="5" y="10" width="5" height="3" rx="1.5" fill="currentColor" opacity="0.9" />
-                  <rect x="14" y="10" width="5" height="3" rx="1.5" fill="currentColor" opacity="0.9" />
-                  <rect x="10" y="5" width="3" height="5" rx="1.5" fill="currentColor" opacity="0.9" />
-                  <rect x="10" y="14" width="3" height="5" rx="1.5" fill="currentColor" opacity="0.9" />
+                <svg viewBox="0 0 127 127" className="h-4 w-4" aria-hidden fill="currentColor">
+                  <path d="M27.2 80c0 7.3-5.9 13.2-13.2 13.2C6.7 93.2.8 87.3.8 80c0-7.3 5.9-13.2 13.2-13.2h13.2V80zm6.6 0c0-7.3 5.9-13.2 13.2-13.2 7.3 0 13.2 5.9 13.2 13.2v33c0 7.3-5.9 13.2-13.2 13.2-7.3 0-13.2-5.9-13.2-13.2V80z"/>
+                  <path d="M47 27c-7.3 0-13.2-5.9-13.2-13.2C33.8 6.5 39.7.6 47 .6c7.3 0 13.2 5.9 13.2 13.2V27H47zm0 6.7c7.3 0 13.2 5.9 13.2 13.2 0 7.3-5.9 13.2-13.2 13.2H13.9C6.6 60.1.7 54.2.7 46.9c0-7.3 5.9-13.2 13.2-13.2H47z"/>
+                  <path d="M99.9 46.9c0-7.3 5.9-13.2 13.2-13.2 7.3 0 13.2 5.9 13.2 13.2 0 7.3-5.9 13.2-13.2 13.2H99.9V46.9zm-6.6 0c0 7.3-5.9 13.2-13.2 13.2-7.3 0-13.2-5.9-13.2-13.2V13.8C66.9 6.5 72.8.6 80.1.6c7.3 0 13.2 5.9 13.2 13.2v33.1z"/>
+                  <path d="M80.1 99.8c7.3 0 13.2 5.9 13.2 13.2 0 7.3-5.9 13.2-13.2 13.2-7.3 0-13.2-5.9-13.2-13.2V99.8h13.2zm0-6.6c-7.3 0-13.2-5.9-13.2-13.2 0-7.3 5.9-13.2 13.2-13.2h33.1c7.3 0 13.2 5.9 13.2 13.2 0 7.3-5.9 13.2-13.2 13.2H80.1z"/>
                 </svg>
                 Add to Slack
               </a>
@@ -307,11 +307,11 @@ function MiniDigestCard() {
 
 function WhiteSlackLogo({ className = "" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden>
-      <rect x="5" y="10" width="5" height="3" rx="1.5" fill="white" opacity="0.9" />
-      <rect x="14" y="10" width="5" height="3" rx="1.5" fill="white" opacity="0.9" />
-      <rect x="10" y="5" width="3" height="5" rx="1.5" fill="white" opacity="0.9" />
-      <rect x="10" y="14" width="3" height="5" rx="1.5" fill="white" opacity="0.9" />
+    <svg viewBox="0 0 127 127" className={className} aria-hidden fill="white">
+      <path d="M27.2 80c0 7.3-5.9 13.2-13.2 13.2C6.7 93.2.8 87.3.8 80c0-7.3 5.9-13.2 13.2-13.2h13.2V80zm6.6 0c0-7.3 5.9-13.2 13.2-13.2 7.3 0 13.2 5.9 13.2 13.2v33c0 7.3-5.9 13.2-13.2 13.2-7.3 0-13.2-5.9-13.2-13.2V80z"/>
+      <path d="M47 27c-7.3 0-13.2-5.9-13.2-13.2C33.8 6.5 39.7.6 47 .6c7.3 0 13.2 5.9 13.2 13.2V27H47zm0 6.7c7.3 0 13.2 5.9 13.2 13.2 0 7.3-5.9 13.2-13.2 13.2H13.9C6.6 60.1.7 54.2.7 46.9c0-7.3 5.9-13.2 13.2-13.2H47z"/>
+      <path d="M99.9 46.9c0-7.3 5.9-13.2 13.2-13.2 7.3 0 13.2 5.9 13.2 13.2 0 7.3-5.9 13.2-13.2 13.2H99.9V46.9zm-6.6 0c0 7.3-5.9 13.2-13.2 13.2-7.3 0-13.2-5.9-13.2-13.2V13.8C66.9 6.5 72.8.6 80.1.6c7.3 0 13.2 5.9 13.2 13.2v33.1z"/>
+      <path d="M80.1 99.8c7.3 0 13.2 5.9 13.2 13.2 0 7.3-5.9 13.2-13.2 13.2-7.3 0-13.2-5.9-13.2-13.2V99.8h13.2zm0-6.6c-7.3 0-13.2-5.9-13.2-13.2 0-7.3 5.9-13.2 13.2-13.2h33.1c7.3 0 13.2 5.9 13.2 13.2 0 7.3-5.9 13.2-13.2 13.2H80.1z"/>
     </svg>
   );
 }

@@ -1,5 +1,5 @@
 import { ShieldCheck } from "lucide-react";
-import logoImage from "@assets/galaxyai-image-1759612930294_1759613447444.png";
+import logoImage from "@assets/teammato_logo_transparent_1759614481870.png";
 
 const nav = {
   product: [
