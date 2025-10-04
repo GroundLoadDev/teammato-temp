@@ -8,6 +8,7 @@ import { filterAnonymousFeedback, generateSubmitterHash, coarsenSituation } from
 import { sendContributionReceipt, postActionNotesToChannel } from "./utils/slackMessaging";
 import { buildFeedbackModal } from "./utils/slackModal";
 import { WebClient } from '@slack/web-api';
+import adminKeysRouter from "./routes/admin-keys";
 
 // Slack OAuth configuration
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
@@ -1899,6 +1900,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.redirect('/post-install?error=server_error');
     }
   });
+
+  // Admin encryption key management endpoints
+  app.use('/api/admin/keys', adminKeysRouter);
 
   // Contact form endpoint (public)
   app.post('/api/contact', async (req, res) => {
