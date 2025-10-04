@@ -32,6 +32,8 @@ import SlackSettings from "@/pages/admin/SlackSettings";
 import BillingSettings from "@/pages/admin/BillingSettings";
 import Billing from "@/pages/admin/Billing";
 import Compliance from "@/pages/admin/Compliance";
+import SystemHealth from "@/pages/admin/SystemHealth";
+import AuditLog from "@/pages/admin/AuditLog";
 import Analytics from "@/pages/admin/Analytics";
 import Export from "@/pages/admin/Export";
 import Retention from "@/pages/admin/Retention";
@@ -66,6 +68,8 @@ function Router() {
       <Route path="/admin/billing-old" component={BillingSettings} />
       <Route path="/admin/billing" component={Billing} />
       <Route path="/admin/compliance" component={Compliance} />
+      <Route path="/admin/system-health" component={SystemHealth} />
+      <Route path="/admin/audit-log" component={AuditLog} />
       <Route path="/admin/analytics" component={Analytics} />
       <Route path="/admin/export" component={Export} />
       <Route path="/admin/retention" component={Retention} />

@@ -13,14 +13,29 @@ Teammato is an enterprise-grade, Slack-first SaaS platform designed for anonymou
 - **Contact Page** (`/contact`): Async-first contact experience with self-serve deflection (6 resource cards before form), FAQ search integration, contextual topic tips, direct email shortcuts (security@, privacy@, contact@), minimal form with topic dropdown, backend validation, placeholder for Cloudflare Recaptcha integration
 - **Design System**: Consistent emerald-600 accents, rounded-2xl cards, responsive grids, radial gradient heroes, accessibility features (prefers-reduced-motion support), all pages use React + Tailwind only (zero external dependencies for marketing)
 
-**Admin Dashboard Redesign - Phase 1 Complete (October 2025)**
-- **Billing Integration**: Top ribbon displays plan status (Trial/Pro/Scale), live usage meter (members/cap), and upgrade CTA. API endpoints for `/api/billing/usage` with Slack workspace member counting and `/api/billing/subscription` with seat cap logic (Pro: 250, Scale: 500/1000/2500/5000).
-- **Post-Install Checklist**: Replaced setup progress bar with stateful 7-step checklist showing live status (Connected, In Progress, Not Yet) and one-click actions: Connect Slack, Activate digest, Create first topic, Add team members, Customize settings, Schedule check-in, Explore exports.
-- **Enhanced Metrics**: Added "New This Week" (feedback items in last 7 days) and "Active Participants" (k-safe unique contributors) cards. Implemented `getNewThisWeek()` and leveraged existing `getUniqueParticipantCount()` storage methods. All 6 metric cards use responsive 3-column grid.
-- **Digest Controls**: Dedicated status card shows channel (#general-feedback), schedule (Daily at 9am), and "Send sample now" action with `/api/slack/digest-preview` endpoint for testing.
-- **Privacy Education**: K-anonymity tooltip on "Ready Threads" metric explains k=5 threshold and protection mechanism with accessible Info icon.
-- **Quick Actions**: Utility strip with Export Data, View Audit Log, and Retention badge (365d) for rapid access to operational features.
-- **Inline Slack Tips**: Command reference section with `/feedback`, `/feedback-topic [name]`, and `/feedback-anon` examples, all copy-to-clipboard enabled.
+**Admin Dashboard Redesign - Phases 1-3 Complete (October 2025)**
+
+*Phase 1: Quick Wins*
+- **Billing Integration**: Top ribbon displays plan status (Trial/Pro/Scale), live usage meter (members/cap), and upgrade CTA. API endpoints for `/api/billing/usage` with Slack workspace member counting and `/api/billing/subscription` with seat cap logic.
+- **Post-Install Checklist**: Stateful 7-step checklist with live status (Connected, In Progress, Not Yet) and one-click actions.
+- **Enhanced Metrics**: Added "New This Week" (last 7 days) and "Active Participants" (k-safe unique contributors). All 6 metric cards use responsive 3-column grid.
+- **Digest Controls**: Status card with channel, schedule, "Send sample now" action via `/api/slack/digest-preview`.
+- **Privacy Education**: K-anonymity tooltips explaining k=5 threshold and protection mechanisms.
+- **Quick Actions**: Utility strip with Export Data, View Audit Log, Retention badge (365d).
+- **Inline Slack Tips**: Command reference with copy-to-clipboard for `/feedback` variants.
+
+*Phase 2: Activation UX*
+- **Empty States**: Action-oriented messaging for zero-count metrics (e.g., "Invite team to submit feedback via Slack").
+- **Welcome Modal**: First-run detection (localStorage) shows guided onboarding for new installations with 4-step quickstart.
+- **Milestone Celebrations**: Automatic toasts for first feedback submission and k-anonymity threshold achievement with sessionStorage tracking.
+- **Contextual Help**: Tooltips on digest settings and checklist items explaining features without cluttering UI.
+- **Progressive Disclosure**: Checklist and metrics naturally guide users through feature discovery based on completion status.
+
+*Phase 3: Billing & Compliance*
+- **Billing Page** (`/admin/billing`): Full plan comparison (Trial, Pro, Scale) with feature matrices, current plan card, usage progress bar, and upgrade CTAs.
+- **Compliance Page** (`/admin/compliance`): GDPR controls, data retention policy display (365d default), export tools, DPA download, privacy architecture explainer (k-anonymity, no PII, content filtering), and data deletion request option.
+- **Plan Features**: Detailed feature lists per tier (seat caps, support levels, analytics depth, DPA signing, custom integrations).
+- **Compliance Docs**: Direct links to DPA PDF, security whitepaper, privacy policy.
 
 ### User Preferences
 I prefer iterative development and clear, concise explanations. Ask before making major changes to the architecture or core functionalities. Ensure all new features align with the privacy-first principle.
