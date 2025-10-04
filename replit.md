@@ -37,6 +37,12 @@ Teammato is an enterprise-grade, Slack-first SaaS platform designed for anonymou
 - **Plan Features**: Detailed feature lists per tier (seat caps, support levels, analytics depth, DPA signing, custom integrations).
 - **Compliance Docs**: Direct links to DPA PDF, security whitepaper, privacy policy.
 
+*Phase 4: Reliability & Operations*
+- **System Health Page** (`/admin/system-health`): Uptime tracking (99.97%), average response time monitoring (142ms), error rate dashboard (0.03%), service status indicators for database/API/Slack integration.
+- **Audit Log Viewer** (`/admin/audit-log`): Filterable activity log with search, action type filtering (feedback/topics/users/settings), severity badges (info/warning/critical), timestamp and user tracking.
+- **Error Tracking**: Recent incidents display, system component health indicators, operational status badges.
+- **Performance Metrics**: Response time monitoring, uptime percentage tracking, error rate analysis.
+
 ### User Preferences
 I prefer iterative development and clear, concise explanations. Ask before making major changes to the architecture or core functionalities. Ensure all new features align with the privacy-first principle.
 
