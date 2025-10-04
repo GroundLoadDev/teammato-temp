@@ -1,5 +1,6 @@
 import { cryptoReady, toBytes, aeadEnc, aeadDec, sha256Str } from "./encryption";
 import { ensureOrgDEK, loadOrgDEK } from "./keys";
+import sodium from "libsodium-wrappers";
 
 export interface EncryptedFields {
   contentCt: Buffer | null;
@@ -32,42 +33,35 @@ export async function encryptFeedbackFields(
 
   const aadStr = `${orgId}|${threadId}`;
   const aad = toBytes(aadStr);
+  
+  const nonce = sodium.randombytes_buf(sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES);
 
   let contentCt: Buffer | null = null;
   let behaviorCt: Buffer | null = null;
   let impactCt: Buffer | null = null;
-  let nonce: Buffer | null = null;
+
+  if (content !== null) {
+    const result = aeadEnc(dek, toBytes(content), aad, nonce);
+    contentCt = Buffer.from(result.ct);
+  }
 
   if (behavior !== null) {
-    const result = aeadEnc(dek, toBytes(behavior), aad);
+    const result = aeadEnc(dek, toBytes(behavior), aad, nonce);
     behaviorCt = Buffer.from(result.ct);
-    nonce = Buffer.from(result.nonce);
   }
 
-  if (impact !== null && nonce) {
-    const result = aeadEnc(dek, toBytes(impact), aad);
+  if (impact !== null) {
+    const result = aeadEnc(dek, toBytes(impact), aad, nonce);
     impactCt = Buffer.from(result.ct);
-    if (!nonce) nonce = Buffer.from(result.nonce);
   }
 
-  if (content !== null && nonce) {
-    const result = aeadEnc(dek, toBytes(content), aad);
-    contentCt = Buffer.from(result.ct);
-    if (!nonce) nonce = Buffer.from(result.nonce);
-  }
-
-  if (!nonce && (behavior || impact || content)) {
-    const result = aeadEnc(dek, toBytes(''), aad);
-    nonce = Buffer.from(result.nonce);
-  }
-
-  const aadHash = nonce ? Buffer.from(sha256Str(aadStr)) : null;
+  const aadHash = Buffer.from(sha256Str(aadStr));
 
   return {
     contentCt,
     behaviorCt,
     impactCt,
-    nonce,
+    nonce: Buffer.from(nonce),
     aadHash,
   };
 }
@@ -103,19 +97,24 @@ export async function decryptFeedbackFields(
   let behavior: string | null = null;
   let impact: string | null = null;
 
-  if (contentCt) {
-    const decrypted = aeadDec(dek, new Uint8Array(contentCt), nonceBytes, aad);
-    content = Buffer.from(decrypted).toString('utf8');
-  }
+  try {
+    if (contentCt) {
+      const decrypted = aeadDec(dek, new Uint8Array(contentCt), nonceBytes, aad);
+      content = Buffer.from(decrypted).toString('utf8');
+    }
 
-  if (behaviorCt) {
-    const decrypted = aeadDec(dek, new Uint8Array(behaviorCt), nonceBytes, aad);
-    behavior = Buffer.from(decrypted).toString('utf8');
-  }
+    if (behaviorCt) {
+      const decrypted = aeadDec(dek, new Uint8Array(behaviorCt), nonceBytes, aad);
+      behavior = Buffer.from(decrypted).toString('utf8');
+    }
 
-  if (impactCt) {
-    const decrypted = aeadDec(dek, new Uint8Array(impactCt), nonceBytes, aad);
-    impact = Buffer.from(decrypted).toString('utf8');
+    if (impactCt) {
+      const decrypted = aeadDec(dek, new Uint8Array(impactCt), nonceBytes, aad);
+      impact = Buffer.from(decrypted).toString('utf8');
+    }
+  } catch (error) {
+    console.error('Decryption failed:', error);
+    throw new Error('Failed to decrypt feedback fields - data may be corrupted or tampered');
   }
 
   return { content, behavior, impact };

@@ -48,7 +48,7 @@ function AtAGlance() {
   const items = [
     {
       title: "End-to-end encryption at rest",
-      sub: "AEAD with per-org keys; plaintext isn't stored.",
+      sub: "XChaCha20-Poly1305 AEAD with per-org 256-bit keys; plaintext never stored.",
       icon: Lock,
     },
     {
@@ -109,7 +109,7 @@ function ControlsGrid() {
 function DataFlow() {
   const steps = [
     { h: "1) Post in Slack", s: "User types /teammato; identity never leaves Slack." },
-    { h: "2) Process & encrypt", s: "Payload analyzed; content encrypted at rest (AEAD)." },
+    { h: "2) Process & encrypt", s: "Content filtered for PII, then encrypted at rest (XChaCha20-Poly1305 AEAD)." },
     { h: "3) Theme only", s: "Topics aggregated; items below k are suppressed." },
     { h: "4) Digest & analytics", s: "Weekly summaries and charts—no identities, ever." },
   ];

@@ -25,10 +25,10 @@ export const toString  = (b: Bytes)  => sodium.to_string(b);
 export const b64Encode = (b: Bytes)  => sodium.to_base64(b, sodium.base64_variants.ORIGINAL);
 export const b64Decode = (s: string) => sodium.from_base64(s, sodium.base64_variants.ORIGINAL);
 
-export function aeadEnc(key: Bytes, plaintext: Bytes, aad: Bytes) {
-  const nonce = sodium.randombytes_buf(sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES);
-  const ct = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(plaintext, aad, null, nonce, key);
-  return { ct, nonce };
+export function aeadEnc(key: Bytes, plaintext: Bytes, aad: Bytes, nonce?: Bytes) {
+  const nonceToUse = nonce || sodium.randombytes_buf(sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES);
+  const ct = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(plaintext, aad, null, nonceToUse, key);
+  return { ct, nonce: nonceToUse };
 }
 
 export function aeadDec(key: Bytes, ct: Bytes, nonce: Bytes, aad: Bytes) {
