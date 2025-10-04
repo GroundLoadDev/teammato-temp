@@ -26,6 +26,7 @@ export const orgs = pgTable("orgs", {
     redact_ui: true,
     enable_oidc: false,
     enable_llm_moderation: false,
+    enable_theming: false,
     plan: 'trial',
     retention_days: 365,
     legal_hold: false
@@ -173,6 +174,36 @@ export const invitations = pgTable("invitations", {
   uniquePendingInvite: unique().on(table.orgId, table.slackUserId, table.status),
 }));
 
+export const postEmbeddings = pgTable("post_embeddings", {
+  postId: uuid("post_id").primaryKey().references(() => feedbackItems.id, { onDelete: 'cascade' }),
+  orgId: uuid("org_id").notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+  periodDate: date("period_date").notNull(),
+  vector: jsonb("vector").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const themes = pgTable("themes", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: uuid("org_id").notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  label: text("label").notNull(),
+  summary: text("summary").notNull(),
+  postsCount: integer("posts_count").notNull(),
+  topTerms: text("top_terms").array().notNull(),
+  channels: text("channels").array().notNull(),
+  deptHits: jsonb("dept_hits").notNull(),
+  trendDelta: integer("trend_delta").default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const themePosts = pgTable("theme_posts", {
+  themeId: uuid("theme_id").notNull().references(() => themes.id, { onDelete: 'cascade' }),
+  postId: uuid("post_id").notNull().references(() => feedbackItems.id, { onDelete: 'cascade' }),
+}, (table) => ({
+  pk: unique().on(table.themeId, table.postId),
+}));
+
 // Insert schemas
 export const insertOrgSchema = createInsertSchema(orgs).omit({ id: true, createdAt: true });
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
@@ -185,6 +216,9 @@ export const insertModerationAuditSchema = createInsertSchema(moderationAudit).o
 export const insertTopicSuggestionSchema = createInsertSchema(topicSuggestions).omit({ id: true, createdAt: true });
 export const insertOrgKeySchema = createInsertSchema(orgKeys).omit({ createdAt: true });
 export const insertInvitationSchema = createInsertSchema(invitations).omit({ id: true, createdAt: true });
+export const insertPostEmbeddingSchema = createInsertSchema(postEmbeddings).omit({ createdAt: true });
+export const insertThemeSchema = createInsertSchema(themes).omit({ id: true, createdAt: true });
+export const insertThemePostSchema = createInsertSchema(themePosts);
 
 // Types
 export type Org = typeof orgs.$inferSelect;
@@ -219,6 +253,15 @@ export type InsertOrgKey = z.infer<typeof insertOrgKeySchema>;
 
 export type Invitation = typeof invitations.$inferSelect;
 export type InsertInvitation = z.infer<typeof insertInvitationSchema>;
+
+export type PostEmbedding = typeof postEmbeddings.$inferSelect;
+export type InsertPostEmbedding = z.infer<typeof insertPostEmbeddingSchema>;
+
+export type Theme = typeof themes.$inferSelect;
+export type InsertTheme = z.infer<typeof insertThemeSchema>;
+
+export type ThemePost = typeof themePosts.$inferSelect;
+export type InsertThemePost = z.infer<typeof insertThemePostSchema>;
 
 // Topic Status Enum
 export const TOPIC_STATUS = {

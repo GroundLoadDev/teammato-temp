@@ -1,0 +1,310 @@
+let’s ship Phase 1 (no-LLM theming). Below is a tight plan Replit can implement now: data model, worker, open-source embeddings, clustering, keywording, templated summaries, and UI glue. Zero third-party cost.
+
+1) What we’ll build (overview)
+
+Embed each k-eligible post with a tiny local model (all-MiniLM-L6-v2).
+
+Cluster embeddings into themes (agglomerative + cosine threshold).
+
+Label clusters with c-TF-IDF / keyword bigrams.
+
+Summarize with deterministic templates (no LLM).
+
+Enforce k before showing quotes or exporting.
+
+Store themes for digests & a Themes page.
+
+Everything runs on CPU, offline. No external APIs.
+
+2) Data model (SQL)
+-- Embeddings cache (so we don’t recompute)
+CREATE TABLE IF NOT EXISTS post_embeddings (
+  post_id UUID PRIMARY KEY,
+  org_id UUID NOT NULL,
+  period_date DATE NOT NULL,          -- e.g., week start; helps partial recompute
+  vector FLOAT4[] NOT NULL,           -- 384-dim for MiniLM
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Themes + membership
+CREATE TABLE IF NOT EXISTS themes (
+  id UUID PRIMARY KEY,
+  org_id UUID NOT NULL,
+  period_daterange DATERANGE NOT NULL,
+  label TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  posts_count INT NOT NULL,
+  top_terms TEXT[] NOT NULL,
+  channels TEXT[] NOT NULL,
+  dept_hits JSONB NOT NULL,
+  trend_delta INT DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS theme_posts (
+  theme_id UUID REFERENCES themes(id) ON DELETE CASCADE,
+  post_id UUID NOT NULL,
+  PRIMARY KEY (theme_id, post_id)
+);
+
+
+If you prefer not to store vectors in SQL, you can keep them in memory during the run. Caching saves time.
+
+3) Dependencies (Node-only, no Python)
+npm i @xenova/transformers onnxruntime-node ml-distance cosine-similarity
+
+
+Embeddings: @xenova/transformers (loads MiniLM ONNX/WASM locally).
+
+Cosine & basic math: cosine-similarity, ml-distance (or roll your own).
+
+4) Worker structure (TypeScript)
+// workers/theme-worker.ts
+import { pipeline } from '@xenova/transformers';
+import similarity from 'cosine-similarity';
+import { sql } from './db'; // your pg helper
+
+type Post = { id: string; org_id: string; thread_id: string; channel: string; dept?: string; content: string };
+
+export async function runTheming(orgId: string, periodStart: string, periodEnd: string, k = 10) {
+  // 1) Load k-eligible posts (decrypt in memory; YOU already enforce k elsewhere)
+  const posts: Post[] = await sql/*sql*/`
+    select p.id, p.org_id, p.thread_id, p.channel, p.dept, plaintext_content as content
+    from posts_view_k_safe p
+    where p.org_id = ${orgId}
+      and p.created_at >= ${periodStart} and p.created_at < ${periodEnd}
+  `;
+
+  if (!posts.length) return;
+
+  // 2) Embed
+  const emb = await getEmbeddings(posts.map(p => p.content)); // float32[384][]
+
+  // 3) Cluster (agglomerative by cosine threshold)
+  const clusters = clusterByThreshold(emb, 0.72); // tweak 0.68–0.78
+
+  // 4) Build themes (keywords, labels, templated summaries)
+  const out = buildThemes(posts, emb, clusters, { k });
+
+  // 5) Persist themes + membership
+  await saveThemes(orgId, periodStart, periodEnd, out);
+}
+
+/* ----------------- Embeddings ----------------- */
+let embedder: any;
+async function getEmbeddings(texts: string[]) {
+  if (!embedder) {
+    embedder = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+  }
+  const vectors: number[][] = [];
+  for (const t of texts) {
+    const output = await embedder(t, { pooling: 'mean', normalize: true });
+    vectors.push(Array.from(output.data as Float32Array)); // 384 dims
+  }
+  return vectors;
+}
+
+/* ----------------- Clustering ----------------- */
+// Simple agglomerative: connect points with cosine >= threshold, take connected components.
+function clusterByThreshold(vectors: number[][], threshold: number): number[][] {
+  const n = vectors.length;
+  const adj: number[][] = Array.from({ length: n }, () => []);
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (similarity(vectors[i], vectors[j]) >= threshold) {
+        adj[i].push(j);
+        adj[j].push(i);
+      }
+    }
+  }
+  const visited = new Array(n).fill(false);
+  const comps: number[][] = [];
+  for (let i = 0; i < n; i++) {
+    if (visited[i]) continue;
+    const comp: number[] = [];
+    const stack = [i];
+    while (stack.length) {
+      const v = stack.pop()!;
+      if (visited[v]) continue;
+      visited[v] = true;
+      comp.push(v);
+      for (const w of adj[v]) if (!visited[w]) stack.push(w);
+    }
+    comps.push(comp);
+  }
+  return comps;
+}
+
+/* ----------------- Keywording + Labels ----------------- */
+function tokenize(s: string) {
+  return s
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 2 && !STOP.has(w));
+}
+const STOP = new Set(['the','and','for','with','from','this','that','have','has','are','was','but','you','your','our','into','over','again','after','before','about','into','onto','because','while','where','when']);
+
+function topTerms(posts: string[], idxs: number[], topN = 5) {
+  const df = new Map<string, number>();
+  const tf = new Map<string, number>();
+  for (const i of idxs) {
+    const terms = new Set(tokenize(posts[i]));
+    for (const t of terms) df.set(t, (df.get(t) || 0) + 1);
+    for (const t of tokenize(posts[i])) tf.set(t, (tf.get(t) || 0) + 1);
+  }
+  const N = idxs.length;
+  const scored: [string, number][] = Array.from(tf.entries()).map(([t, f]) => {
+    const idf = Math.log(1 + N / (1 + (df.get(t) || 1)));
+    return [t, f * idf];
+  });
+  scored.sort((a, b) => b[1] - a[1]);
+  return scored.slice(0, topN).map(([t]) => t);
+}
+
+function labelFromTerms(terms: string[]) {
+  // simple heuristic + alias map
+  const aliases: Record<string, string> = {
+    'scope': 'scope creep',
+    'burnout': 'burnout & load',
+    'handoff': 'handoff gaps',
+  };
+  const primary = aliases[terms[0]] || terms[0];
+  const secondary = terms[1] || '';
+  if (!secondary) return cap(primary);
+  return `${cap(primary)} & ${secondary}`;
+}
+const cap = (s: string) => s.slice(0,1).toUpperCase() + s.slice(1);
+
+/* ----------------- Templated summaries ----------------- */
+type BuiltTheme = {
+  label: string;
+  summary: string;
+  top_terms: string[];
+  postIndices: number[];
+  channels: string[];
+  dept_hits: Record<string, number>;
+};
+function buildThemes(posts: Post[], vectors: number[][], clusters: number[][], opts: { k: number }): BuiltTheme[] {
+  const out: BuiltTheme[] = [];
+  const contents = posts.map(p => p.content);
+
+  for (const comp of clusters) {
+    // drop tiny clusters; we’ll fold them into a “General friction” bucket later
+    if (comp.length < Math.max(3, Math.floor(opts.k * 0.5))) continue;
+
+    const terms = topTerms(contents, comp, 6);
+    const label = labelFromTerms(terms);
+    const ch = hist(comp.map(i => posts[i].channel));
+    const depts = hist(comp.map(i => posts[i].dept || 'unknown'));
+
+    // templated summary; tweak fragments as you like
+    const channelsLine = ch.top.length ? ` Most mentions came from #${ch.top.slice(0,2).join(', #')}.` : '';
+    const summary = `${comp.length} posts raised concerns around ${label.toLowerCase()}. Common terms include ${terms.slice(0,3).join(', ')}.${channelsLine}`;
+
+    out.push({
+      label,
+      summary,
+      top_terms: terms.slice(0,5),
+      postIndices: comp,
+      channels: ch.sorted,
+      dept_hits: depts.map,
+    });
+  }
+
+  // Merge leftovers into "General friction" if there’s volume
+  const covered = new Set(out.flatMap(t => t.postIndices));
+  const remaining = posts.map((_, i) => i).filter(i => !covered.has(i));
+  if (remaining.length >= Math.max(5, Math.floor(opts.k))) {
+    const terms = topTerms(contents, remaining, 5);
+    const ch = hist(remaining.map(i => posts[i].channel));
+    const depts = hist(remaining.map(i => posts[i].dept || 'unknown'));
+    out.push({
+      label: 'General friction & one-offs',
+      summary: `A mix of smaller issues across ${terms.slice(0,3).join(', ')}. No single sub-topic meets k this period.`,
+      top_terms: terms.slice(0,5),
+      postIndices: remaining,
+      channels: ch.sorted,
+      dept_hits: depts.map,
+    });
+  }
+
+  // Final k-enforcement for quotes: each theme stays, but quotes shown only if theme size >= k
+  return out;
+}
+
+function hist(arr: string[]) {
+  const m = new Map<string, number>();
+  for (const a of arr) m.set(a, (m.get(a) || 0) + 1);
+  const sorted = Array.from(m.entries()).sort((a,b) => b[1]-a[1]).map(([k]) => k);
+  return { map: Object.fromEntries(m), sorted, top: sorted };
+}
+
+/* ----------------- Persist ----------------- */
+async function saveThemes(orgId: string, start: string, end: string, built: BuiltTheme[]) {
+  // compute trend vs last period here if you want
+  for (const t of built) {
+    const themeId = crypto.randomUUID();
+    await sql/*sql*/`
+      insert into themes (id, org_id, period_daterange, label, summary, posts_count, top_terms, channels, dept_hits)
+      values (${themeId}, ${orgId}, daterange(${start}::date, ${end}::date, '[]'),
+              ${t.label}, ${t.summary}, ${t.postIndices.length}, ${t.top_terms}, ${t.channels}, ${t.dept_hits}::jsonb)
+    `;
+    // membership
+    for (const i of t.postIndices) {
+      await sql/*sql*/`insert into theme_posts (theme_id, post_id) values (${themeId}, ${/* post id */ ''})`;
+    }
+  }
+}
+
+
+Notes:
+• The clustering threshold 0.72 is a sane starting point; tune per your data.
+• For exemplar quotes in UI, only show them when posts_count >= k and sample from ≥k posts.
+
+5) UI shape (Theme card props)
+export type ThemeCard = {
+  id: string;
+  label: string;
+  posts_count: number;
+  top_terms: string[];
+  summary: string;
+  trend_delta?: number;
+  channels: string[];
+  dept_hits: Record<string, number>;
+  k_threshold: number;
+  exemplar_quotes?: { text: string }[]; // only when posts_count >= k
+};
+
+
+Render with the same rounded cards/emerald accents we’ve used. (I can hand you a component if you want it pre-styled.)
+
+6) Scheduling & gates
+
+Run worker daily (or on digest generation).
+
+Trials: run the pipeline but hide quotes and limit frequency (e.g., weekly only).
+
+Paid: daily + quotes for themes meeting k.
+
+Add an org flag enable_theming (true for paid tiers).
+
+7) Quality & safety checks
+
+k enforced pre/post: only cluster inputs already eligible; hide sub-themes < k.
+
+PII: you already scrub at ingestion; still run a light check before quoting.
+
+Stability: cache embeddings for a week by post_id to keep labels steady.
+
+Smoke metrics: posts processed, clusters count, avg cluster size, % in “General friction”.
+
+8) Acceptance criteria
+
+Themes appear in weekly digest with label, count, top terms, channels, summary (templated).
+
+Quotes shown only when posts_count >= k.
+
+No LLM calls; CPU-only; runtime for 1k posts < ~60s on basic hardware.
+
+Deterministic output when rerun on same period (± ordering).

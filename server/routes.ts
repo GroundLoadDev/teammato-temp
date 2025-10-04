@@ -9,6 +9,7 @@ import { sendContributionReceipt, postActionNotesToChannel } from "./utils/slack
 import { buildFeedbackModal } from "./utils/slackModal";
 import { WebClient } from '@slack/web-api';
 import adminKeysRouter from "./routes/admin-keys";
+import themesRouter from "./routes/themes";
 
 // Slack OAuth configuration
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
@@ -1903,6 +1904,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Admin encryption key management endpoints
   app.use('/api/admin/keys', adminKeysRouter);
+
+  // Themes API endpoints
+  app.use('/api/themes', themesRouter);
 
   // Contact form endpoint (public)
   app.post('/api/contact', async (req, res) => {

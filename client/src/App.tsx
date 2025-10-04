@@ -38,6 +38,7 @@ import Analytics from "@/pages/admin/Analytics";
 import Export from "@/pages/admin/Export";
 import Retention from "@/pages/admin/Retention";
 import UserManagement from "@/pages/admin/UserManagement";
+import Themes from "@/pages/admin/Themes";
 
 function Router() {
   return (
@@ -71,6 +72,7 @@ function Router() {
       <Route path="/admin/system-health" component={SystemHealth} />
       <Route path="/admin/audit-log" component={AuditLog} />
       <Route path="/admin/analytics" component={Analytics} />
+      <Route path="/admin/themes" component={Themes} />
       <Route path="/admin/export" component={Export} />
       <Route path="/admin/retention" component={Retention} />
 
