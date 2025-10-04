@@ -1,5 +1,6 @@
 import { Home, MessageSquare, Tag, Lightbulb, BarChart, Slack, FileText, Download, Clock, Users, Sparkles } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import logoImage from "@assets/galaxyai-image-1759612930294_1759613447444.png";
 import {
   Sidebar,
   SidebarContent,
@@ -51,10 +52,14 @@ export function AppSidebar() {
       <SidebarHeader className="border-b px-6 py-4">
         <Link href="/admin/get-started">
           <div className="flex items-center gap-2 cursor-pointer">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <span className="text-sm font-bold">T</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-md overflow-hidden">
+              <img
+                src={logoImage}
+                alt=""
+                className="h-8 w-8 object-contain"
+              />
             </div>
-            <span className="text-lg font-bold">Teammato</span>
+            <span className="text-4xl font-semibold" style={{ color: '#0f172a' }}>Teammato</span>
           </div>
         </Link>
       </SidebarHeader>

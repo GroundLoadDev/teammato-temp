@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import logoImage from "@assets/galaxyai-image-1759612930294_1759613447444.png";
 
 type NavItem = { label: string; href: string };
 
@@ -50,7 +51,7 @@ export default function Header({
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <a href="/" className="group inline-flex items-center gap-2" aria-label="Teammato home">
           <Logo />
-          <span className="text-[15px] font-semibold tracking-tight group-hover:opacity-90">Teammato</span>
+          <span className="text-4xl font-semibold tracking-tight group-hover:opacity-90" style={{ color: '#0f172a' }}>Teammato</span>
         </a>
 
         <nav className="hidden items-center gap-6 md:flex">
@@ -76,8 +77,9 @@ export default function Header({
           </a>
           <a
             href={installed ? "slack://open" : authorizeUrl}
-            className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
           >
+            {!installed && <WhiteSlackLogo className="h-4 w-4" />}
             {installed ? "Open in Slack" : "Add to Slack"}
           </a>
         </div>
@@ -124,8 +126,9 @@ export default function Header({
             </a>
             <a
               href={installed ? "slack://open" : authorizeUrl}
-              className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-emerald-700"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-emerald-700"
             >
+              {!installed && <WhiteSlackLogo className="h-4 w-4" />}
               {installed ? "Open in Slack" : "Add to Slack"}
             </a>
           </div>
@@ -137,14 +140,12 @@ export default function Header({
 
 function Logo() {
   return (
-    <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl bg-foreground/10">
+    <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl">
       <img
-        src="/logo.svg"
+        src={logoImage}
         alt=""
         className="h-8 w-8 object-contain"
-        onError={(e) => ((e.currentTarget.style.display = "none"))}
       />
-      <span className="text-sm font-semibold">T</span>
     </span>
   );
 }
@@ -156,6 +157,17 @@ function SlackGlyph({ className = "" }: { className?: string }) {
       <rect x="14" y="10" width="5" height="3" rx="1.5" className="fill-current opacity-80" />
       <rect x="10" y="5" width="3" height="5" rx="1.5" className="fill-current opacity-80" />
       <rect x="10" y="14" width="3" height="5" rx="1.5" className="fill-current opacity-80" />
+    </svg>
+  );
+}
+
+function WhiteSlackLogo({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <rect x="5" y="10" width="5" height="3" rx="1.5" fill="white" opacity="0.9" />
+      <rect x="14" y="10" width="5" height="3" rx="1.5" fill="white" opacity="0.9" />
+      <rect x="10" y="5" width="3" height="5" rx="1.5" fill="white" opacity="0.9" />
+      <rect x="10" y="14" width="3" height="5" rx="1.5" fill="white" opacity="0.9" />
     </svg>
   );
 }

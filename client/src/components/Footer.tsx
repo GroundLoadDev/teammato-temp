@@ -1,4 +1,5 @@
 import { ShieldCheck } from "lucide-react";
+import logoImage from "@assets/galaxyai-image-1759612930294_1759613447444.png";
 
 const nav = {
   product: [
@@ -30,21 +31,14 @@ export default function Footer() {
         <div className="grid gap-12 md:grid-cols-12">
           <div className="md:col-span-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-foreground/10">
+              <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl">
                 <img
-                  src="/logo.svg"
+                  src={logoImage}
                   alt="Teammato"
                   className="h-9 w-9 object-contain"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.display = "none";
-                    const fallback = document.createElement("span");
-                    fallback.textContent = "T";
-                    fallback.className = "text-sm font-semibold";
-                    e.currentTarget.parentElement?.appendChild(fallback);
-                  }}
                 />
               </div>
-              <span className="text-lg font-semibold tracking-tight">Teammato</span>
+              <span className="text-4xl font-semibold tracking-tight" style={{ color: '#0f172a' }}>Teammato</span>
             </div>
 
             <p className="mt-3 max-w-sm text-sm text-muted-foreground">
