@@ -441,7 +441,19 @@ export default function GetStarted() {
                 <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
               )}
               <div className="flex-1">
-                <h3 className="font-semibold">Pick digest channel</h3>
+                <h3 className="font-semibold flex items-center gap-2">
+                  Pick digest channel
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-3.5 h-3.5 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p className="text-xs">Daily digests summarize new feedback and send to your chosen channel, keeping everyone informed without spamming.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </h3>
                 <p className="text-sm text-muted-foreground">
                   {slackSettings?.digestChannel ? `Configured: ${slackSettings.digestChannel}` : 'Set where daily digests are sent'}
                 </p>
