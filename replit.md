@@ -63,6 +63,28 @@ Teammato is an enterprise-grade, Slack-first SaaS platform designed for anonymou
   - Backfill script (`scripts/backfill-encrypt.ts`): Batch encryption of existing plaintext data
 - **Testing**: Comprehensive test suite (`scripts/test-encryption.ts`) validates DEK wrap/unwrap, AEAD enc/dec, multi-field encryption, AAD tampering protection
 
+**Theming System - Phase 1 (October 2025)**
+- **CPU-Based ML Pipeline**: Zero-cost local processing with all-MiniLM-L6-v2 embeddings via @xenova/transformers on ONNX runtime
+- **Schema**:
+  - `post_embeddings`: Stores 384-dim vectors for feedback items
+  - `themes`: Generated theme metadata (label, summary, stats, k-safe post count)
+  - `theme_posts`: Many-to-many join table linking themes to feedback
+- **Clustering**: Agglomerative hierarchical clustering with cosine similarity threshold (0.72)
+- **Keywording**: c-TF-IDF extraction with frequency filtering and automated label generation
+- **Summaries**: Template-based summaries (no LLM) showing theme prevalence and sample quotes
+- **Access Control**: 
+  - `requireThemingEnabled` middleware enforces `org.settings.enable_theming` flag
+  - All routes (POST /api/themes/generate, GET /api/themes, GET /api/themes/:id) gated for paid orgs only
+  - 403 responses with upgrade message for unpaid accounts
+- **K-Anonymity**: Enforces org's configured k_anonymity threshold (default 5) for theme visibility and quote sampling
+- **UI**: ThemeCard component with emerald-600 branding, Themes admin page (/admin/themes) with weekly/monthly period selector
+- **Implementation**:
+  - `server/workers/theme-worker.ts`: Full ML pipeline (embed → cluster → keyword → summarize)
+  - `server/routes/themes.ts`: API routes with access control and defensive settings handling
+  - `client/src/pages/admin/Themes.tsx`: Admin UI with period selection
+  - `client/src/components/ThemeCard.tsx`: Theme display component
+- **Cost Model**: CPU-only processing, no API calls, restricted to paid tiers via enable_theming flag
+
 ### User Preferences
 I prefer iterative development and clear, concise explanations. Ask before making major changes to the architecture or core functionalities. Ensure all new features align with the privacy-first principle.
 
