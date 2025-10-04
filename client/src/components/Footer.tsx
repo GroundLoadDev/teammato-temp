@@ -38,7 +38,7 @@ export default function Footer() {
                   className="h-9 w-9 object-contain"
                 />
               </div>
-              <span className="text-4xl font-semibold tracking-tight" style={{ color: '#0f172a' }}>Teammato</span>
+              <span className="text-lg font-semibold tracking-tight" style={{ color: '#0f172a' }}>Teammato</span>
             </div>
 
             <p className="mt-3 max-w-sm text-sm text-muted-foreground">

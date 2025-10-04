@@ -51,7 +51,7 @@ export default function Header({
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <a href="/" className="group inline-flex items-center gap-2" aria-label="Teammato home">
           <Logo />
-          <span className="text-4xl font-semibold tracking-tight group-hover:opacity-90" style={{ color: '#0f172a' }}>Teammato</span>
+          <span className="text-lg font-semibold tracking-tight group-hover:opacity-90" style={{ color: '#0f172a' }}>Teammato</span>
         </a>
 
         <nav className="hidden items-center gap-6 md:flex">

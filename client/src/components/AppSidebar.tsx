@@ -59,7 +59,7 @@ export function AppSidebar() {
                 className="h-8 w-8 object-contain"
               />
             </div>
-            <span className="text-4xl font-semibold" style={{ color: '#0f172a' }}>Teammato</span>
+            <span className="text-lg font-semibold" style={{ color: '#0f172a' }}>Teammato</span>
           </div>
         </Link>
       </SidebarHeader>

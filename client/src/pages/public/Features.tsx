@@ -36,7 +36,8 @@ function Hero() {
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
-              <a href="/api/slack/install" className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700" data-testid="button-add-to-slack">
+              <a href="/api/slack/install" className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700" data-testid="button-add-to-slack">
+                <WhiteSlackLogo className="h-4 w-4" />
                 Add to Slack
               </a>
               <a href="/trust" className="rounded-xl border px-5 py-2.5 text-sm hover:bg-muted" data-testid="button-trust">Trust &amp; security</a>
@@ -200,7 +201,13 @@ function FinalCTA() {
               Install in Slack in minutes. K-anonymous digests your leaders can act on—no plaintext stored.
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-3">
-              <a href="/api/slack/install" className="rounded-2xl bg-emerald-500 px-6 py-3 text-sm font-medium text-neutral-950 hover:bg-emerald-400" data-testid="button-cta-install">
+              <a href="/api/slack/install" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-6 py-3 text-sm font-medium text-neutral-950 hover:bg-emerald-400" data-testid="button-cta-install">
+                <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden>
+                  <rect x="5" y="10" width="5" height="3" rx="1.5" fill="currentColor" opacity="0.9" />
+                  <rect x="14" y="10" width="5" height="3" rx="1.5" fill="currentColor" opacity="0.9" />
+                  <rect x="10" y="5" width="3" height="5" rx="1.5" fill="currentColor" opacity="0.9" />
+                  <rect x="10" y="14" width="3" height="5" rx="1.5" fill="currentColor" opacity="0.9" />
+                </svg>
                 Add to Slack
               </a>
               <a href="/pricing" className="rounded-2xl border border-neutral-800 px-6 py-3 text-sm text-neutral-200 hover:bg-neutral-900" data-testid="button-cta-pricing">
@@ -295,5 +302,16 @@ function MiniDigestCard() {
       </div>
       <div className="mt-4 text-xs text-neutral-500">Exports respect the same threshold.</div>
     </div>
+  );
+}
+
+function WhiteSlackLogo({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <rect x="5" y="10" width="5" height="3" rx="1.5" fill="white" opacity="0.9" />
+      <rect x="14" y="10" width="5" height="3" rx="1.5" fill="white" opacity="0.9" />
+      <rect x="10" y="5" width="3" height="5" rx="1.5" fill="white" opacity="0.9" />
+      <rect x="10" y="14" width="3" height="5" rx="1.5" fill="white" opacity="0.9" />
+    </svg>
   );
 }

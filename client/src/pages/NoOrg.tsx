@@ -1,7 +1,17 @@
 import { Button } from "@/components/ui/button";
 import { buildSlackAuthorizeUrl } from "@/lib/slackInstall";
-import { SiSlack } from "react-icons/si";
 import { Plus } from "lucide-react";
+
+function WhiteSlackLogo({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <rect x="5" y="10" width="5" height="3" rx="1.5" fill="white" opacity="0.9" />
+      <rect x="14" y="10" width="5" height="3" rx="1.5" fill="white" opacity="0.9" />
+      <rect x="10" y="5" width="3" height="5" rx="1.5" fill="white" opacity="0.9" />
+      <rect x="10" y="14" width="3" height="5" rx="1.5" fill="white" opacity="0.9" />
+    </svg>
+  );
+}
 
 export default function NoOrg() {
   const handleAddToSlack = () => {
@@ -25,7 +35,7 @@ export default function NoOrg() {
             onClick={handleAddToSlack}
             data-testid="button-add-to-slack-primary"
           >
-            <SiSlack className="w-5 h-5" />
+            <WhiteSlackLogo className="w-5 h-5" />
             Add to Slack
           </Button>
           

@@ -308,9 +308,10 @@ export default function Landing() {
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <a
                   href="/api/slack/install"
-                  className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-6 py-3 text-white shadow hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-white shadow hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
                   data-testid="button-add-to-slack"
                 >
+                  <WhiteSlackLogo className="h-5 w-5" />
                   Add to Slack
                 </a>
                 <a
@@ -935,6 +936,12 @@ export default function Landing() {
                   href="/api/slack/install"
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-7 py-3.5 text-base font-medium text-neutral-950 shadow transition hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
                 >
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden>
+                    <rect x="5" y="10" width="5" height="3" rx="1.5" fill="currentColor" opacity="0.9" />
+                    <rect x="14" y="10" width="5" height="3" rx="1.5" fill="currentColor" opacity="0.9" />
+                    <rect x="10" y="5" width="3" height="5" rx="1.5" fill="currentColor" opacity="0.9" />
+                    <rect x="10" y="14" width="3" height="5" rx="1.5" fill="currentColor" opacity="0.9" />
+                  </svg>
                   Add to Slack
                   <ArrowRight className="h-5 w-5" />
                 </a>
@@ -1284,5 +1291,16 @@ function PreviewAdmin() {
         </div>
       </div>
     </div>
+  );
+}
+
+function WhiteSlackLogo({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <rect x="5" y="10" width="5" height="3" rx="1.5" fill="white" opacity="0.9" />
+      <rect x="14" y="10" width="5" height="3" rx="1.5" fill="white" opacity="0.9" />
+      <rect x="10" y="5" width="3" height="5" rx="1.5" fill="white" opacity="0.9" />
+      <rect x="10" y="14" width="3" height="5" rx="1.5" fill="white" opacity="0.9" />
+    </svg>
   );
 }
