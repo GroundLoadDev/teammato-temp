@@ -248,7 +248,6 @@ export default function Landing() {
   const [faqQuery, setFaqQuery] = useState("");
   const [activeTopics, setActiveTopics] = useState<FAQTopic[]>([]);
   const [activePrinciple, setActivePrinciple] = useState<PrincipleKey>("psychSafety");
-  const [compactEvidence, setCompactEvidence] = useState<boolean>(true);
 
   const visible = (t: Theme) => !enforceK || t.count >= k;
 
@@ -670,7 +669,7 @@ export default function Landing() {
         <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(1200px_400px_at_50%_-10%,rgba(16,185,129,0.10),transparent)]" />
 
         <div className="mx-auto max-w-6xl px-6 py-24 lg:py-28">
-          <header className="mb-6 flex flex-col gap-4 md:mb-10 md:flex-row md:items-end md:justify-between">
+          <header className="mb-6 md:mb-10">
             <div>
               <p className="font-mono text-sm uppercase tracking-wide text-muted-foreground">Evidence lab</p>
               <h2 className="mt-2 text-4xl font-semibold tracking-tight md:text-5xl">
@@ -680,95 +679,45 @@ export default function Landing() {
                 We don't guess how humans behave—we design for it. Below are the principles we implement on-by-default.
               </p>
             </div>
-
-            <div className="inline-flex select-none items-center gap-3 self-start rounded-xl border bg-background p-2 text-sm shadow">
-              <button
-                onClick={() => setCompactEvidence(true)}
-                className={`rounded-lg px-3 py-1.5 ${compactEvidence ? "bg-emerald-600 text-white" : "hover:bg-muted"}`}
-                aria-pressed={compactEvidence}
-              >
-                Compact
-              </button>
-              <button
-                onClick={() => setCompactEvidence(false)}
-                className={`rounded-lg px-3 py-1.5 ${!compactEvidence ? "bg-emerald-600 text-white" : "hover:bg-muted"}`}
-                aria-pressed={!compactEvidence}
-              >
-                Full
-              </button>
-            </div>
           </header>
 
           <div className="grid gap-8 md:grid-cols-12">
-            <aside className={`md:col-span-5 ${compactEvidence ? "space-y-2" : "space-y-2"}`}>
-              {compactEvidence ? (
-                <div className="grid grid-cols-2 gap-2">
-                  {(Object.keys(PRINCIPLES) as PrincipleKey[]).map((key) => {
-                    const p = PRINCIPLES[key];
-                    const isActive = key === activePrinciple;
-                    const Icon = p.icon;
-                    return (
-                      <button
-                        key={key}
-                        onClick={() => setActivePrinciple(key)}
-                        className={[
-                          "flex items-start justify-between rounded-xl px-3 py-3 min-h-[56px] text-left ring-1 ring-black/5",
-                          isActive ? "bg-background shadow-sm" : "bg-muted hover:bg-muted/70",
-                        ].join(" ")}
-                        aria-pressed={isActive}
-                      >
-                        <div className="flex items-start gap-2">
-                          <span className={["flex h-7 w-7 items-center justify-center rounded-lg",
-                            isActive ? "bg-emerald-600 text-white" : "bg-foreground/10 text-foreground/80"
-                          ].join(" ")}>
-                            <Icon className="h-4 w-4" />
-                          </span>
-                          <span className="text-sm font-medium leading-snug whitespace-normal break-words">{p.title}</span>
-                        </div>
-                        <span className="ml-2 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-emerald-200">
-                          {p.badge}
+            <aside className="md:col-span-5 space-y-2">
+              <div className="space-y-2">
+                {(Object.keys(PRINCIPLES) as PrincipleKey[]).map((key) => {
+                  const p = PRINCIPLES[key];
+                  const isActive = key === activePrinciple;
+                  const Icon = p.icon;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setActivePrinciple(key)}
+                      className={[
+                        "w-full rounded-2xl p-4 text-left transition-all ring-1 ring-black/5",
+                        isActive ? "bg-background shadow-[0_1px_0_rgba(0,0,0,0.06),0_24px_48px_-24px_rgba(0,0,0,0.25)]" : "bg-muted hover:bg-muted/70"
+                      ].join(" ")}
+                      aria-pressed={isActive}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className={["flex h-10 w-10 flex-none items-center justify-center rounded-xl",
+                          isActive ? "bg-emerald-600 text-white" : "bg-foreground/10 text-foreground/80"
+                        ].join(" ")}>
+                          <Icon className="h-5 w-5" />
                         </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {(Object.keys(PRINCIPLES) as PrincipleKey[]).map((key) => {
-                    const p = PRINCIPLES[key];
-                    const isActive = key === activePrinciple;
-                    const Icon = p.icon;
-                    return (
-                      <button
-                        key={key}
-                        onClick={() => setActivePrinciple(key)}
-                        className={[
-                          "w-full rounded-2xl p-5 text-left transition-all ring-1 ring-black/5",
-                          isActive ? "bg-background shadow-[0_1px_0_rgba(0,0,0,0.06),0_24px_48px_-24px_rgba(0,0,0,0.25)]" : "bg-muted hover:bg-muted/70"
-                        ].join(" ")}
-                        aria-pressed={isActive}
-                      >
-                        <div className="flex items-start gap-4">
-                          <span className={["flex h-12 w-12 flex-none items-center justify-center rounded-xl",
-                            isActive ? "bg-emerald-600 text-white" : "bg-foreground/10 text-foreground/80"
-                          ].join(" ")}>
-                            <Icon className="h-6 w-6" />
-                          </span>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h3 className="text-xl font-semibold leading-tight">{p.title}</h3>
-                              <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
-                                {p.badge}
-                              </span>
-                            </div>
-                            <p className="mt-1 text-sm text-muted-foreground">{p.blurb}</p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-lg font-semibold leading-tight">{p.title}</h3>
+                            <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
+                              {p.badge}
+                            </span>
                           </div>
+                          <p className="mt-1 text-sm text-muted-foreground">{p.blurb}</p>
                         </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </aside>
 
             <div className="md:col-span-7">
@@ -809,6 +758,9 @@ export default function Landing() {
             <h2 className="mt-2 text-3xl font-semibold tracking-tight md:text-4xl">
               Objections—answered plainly
             </h2>
+            <p className="mt-3 text-base text-muted-foreground">
+              Quick answers below. For the full list, <a href="/faq" className="text-emerald-700 underline underline-offset-4 hover:text-emerald-600">visit our FAQ</a>.
+            </p>
           </header>
 
           {/* Search + filter bar */}
@@ -894,14 +846,6 @@ export default function Landing() {
 
                     <div className="px-6 pb-6 pt-0 text-base text-muted-foreground">
                       <p className="max-w-prose leading-relaxed">{item.a}</p>
-                      <div className="mt-3 text-sm">
-                        <a
-                          href={`#faq?open=${item.id}`}
-                          className="text-emerald-700 underline underline-offset-4 hover:text-emerald-600"
-                        >
-                          Link to this answer
-                        </a>
-                      </div>
                     </div>
                   </details>
                 );

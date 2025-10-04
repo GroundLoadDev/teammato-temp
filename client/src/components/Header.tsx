@@ -7,9 +7,7 @@ const NAV: NavItem[] = [
   { label: "How It Works", href: "/how-it-works" },
   { label: "Features", href: "/features" },
   { label: "Pricing", href: "/pricing" },
-  { label: "FAQ", href: "/#faq" },
   { label: "Trust", href: "/trust" },
-  { label: "Contact", href: "/contact" },
 ];
 
 export default function Header({

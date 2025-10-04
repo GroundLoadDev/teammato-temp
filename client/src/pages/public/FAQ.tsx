@@ -315,11 +315,6 @@ function FAQSearch() {
                     </summary>
                     <div className="px-5 pb-5 text-sm text-muted-foreground" data-testid={`content-${qa.id}`}>
                       <p className="max-w-prose leading-relaxed">{qa.a}</p>
-                      <div className="mt-3 text-xs">
-                        <a href={`/faq?id=${qa.id}`} className="text-emerald-700 underline underline-offset-4 hover:text-emerald-600" data-testid={`link-${qa.id}`}>
-                          Link to this answer
-                        </a>
-                      </div>
                     </div>
                   </details>
                 ))}
