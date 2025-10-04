@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   CheckCircle2, Circle, MessageSquare, FileText, Tag, CheckCheck, 
   Slack, ArrowRight, Info, Download, History, AlertTriangle, Clock,
-  Send, ChevronRight, Copy, TrendingUp, Users
+  Send, ChevronRight, Copy, TrendingUp, Users, Sparkles, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -56,6 +57,8 @@ interface FeedbackThread {
 export default function GetStarted() {
   const { toast } = useToast();
   const [copiedCommand, setCopiedCommand] = useState<string | null>(null);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [showMilestone, setShowMilestone] = useState<string | null>(null);
 
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ['/api/dashboard/stats'],
@@ -91,6 +94,46 @@ export default function GetStarted() {
     navigator.clipboard.writeText(cmd);
     setCopiedCommand(cmd);
     setTimeout(() => setCopiedCommand(null), 2000);
+  };
+
+  // First-run detection and milestone tracking
+  useEffect(() => {
+    if (!statsLoading && !slackLoading && stats && slackStatus) {
+      const hasSeenWelcome = localStorage.getItem('teammato_welcomed');
+      const lastFeedbackCount = parseInt(localStorage.getItem('teammato_last_feedback') || '0');
+      const hasReachedK = localStorage.getItem('teammato_k_reached');
+      
+      // Show welcome for first-time users
+      if (!hasSeenWelcome && slackStatus.connected && stats.totalFeedbackItems === 0) {
+        setShowWelcome(true);
+      }
+      
+      // Milestone: First feedback received
+      if (stats.totalFeedbackItems > 0 && lastFeedbackCount === 0) {
+        const hasSeenFirstFeedback = sessionStorage.getItem('teammato_first_feedback_celebrated');
+        if (!hasSeenFirstFeedback) {
+          setShowMilestone('first_feedback');
+          sessionStorage.setItem('teammato_first_feedback_celebrated', 'true');
+        }
+      }
+      
+      // Milestone: K-anonymity threshold reached
+      if (stats.readyThreads > 0 && !hasReachedK) {
+        const hasSeenKReached = sessionStorage.getItem('teammato_k_celebrated');
+        if (!hasSeenKReached) {
+          setShowMilestone('k_reached');
+          sessionStorage.setItem('teammato_k_celebrated', 'true');
+          localStorage.setItem('teammato_k_reached', 'true');
+        }
+      }
+      
+      localStorage.setItem('teammato_last_feedback', stats.totalFeedbackItems.toString());
+    }
+  }, [stats, statsLoading, slackStatus, slackLoading]);
+
+  const dismissWelcome = () => {
+    setShowWelcome(false);
+    localStorage.setItem('teammato_welcomed', 'true');
   };
 
   // Get plan display name
@@ -223,7 +266,11 @@ export default function GetStarted() {
             <div className="text-2xl font-bold" data-testid="text-total-items">
               {statsLoading ? '...' : stats?.totalFeedbackItems || 0}
             </div>
-            <p className="text-xs text-muted-foreground">Individual submissions</p>
+            {!statsLoading && stats?.totalFeedbackItems === 0 ? (
+              <p className="text-xs text-muted-foreground">Invite team to submit feedback via Slack</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Individual submissions</p>
+            )}
           </CardContent>
         </Card>
 
@@ -265,7 +312,11 @@ export default function GetStarted() {
               <div className="text-2xl font-bold" data-testid="text-ready-threads">
                 {statsLoading ? '...' : stats?.readyThreads || 0}
               </div>
-              <p className="text-xs text-muted-foreground">Met k-anonymity threshold</p>
+              {!statsLoading && stats?.readyThreads === 0 ? (
+                <p className="text-xs text-muted-foreground">Need 5+ participants to unlock</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Met k-anonymity threshold</p>
+              )}
             </CardContent>
           </Card>
         </Link>
@@ -279,7 +330,11 @@ export default function GetStarted() {
             <div className="text-2xl font-bold" data-testid="text-new-week">
               {statsLoading ? '...' : stats?.newThisWeek || 0}
             </div>
-            <p className="text-xs text-muted-foreground">Items in last 7 days</p>
+            {!statsLoading && stats?.newThisWeek === 0 ? (
+              <p className="text-xs text-muted-foreground">Share Slack commands to activate</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Items in last 7 days</p>
+            )}
           </CardContent>
         </Card>
 
@@ -292,7 +347,11 @@ export default function GetStarted() {
             <div className="text-2xl font-bold" data-testid="text-participants">
               {statsLoading ? '...' : stats?.activeParticipants || 0}
             </div>
-            <p className="text-xs text-muted-foreground">K-safe unique contributors</p>
+            {!statsLoading && stats?.activeParticipants === 0 ? (
+              <p className="text-xs text-muted-foreground">Waiting for first contributors</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">K-safe unique contributors</p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -594,6 +653,82 @@ export default function GetStarted() {
           </div>
         )}
       </div>
+
+      {/* Welcome Modal for First-Time Users */}
+      <Dialog open={showWelcome} onOpenChange={setShowWelcome}>
+        <DialogContent className="sm:max-w-md" data-testid="dialog-welcome">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-emerald-600" />
+              Welcome to Teammato!
+            </DialogTitle>
+            <DialogDescription className="pt-4 space-y-3">
+              <p>Your anonymous feedback platform is ready. Here's how to get started:</p>
+              <ul className="list-disc pl-5 space-y-2 text-sm">
+                <li>Share the <code className="px-1.5 py-0.5 rounded bg-muted text-xs">/teammato</code> command with your team in Slack</li>
+                <li>Invite at least 5 team members to ensure k-anonymity protection</li>
+                <li>Create your first topic to organize feedback campaigns</li>
+                <li>Configure the daily digest to stay updated on new feedback</li>
+              </ul>
+              <p className="text-xs text-muted-foreground pt-2">
+                Follow the checklist above to complete your setup.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button onClick={dismissWelcome} data-testid="button-welcome-dismiss">
+              Get Started
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Milestone Celebration Modals */}
+      <Dialog open={showMilestone === 'first_feedback'} onOpenChange={() => setShowMilestone(null)}>
+        <DialogContent className="sm:max-w-md" data-testid="dialog-first-feedback">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-emerald-600" />
+              First Feedback Received! 🎉
+            </DialogTitle>
+            <DialogDescription className="pt-4">
+              <p>Congratulations! Your team has submitted their first feedback. Your anonymous feedback loop is now active.</p>
+              <p className="mt-3 text-sm text-muted-foreground">
+                Remember: Feedback threads need at least 5 participants before they're visible to protect anonymity.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowMilestone(null)} data-testid="button-milestone-dismiss">
+              Continue
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showMilestone === 'k_reached'} onOpenChange={() => setShowMilestone(null)}>
+        <DialogContent className="sm:max-w-md" data-testid="dialog-k-reached">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCheck className="w-5 h-5 text-emerald-600" />
+              K-Anonymity Threshold Reached! 🔒
+            </DialogTitle>
+            <DialogDescription className="pt-4">
+              <p>Excellent! Your first feedback thread has reached the k-anonymity threshold with 5+ participants.</p>
+              <p className="mt-3 text-sm text-muted-foreground">
+                This feedback is now visible and ready for review while protecting contributor anonymity.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Link href="/admin/feedback">
+              <Button onClick={() => setShowMilestone(null)} data-testid="button-view-feedback">
+                View Feedback
+              </Button>
+            </Link>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
