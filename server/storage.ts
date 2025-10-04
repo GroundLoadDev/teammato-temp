@@ -527,7 +527,33 @@ export class PgStorage implements IStorage {
 
   // Feedback Items
   async createFeedbackItem(insertItem: InsertFeedbackItem): Promise<FeedbackItem> {
-    const result = await db.insert(feedbackItems).values(insertItem).returning();
+    let finalItem = { ...insertItem };
+    
+    if (process.env.TM_MASTER_KEY_V1 && insertItem.threadId) {
+      try {
+        const { encryptFeedbackFields } = await import('./utils/encryptFeedback');
+        const encrypted = await encryptFeedbackFields(
+          insertItem.orgId,
+          insertItem.threadId,
+          insertItem.content || null,
+          insertItem.behavior || null,
+          insertItem.impact || null
+        );
+        
+        finalItem = {
+          ...insertItem,
+          contentCt: encrypted.contentCt,
+          behaviorCt: encrypted.behaviorCt,
+          impactCt: encrypted.impactCt,
+          nonce: encrypted.nonce,
+          aadHash: encrypted.aadHash,
+        };
+      } catch (error) {
+        console.error('Encryption error:', error);
+      }
+    }
+    
+    const result = await db.insert(feedbackItems).values(finalItem).returning();
     return result[0];
   }
 

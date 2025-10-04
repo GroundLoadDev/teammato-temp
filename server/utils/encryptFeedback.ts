@@ -1,0 +1,122 @@
+import { cryptoReady, toBytes, aeadEnc, aeadDec, sha256Str } from "./encryption";
+import { ensureOrgDEK, loadOrgDEK } from "./keys";
+
+export interface EncryptedFields {
+  contentCt: Buffer | null;
+  behaviorCt: Buffer | null;
+  impactCt: Buffer | null;
+  nonce: Buffer | null;
+  aadHash: Buffer | null;
+}
+
+export async function encryptFeedbackFields(
+  orgId: string,
+  threadId: string,
+  content: string | null,
+  behavior: string | null,
+  impact: string | null
+): Promise<EncryptedFields> {
+  if (!process.env.TM_MASTER_KEY_V1) {
+    return {
+      contentCt: null,
+      behaviorCt: null,
+      impactCt: null,
+      nonce: null,
+      aadHash: null,
+    };
+  }
+
+  await cryptoReady();
+  await ensureOrgDEK(orgId);
+  const dek = await loadOrgDEK(orgId);
+
+  const aadStr = `${orgId}|${threadId}`;
+  const aad = toBytes(aadStr);
+
+  let contentCt: Buffer | null = null;
+  let behaviorCt: Buffer | null = null;
+  let impactCt: Buffer | null = null;
+  let nonce: Buffer | null = null;
+
+  if (behavior !== null) {
+    const result = aeadEnc(dek, toBytes(behavior), aad);
+    behaviorCt = Buffer.from(result.ct);
+    nonce = Buffer.from(result.nonce);
+  }
+
+  if (impact !== null && nonce) {
+    const result = aeadEnc(dek, toBytes(impact), aad);
+    impactCt = Buffer.from(result.ct);
+    if (!nonce) nonce = Buffer.from(result.nonce);
+  }
+
+  if (content !== null && nonce) {
+    const result = aeadEnc(dek, toBytes(content), aad);
+    contentCt = Buffer.from(result.ct);
+    if (!nonce) nonce = Buffer.from(result.nonce);
+  }
+
+  if (!nonce && (behavior || impact || content)) {
+    const result = aeadEnc(dek, toBytes(''), aad);
+    nonce = Buffer.from(result.nonce);
+  }
+
+  const aadHash = nonce ? Buffer.from(sha256Str(aadStr)) : null;
+
+  return {
+    contentCt,
+    behaviorCt,
+    impactCt,
+    nonce,
+    aadHash,
+  };
+}
+
+export async function decryptFeedbackFields(
+  orgId: string,
+  threadId: string,
+  contentCt: Buffer | null,
+  behaviorCt: Buffer | null,
+  impactCt: Buffer | null,
+  nonce: Buffer | null
+): Promise<{
+  content: string | null;
+  behavior: string | null;
+  impact: string | null;
+}> {
+  if (!process.env.TM_MASTER_KEY_V1 || !nonce) {
+    return {
+      content: null,
+      behavior: null,
+      impact: null,
+    };
+  }
+
+  await cryptoReady();
+  const dek = await loadOrgDEK(orgId);
+
+  const aadStr = `${orgId}|${threadId}`;
+  const aad = toBytes(aadStr);
+  const nonceBytes = new Uint8Array(nonce);
+
+  let content: string | null = null;
+  let behavior: string | null = null;
+  let impact: string | null = null;
+
+  if (contentCt) {
+    const decrypted = aeadDec(dek, new Uint8Array(contentCt), nonceBytes, aad);
+    content = Buffer.from(decrypted).toString('utf8');
+  }
+
+  if (behaviorCt) {
+    const decrypted = aeadDec(dek, new Uint8Array(behaviorCt), nonceBytes, aad);
+    behavior = Buffer.from(decrypted).toString('utf8');
+  }
+
+  if (impactCt) {
+    const decrypted = aeadDec(dek, new Uint8Array(impactCt), nonceBytes, aad);
+    impact = Buffer.from(decrypted).toString('utf8');
+  }
+
+  return { content, behavior, impact };
+}
