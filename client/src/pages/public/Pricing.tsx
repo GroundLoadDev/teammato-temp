@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 type Term = "monthly" | "annual";
 
@@ -45,14 +47,18 @@ export default function PricingPage() {
   const recommended = useMemo(() => pickBandBySeats(seats), [seats]);
 
   return (
-    <main id="main">
-      <PricingHero term={term} onTermChange={setTerm} />
-      <SeatSizer seats={seats} setSeats={setSeats} recommended={recommended} term={term} />
-      <PlansChooser term={term} />
-      <FeatureParity />
-      <BillingExplainer />
-      <PricingFAQ />
-    </main>
+    <>
+      <Header />
+      <main id="main">
+        <PricingHero term={term} onTermChange={setTerm} />
+        <SeatSizer seats={seats} setSeats={setSeats} recommended={recommended} term={term} />
+        <PlansChooser term={term} />
+        <FeatureParity />
+        <BillingExplainer />
+        <PricingFAQ />
+      </main>
+      <Footer />
+    </>
   );
 }
 
