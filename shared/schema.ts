@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, jsonb, boolean, uuid, integer, unique, date } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, jsonb, boolean, uuid, integer, unique, date, bytea } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -106,6 +106,11 @@ export const feedbackItems = pgTable("feedback_items", {
   moderatorId: uuid("moderator_id").references(() => users.id, { onDelete: 'set null' }),
   moderatedAt: timestamp("moderated_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  contentCt: bytea("content_ct"),
+  behaviorCt: bytea("behavior_ct"),
+  impactCt: bytea("impact_ct"),
+  nonce: bytea("nonce"),
+  aadHash: bytea("aad_hash"),
 }, (table) => ({
   uniqueParticipation: unique().on(table.threadId, table.slackUserId),
 }));
@@ -134,6 +139,13 @@ export const topicSuggestions = pgTable("topic_suggestions", {
   orgStatusIndex: unique().on(table.orgId, table.status, table.createdAt),
 }));
 
+export const orgKeys = pgTable("org_keys", {
+  orgId: uuid("org_id").primaryKey().references(() => orgs.id, { onDelete: 'cascade' }),
+  wrappedDek: bytea("wrapped_dek").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  rotatedAt: timestamp("rotated_at"),
+});
+
 export const invitations = pgTable("invitations", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   orgId: uuid("org_id").notNull().references(() => orgs.id, { onDelete: 'cascade' }),
@@ -159,6 +171,7 @@ export const insertFeedbackThreadSchema = createInsertSchema(feedbackThreads).om
 export const insertFeedbackItemSchema = createInsertSchema(feedbackItems).omit({ id: true, createdAt: true });
 export const insertModerationAuditSchema = createInsertSchema(moderationAudit).omit({ id: true, createdAt: true });
 export const insertTopicSuggestionSchema = createInsertSchema(topicSuggestions).omit({ id: true, createdAt: true });
+export const insertOrgKeySchema = createInsertSchema(orgKeys).omit({ createdAt: true });
 export const insertInvitationSchema = createInsertSchema(invitations).omit({ id: true, createdAt: true });
 
 // Types
@@ -188,6 +201,9 @@ export type InsertModerationAudit = z.infer<typeof insertModerationAuditSchema>;
 
 export type TopicSuggestion = typeof topicSuggestions.$inferSelect;
 export type InsertTopicSuggestion = z.infer<typeof insertTopicSuggestionSchema>;
+
+export type OrgKey = typeof orgKeys.$inferSelect;
+export type InsertOrgKey = z.infer<typeof insertOrgKeySchema>;
 
 export type Invitation = typeof invitations.$inferSelect;
 export type InsertInvitation = z.infer<typeof insertInvitationSchema>;
