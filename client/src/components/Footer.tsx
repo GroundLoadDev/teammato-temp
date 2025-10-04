@@ -3,9 +3,10 @@ import logoImage from "@assets/teammato_logo_transparent_1759614481870.png";
 
 const nav = {
   product: [
-    { label: "Features", href: "/#features" },
+    { label: "How It Works", href: "/how-it-works" },
+    { label: "Features", href: "/features" },
     { label: "Pricing", href: "/pricing" },
-    { label: "FAQ", href: "/#faq" },
+    { label: "FAQ", href: "/faq" },
   ],
   company: [
     { label: "About", href: "/about" },

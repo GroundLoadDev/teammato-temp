@@ -1,0 +1,287 @@
+// HowItWorksPage.tsx
+// Teammato /how-it-works — Story-first, safe, and technical when you want it.
+// Tailwind only.
+
+import { useState } from "react";
+
+export default function HowItWorksPage() {
+  return (
+    <main id="main">
+      <Hero />
+      <StorySteps />
+      <FlowRail />
+      <PrivacyPoster />
+      <UnderTheHood />
+      <NotWhatWeDo />
+      <CTA />
+    </main>
+  );
+}
+
+/* ----------------------------- HERO ----------------------------- */
+
+function Hero() {
+  const [mode, setMode] = useState<"human" | "tech">("human");
+
+  return (
+    <section className="relative overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(1200px_380px_at_50%_-80px,rgba(16,185,129,0.12),transparent)]" />
+      <div className="mx-auto max-w-6xl px-6 pb-12 pt-16 md:pt-20">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">How Teammato works</h1>
+            <p className="mt-3 max-w-2xl text-lg text-muted-foreground">
+              A gentle way to speak up—and a safe way to listen. Built inside Slack, designed for privacy, and tuned for signal over noise.
+            </p>
+          </div>
+
+          <div className="rounded-xl border bg-background p-1">
+            <div className="flex">
+              <button
+                onClick={() => setMode("human")}
+                className={`rounded-lg px-3 py-1.5 text-sm ${mode === "human" ? "bg-emerald-600 text-white" : "text-foreground/80 hover:bg-muted"}`}
+              >
+                For humans
+              </button>
+              <button
+                onClick={() => setMode("tech")}
+                className={`rounded-lg px-3 py-1.5 text-sm ${mode === "tech" ? "bg-emerald-600 text-white" : "text-foreground/80 hover:bg-muted"}`}
+              >
+                For engineers
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {mode === "human" ? (
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
+            {[
+              { h: "Post in Slack", p: "Use /teammato when something’s hard to say out loud. Share context; no names are shown anywhere." },
+              { h: "Protected by design", p: "We scrub PII, encrypt message bodies, and hide small-n topics. No one can ‘read between the lines.’" },
+              { h: "Themes, not people", p: "Leaders see patterns and trends—never individuals. Actions follow the signal, not the speaker." },
+            ].map((x) => (
+              <div key={x.h} className="rounded-2xl border bg-background p-5">
+                <div className="text-base font-semibold">{x.h}</div>
+                <div className="mt-1 text-sm text-muted-foreground">{x.p}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
+            {[
+              { h: "Ingestion", p: "Slash command payload → PII scrub → AEAD encrypt (XChaCha20-Poly1305) with per-org 256-bit keys." },
+              { h: "K-anonymity", p: "Below-k topics suppressed across UI/exports. No plaintext stored. Row-level org isolation on all reads." },
+              { h: "Signals", p: "Open-source embeddings + clustering (no LLM) produce weekly themes. Quotes shown only when ≥ k." },
+            ].map((x) => (
+              <div key={x.h} className="rounded-2xl border bg-background p-5">
+                <div className="text-base font-semibold">{x.h}</div>
+                <div className="mt-1 text-sm text-muted-foreground">{x.p}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* ----------------------------- STORY STEPS ----------------------------- */
+
+function StorySteps() {
+  const items = [
+    {
+      k: "1",
+      h: "Post",
+      sub: "A safe place to start",
+      p: "People type /teammato in Slack. We nudge for clarity and tone, then accept the post anonymously.",
+    },
+    {
+      k: "2",
+      h: "Protect",
+      sub: "Privacy is a feature",
+      p: "We scrub PII, then encrypt message bodies at rest. Topics with fewer than k posts stay hidden everywhere.",
+    },
+    {
+      k: "3",
+      h: "Share",
+      sub: "Themes over time",
+      p: "Open-source embeddings group similar posts into themes—no LLM required. Leaders see patterns and suggested next steps.",
+    },
+  ];
+
+  return (
+    <section className="mx-auto max-w-6xl px-6 py-10">
+      <div className="grid gap-4 md:grid-cols-3">
+        {items.map((s) => (
+          <div key={s.k} className="group relative rounded-3xl border bg-background p-6">
+            <div className="absolute -left-3 -top-3 grid h-8 w-8 place-items-center rounded-xl bg-emerald-600 text-sm font-medium text-white shadow">{s.k}</div>
+            <div className="text-xl font-semibold">{s.h}</div>
+            <div className="text-sm text-emerald-700">{s.sub}</div>
+            <p className="mt-2 text-sm text-muted-foreground">{s.p}</p>
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 translate-y-1 rounded-b-3xl bg-gradient-to-t from-emerald-50/40 opacity-0 transition group-hover:opacity-100" />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ----------------------------- FLOW RAIL ----------------------------- */
+
+function FlowRail() {
+  const steps = [
+    { title: "Slack", text: "User posts via /teammato", hint: "identity stays in Slack" },
+    { title: "Scrub", text: "PII filters at ingestion", hint: "no emails, IDs, @mentions" },
+    { title: "Encrypt", text: "AEAD at rest", hint: "XChaCha20-Poly1305 · per-org keys" },
+    { title: "Cluster", text: "Embeddings → themes", hint: "no LLM in the loop" },
+    { title: "Digest", text: "Weekly themes & trends", hint: "quotes only when ≥ k" },
+  ];
+  return (
+    <section className="mx-auto max-w-6xl px-6 py-6">
+      <div className="rounded-3xl border bg-muted/40 p-6 md:p-8">
+        <h2 className="text-xl font-semibold">Data flow, at a glance</h2>
+        <div className="mt-5 grid items-stretch gap-3 md:grid-cols-5">
+          {steps.map((s, i) => (
+            <div key={s.title} className="relative rounded-2xl border bg-background p-4">
+              <div className="text-sm font-medium">{s.title}</div>
+              <div className="text-sm text-muted-foreground">{s.text}</div>
+              <div className="mt-2 rounded-lg bg-foreground/5 px-2 py-1 text-xs text-foreground/70">{s.hint}</div>
+              {i < steps.length - 1 && (
+                <span className="pointer-events-none absolute -right-2 top-1/2 hidden h-4 w-4 -translate-y-1/2 rotate-45 border-r border-t md:block" />
+              )}
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">Plaintext bodies are never stored. k-anonymity enforced across UI and exports.</p>
+      </div>
+    </section>
+  );
+}
+
+/* ----------------------------- PRIVACY POSTER ----------------------------- */
+
+function PrivacyPoster() {
+  const badges = [
+    { h: "K-anonymous by default", p: "Topics below k are hidden across dashboards and exports." },
+    { h: "AEAD encryption at rest", p: "XChaCha20-Poly1305 with per-org 256-bit keys. Row-level isolation on queries." },
+    { h: "No PII in logs", p: "We scrub at ingestion. Operational logs exclude message content and identifiers." },
+  ];
+  return (
+    <section className="mx-auto max-w-6xl px-6 py-10">
+      <div className="rounded-3xl border bg-background p-6 md:p-8">
+        <div className="grid gap-4 md:grid-cols-3">
+          {badges.map((b) => (
+            <div key={b.h} className="rounded-2xl border bg-muted/40 p-5">
+              <div className="inline-flex items-center gap-2 text-sm">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <span className="font-medium">{b.h}</span>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">{b.p}</p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-4 text-xs text-muted-foreground">
+          Learn more on our <a className="underline underline-offset-4" href="/trust">Trust &amp; Security</a> page.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+/* ----------------------------- UNDER THE HOOD ----------------------------- */
+
+function UnderTheHood() {
+  const [open, setOpen] = useState(false);
+  const rows = [
+    { label: "Scrub & validate", detail: "Regex + heuristics remove emails, phone numbers, Slack IDs, and @mentions before storage." },
+    { label: "Encrypt bodies", detail: "Message bodies encrypted at rest (XChaCha20-Poly1305 AEAD). Per-org data keys wrapped locally and cached briefly." },
+    { label: "Cluster without LLM", detail: "MiniLM embeddings + cosine clustering group similar posts. Labels via c-TF-IDF keywords." },
+    { label: "k-enforcement", detail: "Quotes and sub-themes only render when counts ≥ k; otherwise they stay suppressed." },
+    { label: "Exports & digests", detail: "CSV and weekly Slack digests mirror the same rules; decryption occurs transiently in memory." },
+  ];
+  return (
+    <section className="mx-auto max-w-6xl px-6 py-6">
+      <div className="rounded-3xl border bg-muted/40 p-6 md:p-8">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Under the hood</h2>
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className="rounded-lg border px-3 py-1.5 text-sm hover:bg-muted"
+          >
+            {open ? "Hide details" : "Show details"}
+          </button>
+        </div>
+        {open && (
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {rows.map((r) => (
+              <div key={r.label} className="rounded-2xl border bg-background p-5">
+                <div className="text-sm font-medium">{r.label}</div>
+                <div className="mt-1 text-sm text-muted-foreground">{r.detail}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        {!open && (
+          <p className="mt-3 text-sm text-muted-foreground">
+            Lightweight, open-source stack by default. No vendor LLMs required.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* ----------------------------- NOT WHAT WE DO ----------------------------- */
+
+function NotWhatWeDo() {
+  const items = [
+    { h: "No people dashboards", p: "We never show individual timelines or identity traces—only themes." },
+    { h: "No dark patterns", p: "No “gotcha” gotchas. Controls and exports reflect the same k-rules." },
+    { h: "No surprise vendors", p: "We keep third-party access limited. Encryption and theming run locally." },
+  ];
+  return (
+    <section className="mx-auto max-w-6xl px-6 py-8">
+      <div className="grid gap-3 md:grid-cols-3">
+        {items.map((x) => (
+          <div key={x.h} className="rounded-2xl border bg-background p-5">
+            <div className="text-base font-semibold">{x.h}</div>
+            <div className="mt-1 text-sm text-muted-foreground">{x.p}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ----------------------------- CTA ----------------------------- */
+
+function CTA() {
+  return (
+    <section className="mx-auto max-w-6xl px-6 pb-20">
+      <div className="grid items-center gap-5 rounded-3xl border bg-gradient-to-br from-emerald-600 to-emerald-700 p-6 text-white md:grid-cols-12 md:p-10">
+        <div className="md:col-span-8">
+          <h3 className="text-2xl font-semibold">Ready to try Teammato in Slack?</h3>
+          <p className="mt-1 text-sm text-emerald-50">
+            Anonymous feedback, encrypted at rest. Themes without the noise. k-anonymity enforced everywhere.
+          </p>
+        </div>
+        <div className="md:col-span-4">
+          <div className="flex gap-2 md:justify-end">
+            <a
+              href="/pricing"
+              className="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
+            >
+              See pricing
+            </a>
+            <a
+              href="/api/slack/authorize"
+              className="inline-flex items-center justify-center rounded-xl border border-white/40 bg-emerald-700/20 px-4 py-2 text-sm font-medium backdrop-blur hover:bg-emerald-700/30"
+            >
+              Add to Slack
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
