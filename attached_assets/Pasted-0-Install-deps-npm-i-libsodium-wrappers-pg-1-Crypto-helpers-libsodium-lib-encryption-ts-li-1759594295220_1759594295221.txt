@@ -1,0 +1,318 @@
+0) Install deps
+npm i libsodium-wrappers pg
+
+1) Crypto helpers (libsodium)
+
+lib/encryption.ts
+
+// lib/encryption.ts
+import sodium from "libsodium-wrappers";
+
+export type Bytes = Uint8Array;
+
+let ready = false;
+export async function cryptoReady() {
+  if (!ready) { await sodium.ready; ready = true; }
+}
+
+const MK_B64 = process.env.TM_MASTER_KEY_V1!;
+if (!MK_B64) throw new Error("Missing TM_MASTER_KEY_V1");
+const MK = () => sodium.from_base64(MK_B64, sodium.base64_variants.ORIGINAL);
+
+export const toBytes   = (s: string) => sodium.from_string(s);
+export const toString  = (b: Bytes)  => sodium.to_string(b);
+export const b64Encode = (b: Bytes)  => sodium.to_base64(b, sodium.base64_variants.ORIGINAL);
+export const b64Decode = (s: string) => sodium.from_base64(s, sodium.base64_variants.ORIGINAL);
+
+export function aeadEnc(key: Bytes, plaintext: Bytes, aad: Bytes) {
+  const nonce = sodium.randombytes_buf(sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES);
+  const ct = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(plaintext, aad, null, nonce, key);
+  return { ct, nonce };
+}
+export function aeadDec(key: Bytes, ct: Bytes, nonce: Bytes, aad: Bytes) {
+  return sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(null, ct, aad, nonce, key);
+}
+export function sha256Str(s: string) {
+  return sodium.crypto_generichash(32, toBytes(s));
+}
+
+// Wrap/unwrap org DEK using Master Key (MK) with AAD = orgId
+export function wrapDEK(dek: Bytes, orgId: string) {
+  const aad   = toBytes(orgId);
+  const nonce = sodium.randombytes_buf(sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES);
+  const body  = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(dek, aad, null, nonce, MK());
+  // store nonce || body as wrapped_dek
+  const out = new Uint8Array(nonce.length + body.length);
+  out.set(nonce, 0); out.set(body, nonce.length);
+  return out;
+}
+export function unwrapDEK(wrapped: Bytes, orgId: string) {
+  const nonceLen = sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES;
+  const nonce = wrapped.slice(0, nonceLen);
+  const body  = wrapped.slice(nonceLen);
+  const aad   = toBytes(orgId);
+  return sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(null, body, aad, nonce, MK());
+}
+
+2) Key helpers (cache + DB)
+
+lib/keys.ts
+
+// lib/keys.ts
+import { Pool } from "pg";
+import sodium from "libsodium-wrappers";
+import { cryptoReady, wrapDEK, unwrapDEK } from "./encryption";
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+type CacheEntry = { dek: Uint8Array; exp: number };
+const cache = new Map<string, CacheEntry>();
+const TTL = Number(process.env.TM_DEK_CACHE_TTL_MS || 20 * 60 * 1000);
+
+function cacheGet(orgId: string) {
+  const hit = cache.get(orgId);
+  if (hit && hit.exp > Date.now()) return hit.dek;
+  if (hit) cache.delete(orgId);
+  return null;
+}
+function cachePut(orgId: string, dek: Uint8Array) {
+  cache.set(orgId, { dek, exp: Date.now() + TTL });
+}
+
+export async function ensureOrgDEK(orgId: string) {
+  await cryptoReady();
+  const client = await pool.connect();
+  try {
+    const row = await client.query("select wrapped_dek from org_keys where org_id=$1", [orgId]);
+    if (row.rowCount > 0) return;
+    const dek = sodium.randombytes_buf(32);
+    const wrapped = wrapDEK(dek, orgId);
+    await client.query("insert into org_keys(org_id, wrapped_dek) values ($1, $2)", [orgId, wrapped]);
+    cachePut(orgId, dek);
+  } finally { client.release(); }
+}
+
+export async function loadOrgDEK(orgId: string) {
+  await cryptoReady();
+  const c = cacheGet(orgId);
+  if (c) return c;
+  const client = await pool.connect();
+  try {
+    const row = await client.query("select wrapped_dek from org_keys where org_id=$1", [orgId]);
+    if (row.rowCount === 0) throw new Error("org_keys missing for " + orgId);
+    const wrapped: Buffer = row.rows[0].wrapped_dek;
+    const dek = unwrapDEK(new Uint8Array(wrapped), orgId);
+    cachePut(orgId, dek);
+    return dek;
+  } finally { client.release(); }
+}
+
+// Rewrap an org's DEK with a NEW master key version in env (TM_MASTER_KEY_V2)
+export async function rewrapOrgDEK(orgId: string) {
+  await cryptoReady();
+  const MK2 = process.env.TM_MASTER_KEY_V2;
+  if (!MK2) throw new Error("TM_MASTER_KEY_V2 not set");
+  const client = await pool.connect();
+  try {
+    const row = await client.query("select wrapped_dek from org_keys where org_id=$1", [orgId]);
+    if (row.rowCount === 0) throw new Error("org not found");
+    const wrapped: Buffer = row.rows[0].wrapped_dek;
+
+    // Temporarily swap MK env to V2 for wrapping
+    const bak = process.env.TM_MASTER_KEY_V1!;
+    (process.env as any).TM_MASTER_KEY_V1 = MK2;
+    const dek = unwrapDEK(new Uint8Array(wrapped), orgId); // unwrap with old
+    const newWrapped = wrapDEK(dek, orgId);                // wrap with MK2
+    (process.env as any).TM_MASTER_KEY_V1 = bak;           // restore
+
+    await client.query("update org_keys set wrapped_dek=$2, rotated_at=now() where org_id=$1", [orgId, newWrapped]);
+    cache.delete(orgId);
+    return true;
+  } finally { client.release(); }
+}
+
+3) Backfill script (encrypt historical plaintext)
+
+Encrypts rows missing content_ct from legacy content column.
+
+Verifies round-trip decrypt; only then updates the row.
+
+Batches to avoid load.
+
+scripts/backfill-encrypt.ts
+
+// ts-node scripts/backfill-encrypt.ts
+import { Pool } from "pg";
+import sodium from "libsodium-wrappers";
+import { cryptoReady, toBytes, aeadEnc, aeadDec, sha256Str } from "../lib/encryption";
+import { ensureOrgDEK, loadOrgDEK } from "../lib/keys";
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const BATCH = Number(process.env.BACKFILL_BATCH || 500);
+
+async function run() {
+  await sodium.ready; await cryptoReady();
+  console.log("Backfill start…");
+
+  while (true) {
+    const client = await pool.connect();
+    try {
+      // 1) pull a batch of plaintext rows (adjust table & columns if needed)
+      const { rows } = await client.query(`
+        select id, org_id, thread_id, content
+        from posts
+        where content_ct is null
+        order by created_at asc
+        limit $1
+      `, [BATCH]);
+
+      if (rows.length === 0) { console.log("Done. No more rows."); break; }
+
+      for (const r of rows) {
+        const orgId = r.org_id as string;
+        await ensureOrgDEK(orgId);
+        const dek = await loadOrgDEK(orgId);
+
+        const aadStr = `${orgId}|${r.thread_id}`;
+        const pt = toBytes(r.content ?? "");
+        const { ct, nonce } = aeadEnc(dek, pt, toBytes(aadStr));
+
+        // Verify round-trip before updating
+        const round = aeadDec(dek, ct, nonce, toBytes(aadStr));
+        if (sodium.to_string(round) !== (r.content ?? "")) {
+          console.error("Round-trip mismatch for", r.id);
+          continue; // skip and log
+        }
+
+        await client.query(`
+          update posts
+          set content_ct=$2, nonce=$3, aad_hash=$4
+          where id=$1
+        `, [r.id, ct, nonce, sha256Str(aadStr)]);
+      }
+
+      console.log(`Processed ${rows.length} rows…`);
+    } finally {
+      client.release();
+    }
+  }
+
+  console.log("Backfill complete.");
+  process.exit(0);
+}
+
+run().catch((e) => { console.error(e); process.exit(1); });
+
+
+Run it:
+
+npx ts-node scripts/backfill-encrypt.ts
+
+
+After you flip reads to ciphertext and monitor for stability, schedule dropping the old plaintext column.
+
+4) Admin endpoints (ensure & rewrap)
+
+Protect with a simple header: x-admin-token: <ADMIN_TOKEN>.
+
+app/api/admin/keys/ensure/route.ts
+
+import { NextRequest, NextResponse } from "next/server";
+import { ensureOrgDEK } from "@/lib/keys";
+
+function guard(req: NextRequest) {
+  const ok = req.headers.get("x-admin-token") === process.env.ADMIN_TOKEN;
+  if (!ok) throw new Error("unauthorized");
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    guard(req);
+    const { orgId } = await req.json();
+    if (!orgId) return NextResponse.json({ error: "orgId required" }, { status: 400 });
+    await ensureOrgDEK(orgId);
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    const msg = e?.message || "error";
+    const code = msg === "unauthorized" ? 401 : 500;
+    return NextResponse.json({ error: msg }, { status: code });
+  }
+}
+
+
+app/api/admin/keys/rewrap/route.ts
+
+import { NextRequest, NextResponse } from "next/server";
+import { rewrapOrgDEK } from "@/lib/keys";
+
+function guard(req: NextRequest) {
+  const ok = req.headers.get("x-admin-token") === process.env.ADMIN_TOKEN;
+  if (!ok) throw new Error("unauthorized");
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    guard(req);
+    const { orgId } = await req.json();
+    if (!orgId) return NextResponse.json({ error: "orgId required" }, { status: 400 });
+    const ok = await rewrapOrgDEK(orgId);
+    return NextResponse.json({ ok });
+  } catch (e: any) {
+    const msg = e?.message || "error";
+    const code = msg === "unauthorized" ? 401 : 500;
+    return NextResponse.json({ error: msg }, { status: code });
+  }
+}
+
+
+Usage examples:
+
+# create DEK for an org
+curl -X POST /api/admin/keys/ensure \
+  -H "content-type: application/json" \
+  -H "x-admin-token: $ADMIN_TOKEN" \
+  -d '{"orgId":"<uuid>"}'
+
+# rewrap an org’s DEK (after adding TM_MASTER_KEY_V2)
+curl -X POST /api/admin/keys/rewrap \
+  -H "content-type: application/json" \
+  -H "x-admin-token: $ADMIN_TOKEN" \
+  -d '{"orgId":"<uuid>"}'
+
+5) Read/Write wiring (server usage)
+
+On write:
+
+import { loadOrgDEK } from "@/lib/keys";
+import { cryptoReady, toBytes, aeadEnc, sha256Str } from "@/lib/encryption";
+
+await cryptoReady();
+const dek = await loadOrgDEK(org_id);
+const aadStr = `${org_id}|${thread_id}`;
+const { ct, nonce } = aeadEnc(dek, toBytes(plaintext), toBytes(aadStr));
+await db.query(
+  "insert into posts (id, org_id, content_ct, nonce, aad_hash) values ($1,$2,$3,$4,$5)",
+  [id, org_id, ct, nonce, sha256Str(aadStr)]
+);
+
+
+On read (server only; enforce k-threshold before returning content):
+
+import { loadOrgDEK } from "@/lib/keys";
+import { cryptoReady, toBytes, aeadDec } from "@/lib/encryption";
+
+await cryptoReady();
+const dek = await loadOrgDEK(org_id);
+const aadStr = `${org_id}|${thread_id}`;
+const textBytes = aeadDec(dek, row.content_ct, row.nonce, toBytes(aadStr));
+const text = Buffer.from(textBytes).toString("utf8");
+
+6) Safety checks & rollout
+
+Dual-write flag: keep writing plaintext + ciphertext for a short period while reads still use plaintext; shadow-compare decrypts and log mismatches.
+
+Flip reads to ciphertext when mismatch=0 and error rate is negligible.
+
+Stop plaintext writes, then drop plaintext column after grace period.
+
+Metrics to watch: decrypt failures, missing org_keys, cache hit rate, backfill throughput.

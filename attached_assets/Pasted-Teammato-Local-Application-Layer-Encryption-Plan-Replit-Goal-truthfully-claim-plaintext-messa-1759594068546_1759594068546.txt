@@ -1,0 +1,267 @@
+Teammato — Local Application-Layer Encryption Plan (Replit)
+
+Goal: truthfully claim “plaintext message bodies aren’t stored; content is encrypted at rest with per-org keys” without using AWS/GCP/Azure. All crypto and key wrapping happen in-app with libsodium (or Node crypto), and secrets live in Replit Secrets.
+
+1) Design overview
+
+Algorithm: XChaCha20-Poly1305 (AEAD) via libsodium-wrappers
+(or AES-256-GCM with Node crypto if libsodium isn’t available).
+
+Key hierarchy (all local):
+
+MK (Master Key) – 32-byte random, stored in Replit Secrets (TM_MASTER_KEY_V1).
+
+DEK (Data Encryption Key per org) – 32-byte random. Stored wrapped (encrypted by MK) in DB table org_keys.
+
+Envelope encryption:
+
+On write: unwrap org DEK → AEAD encrypt post → store ciphertext + nonce.
+
+On read: unwrap/cached DEK → AEAD decrypt server-side (respecting k-threshold).
+
+AAD (Additional Authenticated Data): org_id|thread_id to bind ciphertext to its context.
+
+Caching: In-memory LRU cache of unwrapped DEKs with short TTL (e.g., 15–30 min).
+
+Rotation: New MK version (e.g., TM_MASTER_KEY_V2) re-wraps DEKs lazily; no content re-encryption required.
+
+Why this fits us: zero third-party cost, strong per-org isolation, trivial to operate, and fast.
+
+2) Schema changes
+-- 2.1 New columns on posts (or messages)
+ALTER TABLE posts
+  ADD COLUMN content_ct BYTEA NOT NULL,   -- ciphertext
+  ADD COLUMN nonce BYTEA NOT NULL,        -- 24 bytes (XChaCha20-Poly1305)
+  ADD COLUMN aad_hash BYTEA NOT NULL;     -- e.g., SHA-256(org_id|thread_id)
+
+-- keep plaintext column TEMPORARILY for migration; drop later.
+
+-- 2.2 New table for wrapped DEKs
+CREATE TABLE org_keys (
+  org_id UUID PRIMARY KEY,
+  wrapped_dek BYTEA NOT NULL,       -- nonce || ciphertext (of DEK wrapped by MK)
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  rotated_at TIMESTAMPTZ
+);
+
+3) Secrets & config (Replit)
+
+Generate a 32-byte base64 key and set in Replit Secrets:
+
+TM_MASTER_KEY_V1=<base64-32-bytes>
+
+Optional future rotation:
+
+TM_MASTER_KEY_V2=<base64-32-bytes> (keep V1 until rewrap completes).
+
+App config:
+
+TM_DEK_CACHE_TTL_MS=1200000 (20 min)
+
+TM_ENCRYPTION_ALGO=xchacha20poly1305 (feature flag)
+
+4) Server helpers (TypeScript, libsodium)
+// encryption.ts
+import sodium from "libsodium-wrappers";
+
+await sodium.ready;
+
+const MK_B64 = process.env.TM_MASTER_KEY_V1!;
+const MK = sodium.from_base64(MK_B64, sodium.base64_variants.ORIGINAL);
+
+type Bytes = Uint8Array;
+
+export function aeadEnc(key: Bytes, plaintext: Bytes, aad: Bytes) {
+  const nonce = sodium.randombytes_buf(sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES);
+  const ct = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(plaintext, aad, null, nonce, key);
+  return { ct, nonce };
+}
+
+export function aeadDec(key: Bytes, ct: Bytes, nonce: Bytes, aad: Bytes) {
+  return sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(null, ct, aad, nonce, key);
+}
+
+// Wrap/unwrap DEK with MK (envelope)
+export function wrapDEK(dek: Bytes, orgId: string) {
+  const aad = sodium.from_string(orgId);
+  const nonce = sodium.randombytes_buf(sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES);
+  const wrapped = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(dek, aad, null, nonce, MK);
+  // store nonce||wrapped as wrapped_dek
+  return concat(nonce, wrapped);
+}
+
+export function unwrapDEK(wrappedDek: Bytes, orgId: string) {
+  const nonce = wrappedDek.slice(0, 24);
+  const body  = wrappedDek.slice(24);
+  const aad   = sodium.from_string(orgId);
+  return sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(null, body, aad, nonce, MK);
+}
+
+export const sha256 = (s: string) => sodium.crypto_generichash(32, sodium.from_string(s));
+export const concat = (a: Bytes, b: Bytes) => {
+  const out = new Uint8Array(a.length + b.length);
+  out.set(a, 0); out.set(b, a.length); return out;
+};
+
+
+DEK cache:
+
+// dekCache.ts
+const cache = new Map<string, { dek: Uint8Array; exp: number }>();
+const TTL = Number(process.env.TM_DEK_CACHE_TTL_MS || 20 * 60 * 1000);
+
+export function put(orgId: string, dek: Uint8Array) {
+  cache.set(orgId, { dek, exp: Date.now() + TTL });
+}
+export function get(orgId: string) {
+  const hit = cache.get(orgId);
+  if (hit && hit.exp > Date.now()) return hit.dek;
+  if (hit) cache.delete(orgId);
+  return null;
+}
+
+
+Key access helpers (DB pseudo-code):
+
+// keys.ts
+import { get as cacheGet, put as cachePut } from "./dekCache";
+import { wrapDEK, unwrapDEK } from "./encryption";
+
+export async function ensureOrgDEK(db, orgId: string) {
+  const row = await db.oneOrNone("select wrapped_dek from org_keys where org_id = $1", [orgId]);
+  if (row) return;
+
+  const dek = sodium.randombytes_buf(32);
+  const wrapped = wrapDEK(dek, orgId);
+  await db.none("insert into org_keys(org_id, wrapped_dek) values($1, $2)", [orgId, wrapped]);
+  cachePut(orgId, dek);
+}
+
+export async function loadOrgDEK(db, orgId: string) {
+  const cached = cacheGet(orgId);
+  if (cached) return cached;
+
+  const row = await db.one("select wrapped_dek from org_keys where org_id = $1", [orgId]);
+  const dek = unwrapDEK(row.wrapped_dek, orgId);
+  cachePut(orgId, dek);
+  return dek;
+}
+
+5) Write / Read paths
+
+Encrypt on write (server):
+
+await ensureOrgDEK(db, org_id);
+const dek = await loadOrgDEK(db, org_id);
+const aadStr = `${org_id}|${thread_id}`;
+const { ct, nonce } = aeadEnc(dek, sodium.from_string(plaintext), sodium.from_string(aadStr));
+
+await db.none(`
+  insert into posts (id, org_id, content_ct, nonce, aad_hash, created_at)
+  values ($1, $2, $3, $4, $5, now())
+`, [id, org_id, ct, nonce, sha256(aadStr)]);
+
+
+Decrypt on read (server):
+
+const dek = await loadOrgDEK(db, org_id);
+const aadStr = `${org_id}|${thread_id}`;
+const textBytes = aeadDec(dek, row.content_ct, row.nonce, sodium.from_string(aadStr));
+const text = sodium.to_string(textBytes);
+// Only return if k-threshold rules allow
+
+6) Migration plan (no downtime)
+
+Feature flag ENCRYPTION_DUAL_WRITE=true.
+
+Start writing both plaintext and ciphertext; read plaintext.
+
+Backfill job (batched):
+
+For rows missing content_ct: encrypt from plaintext, verify decrypt, then mark row done.
+
+Shadow reads metric:
+
+On read, decrypt ciphertext and compare to plaintext (hash) silently; log mismatches.
+
+Flip reads to ciphertext once mismatch rate = 0.
+
+Stop plaintext writes; set ENCRYPTION_DUAL_WRITE=false.
+
+Schedule drop of plaintext column after grace period.
+
+Docs & copy updated. Pen test focused on crypto/key handling.
+
+7) Rotation & rewrap (local)
+
+Add TM_MASTER_KEY_V2 to secrets.
+
+For each org_keys.wrapped_dek:
+
+Unwrap with MK_v1 → re-wrap with MK_v2 → write back (rotated_at = now()).
+
+Once complete and stable, remove MK_v1 from runtime and secrets.
+
+No message content re-encryption needed.
+
+8) Exports / digests / search
+
+Exports: decrypt only the themes that pass k-threshold in memory while generating CSV; never write decrypted content to disk; stream output.
+
+Digests/analytics: operate on decrypted content transiently or on derived tokens (n-grams) that don’t disclose identities.
+
+Full-text search: avoid server-side DB FTS on ciphertext. If needed, index hashed keyword dictionaries (not raw text) per org with caution, or decrypt on read and search in memory for small result sets.
+
+9) Observability & safeguards
+
+Metrics:
+
+decrypt failures, unwrap errors, cache hit rate, dual-read mismatch count, backfill progress.
+
+Audit events:
+
+org DEK unwrap → log (org_id, actor=system, ts); throttle to avoid log floods.
+
+Guards:
+
+refuse to return decrypted content if k < threshold or role lacks permission.
+
+constant-time compares for auth tokens; zero out sensitive buffers after use where feasible.
+
+10) Test plan (must pass)
+
+Unit: deterministic AEAD round-trip, AAD tamper failure, nonce uniqueness, wrap/unwrap.
+
+Integration: dual-write shadow compare, backfill correctness, rotation re-wrap, cache TTL expiry.
+
+Security: attempt decrypt with wrong org_id (AAD must fail), simulate missing secrets, log redaction.
+
+11) Docs & copy updates (ship with flip)
+
+Trust: “Message bodies are encrypted at rest using AEAD with per-org keys. Keys are locally managed; no third-party key service.”
+
+DPA Annex II: reflect app-layer AEAD + per-org keys + rewrap.
+
+Marketing: keep k-anonymity + no PII in logs; reintroduce “ciphertext at rest” once reads flip.
+
+12) Risks & mitigations
+
+Secret exposure: limit MK to server runtime only; don’t log secrets; protect Replit Secrets; rotate annually.
+
+Cache stampede: prime cache for hot orgs at worker start; backoff on unwrap errors.
+
+Nonce reuse: always generate random 24-byte nonces; lint the code to prohibit deterministic reuse.
+
+Migration bugs: dual-read shadow compare + rollback flag.
+
+13) Acceptance criteria
+
+No plaintext in posts after flip; ciphertext + nonce present for all rows.
+
+All API reads succeed via decrypt path with zero mismatches.
+
+Backfills and rotations are resumable and idempotent.
+
+Exports/digests operate entirely from ciphertext path with k-anonymity enforced.
+
+Observability dashboards show decrypt error rate < 1e-6; cache hit rate > 90%.
