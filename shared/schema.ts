@@ -204,6 +204,21 @@ export const themePosts = pgTable("theme_posts", {
   pk: unique().on(table.themeId, table.postId),
 }));
 
+export const orgAudience = pgTable("org_audience", {
+  orgId: uuid("org_id").primaryKey().references(() => orgs.id, { onDelete: 'cascade' }),
+  mode: text("mode").notNull().default('workspace'),
+  usergroupId: text("usergroup_id"),
+  channelIds: text("channel_ids").array().notNull().default(sql`ARRAY[]::text[]`),
+  excludeGuests: boolean("exclude_guests").notNull().default(true),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const orgUsage = pgTable("org_usage", {
+  orgId: uuid("org_id").primaryKey().references(() => orgs.id, { onDelete: 'cascade' }),
+  eligibleCount: integer("eligible_count").notNull().default(0),
+  lastSynced: timestamp("last_synced").notNull().defaultNow(),
+});
+
 // Insert schemas
 export const insertOrgSchema = createInsertSchema(orgs).omit({ id: true, createdAt: true });
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
@@ -219,6 +234,8 @@ export const insertInvitationSchema = createInsertSchema(invitations).omit({ id:
 export const insertPostEmbeddingSchema = createInsertSchema(postEmbeddings).omit({ createdAt: true });
 export const insertThemeSchema = createInsertSchema(themes).omit({ id: true, createdAt: true });
 export const insertThemePostSchema = createInsertSchema(themePosts);
+export const insertOrgAudienceSchema = createInsertSchema(orgAudience).omit({ updatedAt: true });
+export const insertOrgUsageSchema = createInsertSchema(orgUsage).omit({ lastSynced: true });
 
 // Types
 export type Org = typeof orgs.$inferSelect;
@@ -262,6 +279,21 @@ export type InsertTheme = z.infer<typeof insertThemeSchema>;
 
 export type ThemePost = typeof themePosts.$inferSelect;
 export type InsertThemePost = z.infer<typeof insertThemePostSchema>;
+
+export type OrgAudience = typeof orgAudience.$inferSelect;
+export type InsertOrgAudience = z.infer<typeof insertOrgAudienceSchema>;
+
+export type OrgUsage = typeof orgUsage.$inferSelect;
+export type InsertOrgUsage = z.infer<typeof insertOrgUsageSchema>;
+
+// Audience Mode Enum
+export const AUDIENCE_MODE = {
+  WORKSPACE: 'workspace',
+  USER_GROUP: 'user_group',
+  CHANNELS: 'channels',
+} as const;
+
+export type AudienceMode = typeof AUDIENCE_MODE[keyof typeof AUDIENCE_MODE];
 
 // Topic Status Enum
 export const TOPIC_STATUS = {

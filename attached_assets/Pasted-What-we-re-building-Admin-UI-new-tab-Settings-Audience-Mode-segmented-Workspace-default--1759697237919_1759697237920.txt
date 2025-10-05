@@ -1,0 +1,261 @@
+What we’re building
+Admin UI (new tab)
+
+Settings → Audience
+
+Mode (segmented):
+
+Workspace (default) – counts all active human members in the Slack workspace.
+
+Slack user group – choose one (e.g., @feedback-enabled).
+
+Selected channels – choose 1..N channels; we count the unique members across those channels.
+
+Live preview: shows current eligible count and what’s excluded (bots, deleted, guests—per policy).
+
+Save: persists to org settings and triggers a recount.
+
+Help: “Over cap? Shrink your audience or upgrade.”
+
+Backend logic
+
+Persist audience mode per org.
+
+Compute eligible_count using Slack APIs:
+
+Workspace: users.list
+
+User group: usergroups.users.list
+
+Channels: conversations.members (unique across chosen channels)
+
+Exclude by policy: deleted, is_bot, and (optionally) Slack guests (is_restricted, is_ultra_restricted).
+
+Cache results (e.g., 10–30 mins) and on demand (Save/Recalculate).
+
+Enforcement uses eligible_count vs seat_cap (with 90% warn, 7-day grace, 110% hard block).
+
+Works with Enterprise Grid because we bill per workspace (we use the workspace’s bot token).
+
+Slack scopes to add (once)
+
+users:read (workspace members)
+
+usergroups:read (list user groups + members)
+
+channels:read and groups:read (conversations.* and private channels membership)
+
+(Optional) team:read for admin niceties
+
+Minimal schema changes
+-- 1) Audience configuration
+create table if not exists org_audience (
+  org_id uuid primary key,
+  mode text not null default 'workspace',          -- 'workspace' | 'user_group' | 'channels'
+  usergroup_id text,                               -- for 'user_group'
+  channel_ids text[] default '{}',                 -- for 'channels'
+  exclude_guests boolean not null default true,    -- policy toggle
+  updated_at timestamptz default now()
+);
+
+-- 2) Usage snapshot (source of truth for enforcement/UX)
+create table if not exists org_usage (
+  org_id uuid primary key,
+  eligible_count int not null default 0,
+  last_synced timestamptz default now()
+);
+
+Types (shared)
+export type AudienceMode = "workspace" | "user_group" | "channels";
+
+export interface OrgAudience {
+  orgId: string;
+  mode: AudienceMode;
+  usergroupId?: string | null;
+  channelIds?: string[];
+  excludeGuests: boolean;
+}
+
+API endpoints (Next.js App Router)
+1) GET current settings + live preview
+
+GET /api/audience
+
+Returns:
+
+{
+  "mode":"channels",
+  "usergroupId":null,
+  "channelIds":["C123","C456"],
+  "excludeGuests":true,
+  "preview": { "eligibleCount": 1834, "lastSynced": "..." }
+}
+
+2) PUT save settings & trigger recount
+
+PUT /api/audience
+
+{
+  "mode":"user_group",
+  "usergroupId":"S12345",
+  "channelIds":[],
+  "excludeGuests":true
+}
+
+3) POST recount now
+
+POST /api/audience/recount
+
+Slack fetchers (server)
+// helpers/slack.ts
+import { WebClient } from "@slack/web-api";
+
+export async function listWorkspaceMembers(client: WebClient, excludeGuests: boolean) {
+  const members: any[] = [];
+  let cursor: string | undefined;
+  do {
+    const resp = await client.users.list({ limit: 200, cursor });
+    members.push(...(resp.members ?? []));
+    cursor = (resp.response_metadata?.next_cursor || "") || undefined;
+  } while (cursor);
+
+  return members.filter(u => {
+    if (u.deleted) return false;
+    if (u.is_bot) return false;
+    if (excludeGuests && (u.is_restricted || u.is_ultra_restricted)) return false; // guests
+    return true;
+  }).map(u => u.id);
+}
+
+export async function listUserGroupMembers(client: WebClient, usergroupId: string) {
+  const resp = await client.usergroups.users.list({ usergroup: usergroupId });
+  return resp.users ?? [];
+}
+
+export async function uniqueMembersFromChannels(client: WebClient, channelIds: string[], excludeGuests: boolean) {
+  const set = new Set<string>();
+  for (const id of channelIds) {
+    let cursor: string | undefined;
+    do {
+      const resp = await client.conversations.members({ channel: id, limit: 1000, cursor });
+      (resp.members ?? []).forEach(m => set.add(m));
+      cursor = (resp.response_metadata?.next_cursor || "") || undefined;
+    } while (cursor);
+  }
+  // If excluding guests, fetch user profiles once to filter.
+  if (excludeGuests) {
+    const ids = Array.from(set);
+    const filtered = new Set<string>();
+    // Batch info (users.info is 1-by-1; keep simple or skip guest filter here if too expensive)
+    for (const user of ids) {
+      try {
+        const info = await client.users.info({ user });
+        const u = (info.user as any) || {};
+        if (u.deleted || u.is_bot) continue;
+        if (u.is_restricted || u.is_ultra_restricted) continue;
+        filtered.add(user);
+      } catch {}
+    }
+    return Array.from(filtered);
+  }
+  return Array.from(set);
+}
+
+Recount service
+// services/audience.ts
+import { WebClient } from "@slack/web-api";
+import { listWorkspaceMembers, listUserGroupMembers, uniqueMembersFromChannels } from "@/helpers/slack";
+
+export async function recomputeEligibleCount(orgId: string): Promise<number> {
+  const { botToken, audience } = await db.getOrgWithAudience(orgId); // your helper
+  const client = new WebClient(botToken);
+
+  let ids: string[] = [];
+  if (audience.mode === "workspace") {
+    ids = await listWorkspaceMembers(client, audience.excludeGuests);
+  } else if (audience.mode === "user_group" && audience.usergroupId) {
+    ids = await listUserGroupMembers(client, audience.usergroupId);
+    // Optional: filter guests/bots/deleted by fetching profiles (can be skipped if user group is curated)
+  } else if (audience.mode === "channels" && audience.channelIds?.length) {
+    ids = await uniqueMembersFromChannels(client, audience.channelIds, audience.excludeGuests);
+  }
+
+  await db.upsertOrgUsage(orgId, { eligible_count: ids.length, last_synced: new Date() });
+  return ids.length;
+}
+
+Enforcement hook (create-post route)
+// middleware/enforceCap.ts
+export async function enforceSeatCap(orgId: string) {
+  const { seat_cap, status, grace_started_at } = await db.getBillingState(orgId);
+  const { eligible_count } = await db.getOrgUsage(orgId);
+
+  const pct = eligible_count / seat_cap;
+
+  if (pct < 0.9) return { allow: true };
+  if (pct <= 1.0) return { allow: true, warn: "near-cap" };
+
+  // Start grace on first overage
+  await db.ensureGraceStarted(orgId);
+
+  const over110 = pct > 1.10;
+  const graceMs = 7 * 24 * 60 * 60 * 1000;
+  const expired = Date.now() - new Date(grace_started_at ?? Date.now()).getTime() > graceMs;
+
+  if (over110 || expired) return { allow: false, reason: "over-cap" };
+  return { allow: true, warn: "grace" };
+}
+
+Admin UI (shadcn/tailwind)
+
+Tabs: Billing | Audience | Security | Exports
+
+Audience tab layout:
+
+Mode selector (3 chips)
+
+If user group: searchable combobox listing usergroups.list
+
+If channels: multi-select list from conversations.list
+
+Exclude guests: toggle
+
+Preview block: “Eligible members: 1,834” + “Last synced 3m ago” + “Recalculate” button
+
+Save button (PUT /api/audience)
+
+(You already have a design system; Replit can wire your components to these endpoints.)
+
+Rate limits & caching
+
+Slack paginates; our helpers are cursor-aware.
+
+Cache responses for ~10–30 minutes; always refresh on Save and on daily job at off-peak.
+
+For channels mode, users.info loops can be heavy; if needed, skip guest filtering there (documented in UI).
+
+QA / Test cases
+
+Switch Workspace → User group; preview drops from, say, 5,200 to 2,140; Save; enforcement lets posts proceed under 2.5k cap.
+
+Switch to Channels mode with 3 big channels; preview = unique members union; Save; recount; enforcement behaves.
+
+Downgrade plan in Portal (5k → 2.5k) while audience > 2.5k: banner + 7-day grace, then block new posts.
+
+Trim audience (remove folks from the user group); Recalculate; block cleared automatically.
+
+Ownership split
+
+You
+
+Approve policy: exclude guests by default? (I recommend Yes.)
+
+Approve UI copy (“Shrink your audience or upgrade”).
+
+Replit
+
+Add schema, endpoints, Slack helpers, recount service, enforcement hook, and the Audience admin tab.
+
+Wire recount on Save + nightly cron.
+
+Respect the audience count everywhere you check cap.
