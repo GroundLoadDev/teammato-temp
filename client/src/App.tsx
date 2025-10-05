@@ -40,6 +40,7 @@ import Export from "@/pages/admin/Export";
 import Retention from "@/pages/admin/Retention";
 import UserManagement from "@/pages/admin/UserManagement";
 import Themes from "@/pages/admin/Themes";
+import Audience from "@/pages/admin/Audience";
 
 function Router() {
   return (
@@ -70,6 +71,7 @@ function Router() {
       <Route path="/admin/slack-settings" component={SlackSettings} />
       <Route path="/admin/billing-old" component={BillingSettings} />
       <Route path="/admin/billing" component={Billing} />
+      <Route path="/admin/audience" component={Audience} />
       <Route path="/admin/compliance" component={Compliance} />
       <Route path="/admin/system-health" component={SystemHealth} />
       <Route path="/admin/audit-log" component={AuditLog} />

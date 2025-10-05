@@ -33,6 +33,7 @@ const navigationGroups = [
       { href: "/admin/users", label: "Users", icon: Users },
       { href: "/admin/slack-settings", label: "Slack", icon: Slack },
       { href: "/admin/billing", label: "Billing", icon: FileText },
+      { href: "/admin/audience", label: "Audience", icon: Users },
     ],
   },
   {
