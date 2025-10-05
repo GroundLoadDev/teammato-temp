@@ -1,0 +1,220 @@
+Teammato × Stripe — Current State Questionnaire (for Lovable)
+
+Please answer inline. Include IDs, screenshots, or code snippets where requested.
+
+1) Accounts, envs, API versions
+
+Stripe account(s):
+
+Production account ID: acct_________
+
+Test account ID (if separate): acct_________
+
+API version pinned on our keys? YYYY-MM-DD
+
+Any per-request overrides? yes/no
+
+Environments: Do we have separate test and prod projects configured in the app? yes/no
+
+How are keys selected at runtime?
+
+2) Products & Prices (seat caps)
+
+Did you create a single Product for workspace caps (name/ID)?
+
+Product ID: prod_________
+
+Prices created (monthly & annual) with lookup_keys? Please complete the table with price_id and lookup_key:
+
+Cap	Monthly price_id	lookup_key	Annual price_id	lookup_key
+250		cap_250_m		cap_250_a
+500		cap_500_m		cap_500_a
+1k		cap_1k_m		cap_1k_a
+2.5k		cap_2_5k_m		cap_2_5k_a
+5k		cap_5k_m		cap_5k_a
+10k		cap_10k_m		cap_10k_a
+25k		cap_25k_m		cap_25k_a
+50k (opt)		cap_50k_m		cap_50k_a
+100k (opt)		cap_100k_m		cap_100k_a
+
+Price metadata: Do prices include { cap: "250", period: "monthly"|"annual" }? yes/no
+
+3) Checkout & trial
+
+Checkout Session endpoint exists? Path & method: ________
+
+mode: subscription with trial_period_days: 14? yes/no
+
+Are we passing customer (existing) vs letting Stripe create one? How do we decide?
+
+Client params into checkout: What payload are we posting (orgId, workspaceId, priceLookupKey, returnUrl)? Paste request/handler.
+
+After success: Where do we redirect the user? Do we store stripe_customer_id and stripe_subscription_id immediately or via webhook only?
+
+4) Customer & metadata
+
+Customer metadata set? (expecting org_id, slack_workspace_id) Paste example object.
+
+Billing email source (installer? admin input?).
+
+5) Customer Portal (self-serve manage)
+
+Portal configured/enabled? yes/no
+
+Allowed actions: price switching, cancel/resume, update payment method, download invoices?
+
+Endpoint to create a Portal session exists? Path & method: ________
+
+What return_url are we using?
+
+6) Webhooks (single source of truth)
+
+Please list which events we receive and how we handle each (file + function). Paste code links if possible.
+
+checkout.session.completed → creates/mirrors org_billing? yes/no details:
+
+customer.subscription.created → updates DB? fields:
+
+customer.subscription.updated → updates status, seat cap, period? fields:
+
+customer.subscription.deleted → behavior:
+
+invoice.payment_succeeded → behavior:
+
+invoice.payment_failed → behavior:
+
+customer.subscription.trial_will_end → behavior:
+
+Security:
+
+Webhook signing secret set? Env var name: ________
+
+Do we use stripe.webhooks.constructEvent with the raw body? yes/no
+
+Idempotency / retries handled? yes/no how?
+
+7) Database mirror
+
+Please paste current DDL (or model) for our billing tables.
+
+org_billing fields present now (expecting: org_id, stripe_customer_id, stripe_subscription_id, price_lookup_key, seat_cap, billing_period, status, trial_end, cancel_at_period_end, updated_at).
+
+Any feature flag tables (org_features) being set by webhook? Which flags?
+
+8) Seat cap & enforcement
+
+Where do we store the workspace member count we compare against? Table/column: ________ How often do we sync Slack membership?
+
+Enforcement rules implemented server-side?
+
+Warn at 90%: UI location? API response?
+
+7-day grace to 110%: Where is this enforced?
+
+Block new submissions >110% or after grace: exact logic snippet?
+
+When switching prices, do we immediately update seat_cap in DB from Stripe price metadata/lookup key? yes/no
+
+9) Plan mapping & feature gates
+
+How do we set plan (trial | pro | scale | enterprise) from cap? Mapping currently used?
+
+Theming flags:
+
+enable_theming (Phase-1) turns on at which states?
+
+llm_theming_enabled currently always false (future), or already wired? Where is it toggled?
+
+10) Taxes, invoicing, receipts
+
+Stripe Tax enabled (automatic)? yes/no
+
+Receipts: Stripe sending emails by default? yes/no
+
+Invoices: Are billing email & tax IDs collected via Checkout/Portal? yes/no
+
+Multi-currency or USD only? ________
+
+11) Proration, upgrades/downgrades, cancellations
+
+When switching caps mid-cycle via Portal, are we using Stripe default proration? yes/no
+
+Annual ↔ Monthly switches allowed in Portal? yes/no
+
+Cancel flows: at period end supported? Do we handle cancel_at_period_end in DB? yes/no
+
+Refunds/credit notes—any app logic, or Stripe-only? ________
+
+12) Coupons / promotion codes
+
+Are promotion codes enabled in Checkout? yes/no
+
+Any custom coupons created we should know about? IDs: ________
+
+13) Branding & emails
+
+Stripe branding (logo/colors) configured? yes/no screenshot?
+
+Who receives Stripe emails? (Customer email only, or additional recipients?)
+
+14) Security / keys / secrets
+
+Where are Stripe keys stored (env names)?
+
+Secret key (test/prod): ________
+
+Publishable key (test/prod): ________
+
+Webhook secret env names: ________
+
+API key rotation process documented? yes/no
+
+Any PII/card data ever touch our servers? (should be no)
+
+15) Observability
+
+Logs for webhook events (success/fail) and state transitions? Where?
+
+Metrics or alerts for: payment failed, subscription canceled, status changes? yes/no tools?
+
+16) Admin & support tools
+
+Do we have an internal page to display an org’s billing snapshot (status, cap, period, trial end, links to Stripe customer/sub)? yes/no
+
+Can an admin force a price change from our UI (or do we rely 100% on Portal)? ________
+
+17) Edge cases to confirm
+
+Multiple workspaces for the same company: one sub per workspace? confirmed/other
+
+Re-installing Slack app: do we re-link to the same stripe_customer_id? how?
+
+Trial → upgrade before trial end: do we keep the trial or start billing immediately? current behavior: ________
+
+Past_due handling: when do we freeze writes? ________
+
+Data retention after cancel: read-only window (e.g., 30 days)? ________
+
+18) Artifacts to attach
+
+Screenshots: Product/Prices, Portal settings, Tax settings.
+
+Example checkout.session payload (redacted).
+
+Example subscription object after update (redacted).
+
+DB rows for a real test org (org_billing, org_features).
+
+What we’ll do with your answers
+
+Map our UI buttons to what’s already built (Checkout vs. Portal vs. inline updates).
+
+Align DB mirroring to the actual webhook payloads you’re writing.
+
+Confirm enforcement points for seat caps & grace logic.
+
+Flip feature gates (theming) in the right places.
+
+Fill any missing pieces (e.g., trial handling, tax, proration) with minimal code.
+
+If anything above isn’t implemented yet, just mark “not yet”—I’ll propose the smallest patch to close the gap.
