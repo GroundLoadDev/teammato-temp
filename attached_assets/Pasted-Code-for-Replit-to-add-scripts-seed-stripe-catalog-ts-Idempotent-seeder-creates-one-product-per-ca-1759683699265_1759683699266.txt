@@ -1,0 +1,215 @@
+Code for Replit to add
+scripts/seed_stripe_catalog.ts
+
+Idempotent seeder: creates one product per cap + two prices (monthly/annual) with correct lookup_keys and metadata. Safe to run multiple times.
+
+/**
+ * Teammato Stripe Catalog Seeder — Option A (one product per cap)
+ * Usage:
+ *   STRIPE_SECRET_KEY=sk_test_... npx ts-node scripts/seed_stripe_catalog.ts --mode seed --env test
+ *   STRIPE_SECRET_KEY=sk_live_... npx ts-node scripts/seed_stripe_catalog.ts --mode seed --env live
+ *
+ *   # (optional) archive old prices after confirming new catalog works
+ *   STRIPE_SECRET_KEY=sk_test_... npx ts-node scripts/seed_stripe_catalog.ts --mode archive-old --oldProductId=prod_OLD
+ */
+
+import Stripe from "stripe";
+
+// -------------------- Config (edit caps/amounts here) --------------------
+const CURRENCY = "usd" as const;
+const TAX_CODE = "txcd_10000000"; // Electronically Supplied Services
+const PRODUCT_DESC =
+  "Anonymous feedback for Slack teams — priced by workspace size.";
+const STATEMENT_DESCRIPTOR = "TEAMMATO";
+const UNIT_LABEL = "workspace";
+
+// Seat caps and amounts (USD). Annual = 10x monthly.
+const CAPS: Array<{ cap: number; monthly: number; annual: number; name: string }> = [
+  { cap: 250, monthly: 99, annual: 999, name: "Teammato 250" },
+  { cap: 500, monthly: 149, annual: 1490, name: "Teammato 500" },
+  { cap: 1000, monthly: 199, annual: 1990, name: "Teammato 1k" },
+  { cap: 2500, monthly: 299, annual: 2990, name: "Teammato 2.5k" },
+  { cap: 5000, monthly: 399, annual: 3990, name: "Teammato 5k" },
+  { cap: 10000, monthly: 599, annual: 5990, name: "Teammato 10k" },
+  { cap: 25000, monthly: 999, annual: 9990, name: "Teammato 25k" },
+  // Uncomment if you want to expose them in Portal too:
+  // { cap: 50000, monthly: 1499, annual: 14990, name: "Teammato 50k" },
+  // { cap: 100000, monthly: 2499, annual: 24990, name: "Teammato 100k" },
+];
+
+// -------------------- Script plumbing --------------------
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2024-06-20",
+});
+
+type Mode = "seed" | "archive-old";
+const args = Object.fromEntries(
+  process.argv.slice(2).map((a) => {
+    const [k, v] = a.replace(/^--/, "").split("=");
+    return [k, v ?? true];
+  })
+) as Record<string, string>;
+
+const mode = (args.mode || "seed") as Mode;
+
+async function findProductByName(name: string) {
+  const list = await stripe.products.list({ active: true, limit: 100 });
+  return list.data.find((p) => p.name === name) || null;
+}
+
+async function ensureProduct(name: string) {
+  const existing = await findProductByName(name);
+  if (existing) return existing;
+
+  return stripe.products.create({
+    name,
+    description: PRODUCT_DESC,
+    statement_descriptor: STATEMENT_DESCRIPTOR,
+    unit_label: UNIT_LABEL,
+    tax_code: TAX_CODE,
+    active: true,
+  });
+}
+
+async function findPriceByLookup(lookup_key: string) {
+  const list = await stripe.prices.list({
+    lookup_keys: [lookup_key],
+    expand: ["data.product"],
+  });
+  return list.data[0] || null;
+}
+
+async function ensurePrice(opts: {
+  product: string;
+  unit_amount: number; // dollars
+  interval: "month" | "year";
+  lookup_key: string;
+  cap: number;
+  period: "monthly" | "annual";
+}) {
+  const existing = await findPriceByLookup(opts.lookup_key);
+  if (existing) {
+    // If amount/metadata changed, we won't overwrite; log to console.
+    return existing;
+  }
+  return stripe.prices.create({
+    product: opts.product,
+    currency: CURRENCY,
+    unit_amount: opts.unit_amount * 100,
+    recurring: { interval: opts.interval },
+    lookup_key: opts.lookup_key,
+    metadata: { cap: String(opts.cap), period: opts.period },
+  });
+}
+
+async function seed() {
+  const summary: Array<{
+    product: string;
+    productId: string;
+    monthlyLookup: string;
+    annualLookup: string;
+    monthlyPriceId: string;
+    annualPriceId: string;
+  }> = [];
+
+  for (const tier of CAPS) {
+    const product = await ensureProduct(tier.name);
+
+    const monthlyLookup = `cap_${formatCapKey(tier.cap)}_m`;
+    const annualLookup = `cap_${formatCapKey(tier.cap)}_a`;
+
+    const pM = await ensurePrice({
+      product: product.id,
+      unit_amount: tier.monthly,
+      interval: "month",
+      lookup_key: monthlyLookup,
+      cap: tier.cap,
+      period: "monthly",
+    });
+
+    const pA = await ensurePrice({
+      product: product.id,
+      unit_amount: tier.annual,
+      interval: "year",
+      lookup_key: annualLookup,
+      cap: tier.cap,
+      period: "annual",
+    });
+
+    summary.push({
+      product: product.name,
+      productId: product.id,
+      monthlyLookup,
+      annualLookup,
+      monthlyPriceId: pM.id,
+      annualPriceId: pA.id,
+    });
+  }
+
+  console.log("\n✅ Catalog seeded/verified. Summary:");
+  console.table(
+    summary.map((s) => ({
+      product: s.product,
+      productId: s.productId,
+      monthly: `${s.monthlyLookup} → ${s.monthlyPriceId}`,
+      annual: `${s.annualLookup} → ${s.annualPriceId}`,
+    }))
+  );
+  console.log(
+    "\n→ Add these products to the Stripe Customer Portal 'Customers can switch plans' list."
+  );
+}
+
+function formatCapKey(cap: number) {
+  // create human-friendly lookup keys that match our earlier convention
+  // 2500 -> "2_5k", 1000 -> "1k", 250 -> "250"
+  if (cap >= 1000) {
+    if (cap % 1000 === 0) return `${cap / 1000}k`;
+    // e.g., 2500
+    return `${cap / 1000}`.replace(".5", "_5") + "k";
+  }
+  return String(cap);
+}
+
+async function archiveOld(productId: string) {
+  if (!productId) throw new Error("Missing --oldProductId=prod_XXXX");
+  const prices = await stripe.prices.list({
+    product: productId,
+    limit: 100,
+  });
+  for (const p of prices.data) {
+    if (p.active) {
+      await stripe.prices.update(p.id, { active: false });
+      console.log(`Archived old price ${p.id} (${p.lookup_key || ""})`);
+    }
+  }
+  console.log("Old prices archived. (Product stays for historical invoices.)");
+}
+
+// -------------------- Run --------------------
+(async () => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("Missing STRIPE_SECRET_KEY");
+  }
+
+  if (mode === "seed") {
+    await seed();
+  } else if (mode === "archive-old") {
+    await archiveOld(String(args.oldProductId || ""));
+  } else {
+    console.error("Unknown --mode. Use --mode seed | --mode archive-old");
+    process.exit(1);
+  }
+})();
+
+Optional package.json script
+
+Replit can add a script for convenience:
+
+{
+  "scripts": {
+    "stripe:seed:test": "STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY npx ts-node scripts/seed_stripe_catalog.ts --mode seed --env test",
+    "stripe:seed:live": "STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY npx ts-node scripts/seed_stripe_catalog.ts --mode seed --env live",
+    "stripe:archive-old:test": "STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY npx ts-node scripts/seed_stripe_catalog.ts --mode archive-old --oldProductId=$OLD_PRODUCT_ID"
+  }
+}
