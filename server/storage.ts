@@ -3,6 +3,7 @@ import { db } from "./db";
 import { 
   orgs, users, slackTeams, slackSettings, topics,
   feedbackThreads, feedbackItems, moderationAudit, topicSuggestions, invitations,
+  orgAudience, orgUsage,
   type Org, type InsertOrg,
   type User, type InsertUser,
   type SlackTeam, type InsertSlackTeam,
@@ -12,7 +13,9 @@ import {
   type FeedbackItem, type InsertFeedbackItem,
   type ModerationAudit, type InsertModerationAudit,
   type TopicSuggestion, type InsertTopicSuggestion,
-  type Invitation, type InsertInvitation
+  type Invitation, type InsertInvitation,
+  type OrgAudience, type InsertOrgAudience,
+  type OrgUsage, type InsertOrgUsage
 } from "@shared/schema";
 
 export interface IStorage {
@@ -128,6 +131,14 @@ export interface IStorage {
   createTopicSuggestion(suggestion: InsertTopicSuggestion): Promise<TopicSuggestion>;
   getTopicSuggestions(orgId: string, status?: string): Promise<TopicSuggestion[]>;
   updateTopicSuggestionStatus(id: string, status: string, orgId: string): Promise<TopicSuggestion | undefined>;
+  
+  // Audience
+  getOrgAudience(orgId: string): Promise<OrgAudience | undefined>;
+  upsertOrgAudience(audience: InsertOrgAudience): Promise<OrgAudience>;
+  
+  // Usage
+  getOrgUsage(orgId: string): Promise<OrgUsage | undefined>;
+  upsertOrgUsage(usage: InsertOrgUsage): Promise<OrgUsage>;
 }
 
 export class PgStorage implements IStorage {
@@ -834,6 +845,46 @@ export class PgStorage implements IStorage {
         eq(topicSuggestions.id, id),
         eq(topicSuggestions.orgId, orgId)
       ))
+      .returning();
+    return result[0];
+  }
+  
+  // Audience
+  async getOrgAudience(orgId: string): Promise<OrgAudience | undefined> {
+    const result = await db.select()
+      .from(orgAudience)
+      .where(eq(orgAudience.orgId, orgId))
+      .limit(1);
+    return result[0];
+  }
+  
+  async upsertOrgAudience(audience: InsertOrgAudience): Promise<OrgAudience> {
+    const result = await db.insert(orgAudience)
+      .values({ ...audience, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: orgAudience.orgId,
+        set: { ...audience, updatedAt: new Date() }
+      })
+      .returning();
+    return result[0];
+  }
+  
+  // Usage
+  async getOrgUsage(orgId: string): Promise<OrgUsage | undefined> {
+    const result = await db.select()
+      .from(orgUsage)
+      .where(eq(orgUsage.orgId, orgId))
+      .limit(1);
+    return result[0];
+  }
+  
+  async upsertOrgUsage(usage: InsertOrgUsage): Promise<OrgUsage> {
+    const result = await db.insert(orgUsage)
+      .values({ ...usage, lastSynced: new Date() })
+      .onConflictDoUpdate({
+        target: orgUsage.orgId,
+        set: { ...usage, lastSynced: new Date() }
+      })
       .returning();
     return result[0];
   }
