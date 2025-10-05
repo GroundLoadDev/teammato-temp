@@ -1942,6 +1942,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Audience Management API
+  app.get('/api/audience', requireAuth, async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      
+      // Get audience settings (create default if not exists)
+      let audience = await storage.getOrgAudience(orgId);
+      if (!audience) {
+        audience = await storage.upsertOrgAudience({
+          orgId,
+          mode: 'workspace',
+          excludeGuests: true,
+        });
+      }
+      
+      // Get usage stats
+      let usage = await storage.getOrgUsage(orgId);
+      if (!usage) {
+        usage = await storage.upsertOrgUsage({
+          orgId,
+          eligibleCount: 0,
+        });
+      }
+      
+      res.json({
+        mode: audience.mode,
+        usergroupId: audience.usergroupId || null,
+        channelIds: audience.channelIds || [],
+        excludeGuests: audience.excludeGuests,
+        preview: {
+          eligibleCount: usage.eligibleCount,
+          lastSynced: usage.lastSynced.toISOString(),
+        },
+      });
+    } catch (error) {
+      console.error('Get audience error:', error);
+      res.status(500).json({ error: 'Failed to get audience settings' });
+    }
+  });
+
+  app.put('/api/audience', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      
+      const schema = z.object({
+        mode: z.enum(['workspace', 'user_group', 'channels']),
+        usergroupId: z.string().optional().nullable(),
+        channelIds: z.array(z.string()).optional().default([]),
+        excludeGuests: z.boolean().default(true),
+      });
+      
+      const data = schema.parse(req.body);
+      
+      // Save audience settings
+      const audience = await storage.upsertOrgAudience({
+        orgId,
+        mode: data.mode,
+        usergroupId: data.usergroupId || null,
+        channelIds: data.channelIds || [],
+        excludeGuests: data.excludeGuests,
+      });
+      
+      // Trigger recount
+      const slackTeam = await storage.getSlackTeamByOrgId(orgId);
+      if (!slackTeam) {
+        return res.status(400).json({ error: 'Slack team not found' });
+      }
+      
+      const { recomputeEligibleCount } = await import('./services/audience');
+      const eligibleCount = await recomputeEligibleCount(slackTeam.accessToken, audience);
+      
+      // Save usage
+      const usage = await storage.upsertOrgUsage({
+        orgId,
+        eligibleCount,
+      });
+      
+      res.json({
+        mode: audience.mode,
+        usergroupId: audience.usergroupId || null,
+        channelIds: audience.channelIds || [],
+        excludeGuests: audience.excludeGuests,
+        preview: {
+          eligibleCount: usage.eligibleCount,
+          lastSynced: usage.lastSynced.toISOString(),
+        },
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Invalid audience data' });
+      }
+      console.error('Update audience error:', error);
+      res.status(500).json({ error: 'Failed to update audience settings' });
+    }
+  });
+
+  app.post('/api/audience/recount', requireAuth, async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      
+      // Get audience settings
+      const audience = await storage.getOrgAudience(orgId);
+      if (!audience) {
+        return res.status(404).json({ error: 'Audience settings not found' });
+      }
+      
+      // Get Slack token
+      const slackTeam = await storage.getSlackTeamByOrgId(orgId);
+      if (!slackTeam) {
+        return res.status(400).json({ error: 'Slack team not found' });
+      }
+      
+      // Recompute count
+      const { recomputeEligibleCount } = await import('./services/audience');
+      const eligibleCount = await recomputeEligibleCount(slackTeam.accessToken, audience);
+      
+      // Save usage
+      const usage = await storage.upsertOrgUsage({
+        orgId,
+        eligibleCount,
+      });
+      
+      res.json({
+        eligibleCount: usage.eligibleCount,
+        lastSynced: usage.lastSynced.toISOString(),
+      });
+    } catch (error) {
+      console.error('Recount audience error:', error);
+      res.status(500).json({ error: 'Failed to recount audience' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
