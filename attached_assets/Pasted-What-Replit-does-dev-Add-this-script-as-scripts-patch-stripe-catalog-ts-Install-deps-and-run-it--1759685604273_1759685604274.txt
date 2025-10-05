@@ -1,0 +1,240 @@
+What Replit does (dev)
+
+Add this script as scripts/patch_stripe_catalog.ts
+
+Install deps and run it:
+
+npm i stripe ts-node
+npx ts-node scripts/patch_stripe_catalog.ts
+
+
+Paste the JSON/console summary back to you.
+
+After your approval, run again with the live key.
+
+scripts/patch_stripe_catalog.ts
+/**
+ * Teammato — Stripe catalog patcher
+ * - Updates per-cap products with description, tax_code, descriptor, unit_label
+ * - Uploads logo file once → creates public FileLink → sets images[] on each product
+ * - Sets a marketing "features" list (used by Pricing Tables & Portal)
+ * - Verifies/ensures monthly & annual prices exist and carry correct metadata
+ * - (Optional) attempts to set price.tax_behavior = 'exclusive' if not set and allowed
+ *
+ * Usage (test):
+ *   STRIPE_SECRET_KEY=sk_test_... npx ts-node scripts/patch_stripe_catalog.ts
+ *
+ * Then repeat with live key when verified.
+ */
+
+import fs from "node:fs";
+import path from "node:path";
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2024-06-20",
+});
+
+// ---------- CONFIG (edit here if needed) ----------
+const PRODUCT_DESC =
+  "Anonymous feedback for Slack teams — priced by workspace size.";
+const STATEMENT_DESCRIPTOR = "TEAMMATO";
+const UNIT_LABEL = "workspace";
+const TAX_CODE = "txcd_10000000"; // General - Electronically Supplied Services
+
+// Per-cap product names we created in Option A
+const PRODUCT_NAMES = [
+  "Teammato 250",
+  "Teammato 500",
+  "Teammato 1k",
+  "Teammato 2.5k",
+  "Teammato 5k",
+  "Teammato 10k",
+  "Teammato 25k",
+  // Add if you created them:
+  // "Teammato 50k",
+  // "Teammato 100k",
+];
+
+// Expected prices (lookup_key & amounts in USD). Annual = 10x monthly.
+const EXPECTED_PRICES: Array<{
+  cap: number;
+  monthly: number;
+  annual: number;
+  monthlyLookup: string;
+  annualLookup: string;
+}> = [
+  { cap: 250,   monthly: 99,  annual: 999,  monthlyLookup: "cap_250_m",   annualLookup: "cap_250_a" },
+  { cap: 500,   monthly: 149, annual: 1490, monthlyLookup: "cap_500_m",   annualLookup: "cap_500_a" },
+  { cap: 1000,  monthly: 199, annual: 1990, monthlyLookup: "cap_1k_m",    annualLookup: "cap_1k_a" },
+  { cap: 2500,  monthly: 299, annual: 2990, monthlyLookup: "cap_2_5k_m",  annualLookup: "cap_2_5k_a" },
+  { cap: 5000,  monthly: 399, annual: 3990, monthlyLookup: "cap_5k_m",    annualLookup: "cap_5k_a" },
+  { cap: 10000, monthly: 599, annual: 5990, monthlyLookup: "cap_10k_m",   annualLookup: "cap_10k_a" },
+  { cap: 25000, monthly: 999, annual: 9990, monthlyLookup: "cap_25k_m",   annualLookup: "cap_25k_a" },
+];
+
+// Product features shown by Stripe Pricing Tables / Portal
+const FEATURES = [
+  { name: "Anonymous feedback inside Slack" },
+  { name: "Posts encrypted at rest (XChaCha20 AEAD)" },
+  { name: "K-anonymous themes and weekly digests" },
+  { name: "No PII in logs; privacy-first by design" },
+];
+
+// Local logo file — place your logo at assets/logo.png
+const LOGO_PATH = path.resolve(process.cwd(), "assets", "logo.png");
+
+// ---------------------------------------------------
+
+async function ensureLogoFileLink(): Promise<string | null> {
+  if (!fs.existsSync(LOGO_PATH)) {
+    console.warn("⚠️  Logo not found at", LOGO_PATH, "— skipping images[] update.");
+    return null;
+  }
+  // Upload file to Stripe
+  const file = await stripe.files.create({
+    purpose: "product_image",
+    file: {
+      data: fs.readFileSync(LOGO_PATH),
+      name: "teammato-logo.png",
+      type: "application/octet-stream",
+    } as any,
+  });
+
+  // Create a public link so it can be used in product.images[]
+  const link = await stripe.fileLinks.create({ file: file.id, expires_at: null });
+  return link.url;
+}
+
+async function updateProductBasics(prod: Stripe.Product, imageUrl: string | null) {
+  const update: Stripe.ProductUpdateParams = {
+    description: PRODUCT_DESC,
+    statement_descriptor: STATEMENT_DESCRIPTOR,
+    unit_label: UNIT_LABEL,
+    tax_code: TAX_CODE,
+    // features is an array of {name}
+    features: FEATURES,
+  };
+  if (imageUrl) update.images = [imageUrl];
+
+  await stripe.products.update(prod.id, update);
+}
+
+async function findProductByName(name: string) {
+  const list = await stripe.products.list({ limit: 100, active: true });
+  return list.data.find((p) => p.name === name) || null;
+}
+
+async function findPriceByLookup(lookup: string): Promise<Stripe.Price | null> {
+  const list = await stripe.prices.list({ lookup_keys: [lookup], expand: ["data.product"] });
+  return list.data[0] || null;
+}
+
+async function ensurePrice(
+  productId: string,
+  lookup: string,
+  dollars: number,
+  interval: "month" | "year",
+  cap: number,
+  period: "monthly" | "annual"
+): Promise<Stripe.Price> {
+  const existing = await findPriceByLookup(lookup);
+  if (existing) {
+    // Try to set tax_behavior = 'exclusive' if not already and if Stripe allows update
+    try {
+      if ((existing as any).tax_behavior !== "exclusive") {
+        await stripe.prices.update(existing.id, { tax_behavior: "exclusive" as any });
+      }
+    } catch {
+      // ignore if not updatable
+    }
+    // Ensure metadata at least
+    if (!existing.metadata || existing.metadata.cap !== String(cap) || existing.metadata.period !== period) {
+      try {
+        await stripe.prices.update(existing.id, { metadata: { cap: String(cap), period } });
+      } catch {
+        // metadata may be locked in some cases; safe to ignore
+      }
+    }
+    return existing;
+  }
+
+  return stripe.prices.create({
+    product: productId,
+    currency: "usd",
+    unit_amount: dollars * 100,
+    recurring: { interval },
+    lookup_key: lookup,
+    metadata: { cap: String(cap), period },
+    tax_behavior: "exclusive",
+  });
+}
+
+async function run() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("Missing STRIPE_SECRET_KEY");
+  }
+
+  const imageUrl = await ensureLogoFileLink();
+
+  const summary: Array<any> = [];
+
+  for (const name of PRODUCT_NAMES) {
+    const prod = await findProductByName(name);
+    if (!prod) {
+      console.warn(`⚠️  Product not found: ${name} (skipping)`);
+      continue;
+    }
+
+    await updateProductBasics(prod, imageUrl);
+
+    // Map expected prices by cap to this product name
+    const expectedForThis = EXPECTED_PRICES.filter((p) => {
+      // naive match by name suffix
+      return name.endsWith(" " + capLabel(p.cap));
+    });
+
+    // If naive match fails (e.g., "Teammato 1k"), fall back by contains
+    const fallback = EXPECTED_PRICES.find((p) => name.includes(capLabel(p.cap)));
+    const set = expectedForThis.length ? expectedForThis : fallback ? [fallback] : [];
+
+    for (const exp of set) {
+      const m = await ensurePrice(prod.id, exp.monthlyLookup, exp.monthly, "month", exp.cap, "monthly");
+      const a = await ensurePrice(prod.id, exp.annualLookup, exp.annual, "year", exp.cap, "annual");
+      summary.push({
+        product: prod.name,
+        productId: prod.id,
+        monthlyLookup: exp.monthlyLookup,
+        monthlyPriceId: m.id,
+        annualLookup: exp.annualLookup,
+        annualPriceId: a.id,
+      });
+    }
+  }
+
+  console.log("\n✅ Patch complete. Summary:");
+  console.table(
+    summary.map((s) => ({
+      product: s.product,
+      monthly: `${s.monthlyLookup} → ${s.monthlyPriceId}`,
+      annual: `${s.annualLookup} → ${s.annualPriceId}`,
+    }))
+  );
+
+  console.log(
+    "\nNext step (manual, once): Dashboard → Settings → Billing → Customer portal → 'Customers can switch plans' → add all 'Teammato <cap>' products."
+  );
+}
+
+function capLabel(cap: number) {
+  if (cap >= 1000) {
+    if (cap % 1000 === 0) return `${cap / 1000}k`;
+    return `${cap / 1000}`.replace(".5", ".5") + "k"; // 2.5k
+  }
+  return String(cap);
+}
+
+run().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
