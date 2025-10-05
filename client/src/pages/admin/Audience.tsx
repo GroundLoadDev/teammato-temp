@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Users, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Users, RefreshCw, AlertCircle, CheckCircle2, Hash, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 
@@ -22,19 +24,48 @@ interface AudienceSettings {
   };
 }
 
+interface UserGroup {
+  id: string;
+  handle: string;
+  name: string;
+  description: string;
+  userCount: number;
+}
+
+interface Channel {
+  id: string;
+  name: string;
+  isPrivate: boolean;
+  memberCount: number;
+}
+
 export default function Audience() {
   const { toast } = useToast();
   const [selectedMode, setSelectedMode] = useState<AudienceMode>("workspace");
   const [excludeGuests, setExcludeGuests] = useState(true);
+  const [selectedUserGroup, setSelectedUserGroup] = useState<string | null>(null);
+  const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
 
   const { data: settings, isLoading } = useQuery<AudienceSettings>({
     queryKey: ['/api/audience'],
+  });
+
+  const { data: userGroups = [], error: userGroupsError, isLoading: userGroupsLoading } = useQuery<UserGroup[]>({
+    queryKey: ['/api/slack/user-groups'],
+    enabled: selectedMode === 'user_group',
+  });
+
+  const { data: channels = [], error: channelsError, isLoading: channelsLoading } = useQuery<Channel[]>({
+    queryKey: ['/api/slack/channels'],
+    enabled: selectedMode === 'channels',
   });
 
   useEffect(() => {
     if (settings) {
       setSelectedMode(settings.mode);
       setExcludeGuests(settings.excludeGuests);
+      setSelectedUserGroup(settings.usergroupId);
+      setSelectedChannels(settings.channelIds);
     }
   }, [settings]);
 
@@ -42,8 +73,8 @@ export default function Audience() {
     mutationFn: async (data: Partial<AudienceSettings>) => {
       return apiRequest('PUT', '/api/audience', {
         mode: data.mode || selectedMode,
-        usergroupId: data.usergroupId || null,
-        channelIds: data.channelIds || [],
+        usergroupId: data.usergroupId !== undefined ? data.usergroupId : selectedUserGroup,
+        channelIds: data.channelIds !== undefined ? data.channelIds : selectedChannels,
         excludeGuests,
       });
     },
@@ -86,12 +117,71 @@ export default function Audience() {
   });
 
   const handleSave = () => {
+    // Validation
+    if (selectedMode === 'user_group' && !selectedUserGroup) {
+      toast({
+        title: "User group required",
+        description: "Please select a user group",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (selectedMode === 'channels' && selectedChannels.length === 0) {
+      toast({
+        title: "Channels required",
+        description: "Please select at least one channel",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     saveMutation.mutate({
       mode: selectedMode,
-      usergroupId: null,
-      channelIds: [],
+      usergroupId: selectedMode === 'user_group' ? selectedUserGroup : null,
+      channelIds: selectedMode === 'channels' ? selectedChannels : [],
     });
   };
+
+  const toggleChannel = (channelId: string) => {
+    setSelectedChannels(prev =>
+      prev.includes(channelId)
+        ? prev.filter(id => id !== channelId)
+        : [...prev, channelId]
+    );
+  };
+
+  const handleModeChange = (mode: AudienceMode) => {
+    setSelectedMode(mode);
+    // Clear stale selections when switching modes
+    if (mode !== 'user_group') {
+      setSelectedUserGroup(null);
+    }
+    if (mode !== 'channels') {
+      setSelectedChannels([]);
+    }
+  };
+
+  // Show error toast when Slack API fetches fail
+  useEffect(() => {
+    if (userGroupsError) {
+      toast({
+        title: "Failed to load user groups",
+        description: "Could not fetch Slack user groups. Please try again or check your Slack connection.",
+        variant: "destructive",
+      });
+    }
+  }, [userGroupsError, toast]);
+
+  useEffect(() => {
+    if (channelsError) {
+      toast({
+        title: "Failed to load channels",
+        description: "Could not fetch Slack channels. Please try again or check your Slack connection.",
+        variant: "destructive",
+      });
+    }
+  }, [channelsError, toast]);
 
   const getTimeSince = (dateString: string) => {
     const date = new Date(dateString);
@@ -165,7 +255,7 @@ export default function Audience() {
           {/* Mode Options */}
           <div className="space-y-3">
             <button
-              onClick={() => setSelectedMode('workspace')}
+              onClick={() => handleModeChange('workspace')}
               className={`w-full p-4 rounded-lg border-2 text-left transition hover-elevate active-elevate-2 ${
                 selectedMode === 'workspace'
                   ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950'
@@ -192,7 +282,7 @@ export default function Audience() {
             </button>
 
             <button
-              onClick={() => setSelectedMode('user_group')}
+              onClick={() => handleModeChange('user_group')}
               className={`w-full p-4 rounded-lg border-2 text-left transition hover-elevate active-elevate-2 ${
                 selectedMode === 'user_group'
                   ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950'
@@ -213,13 +303,12 @@ export default function Audience() {
                   <p className="text-sm text-muted-foreground">
                     Count only members of a specific user group (e.g., @feedback-enabled)
                   </p>
-                  <Badge variant="secondary" className="mt-2">Coming Soon</Badge>
                 </div>
               </div>
             </button>
 
             <button
-              onClick={() => setSelectedMode('channels')}
+              onClick={() => handleModeChange('channels')}
               className={`w-full p-4 rounded-lg border-2 text-left transition hover-elevate active-elevate-2 ${
                 selectedMode === 'channels'
                   ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950'
@@ -240,11 +329,116 @@ export default function Audience() {
                   <p className="text-sm text-muted-foreground">
                     Count unique members across specific channels
                   </p>
-                  <Badge variant="secondary" className="mt-2">Coming Soon</Badge>
                 </div>
               </div>
             </button>
           </div>
+
+          {/* User Group Selector */}
+          {selectedMode === 'user_group' && (
+            <div className="space-y-3">
+              <Label htmlFor="usergroup-select" className="text-base font-medium">
+                Select User Group
+              </Label>
+              {userGroupsLoading ? (
+                <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Loading user groups...
+                </div>
+              ) : userGroupsError ? (
+                <div className="p-3 rounded-lg border border-destructive bg-destructive/10 text-sm text-destructive">
+                  Failed to load user groups. Please try again.
+                </div>
+              ) : userGroups.length === 0 ? (
+                <div className="p-3 rounded-lg border bg-muted text-sm text-muted-foreground">
+                  No user groups found in your Slack workspace. Create one in Slack first.
+                </div>
+              ) : (
+                <Select
+                  value={selectedUserGroup || ''}
+                  onValueChange={setSelectedUserGroup}
+                >
+                  <SelectTrigger id="usergroup-select" data-testid="select-usergroup">
+                    <SelectValue placeholder="Choose a user group..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {userGroups.map((ug) => (
+                      <SelectItem key={ug.id} value={ug.id} data-testid={`usergroup-${ug.id}`}>
+                        <div className="flex items-center gap-2">
+                          <UserCircle className="w-4 h-4" />
+                          <span>@{ug.handle}</span>
+                          <span className="text-muted-foreground">({ug.userCount} members)</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {selectedUserGroup && !userGroupsLoading && !userGroupsError && (
+                <p className="text-sm text-muted-foreground">
+                  Only members of this user group will count toward your seat cap
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Channels Multi-Selector */}
+          {selectedMode === 'channels' && (
+            <div className="space-y-3">
+              <Label className="text-base font-medium">
+                Select Channels ({selectedChannels.length} selected)
+              </Label>
+              {channelsLoading ? (
+                <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Loading channels...
+                </div>
+              ) : channelsError ? (
+                <div className="p-3 rounded-lg border border-destructive bg-destructive/10 text-sm text-destructive">
+                  Failed to load channels. Please try again.
+                </div>
+              ) : channels.length === 0 ? (
+                <div className="p-3 rounded-lg border bg-muted text-sm text-muted-foreground">
+                  No channels found in your Slack workspace.
+                </div>
+              ) : (
+                <div className="max-h-64 overflow-y-auto border rounded-lg p-2 space-y-1">
+                  {channels.map((channel) => (
+                    <div
+                      key={channel.id}
+                      className="flex items-center gap-3 p-2 rounded-md hover-elevate"
+                      data-testid={`channel-${channel.id}`}
+                    >
+                      <Checkbox
+                        id={`channel-${channel.id}`}
+                        checked={selectedChannels.includes(channel.id)}
+                        onCheckedChange={() => toggleChannel(channel.id)}
+                        data-testid={`checkbox-channel-${channel.id}`}
+                      />
+                      <label
+                        htmlFor={`channel-${channel.id}`}
+                        className="flex-1 flex items-center gap-2 cursor-pointer text-sm"
+                      >
+                        <Hash className="w-4 h-4" />
+                        <span>{channel.name}</span>
+                        {channel.isPrivate && (
+                          <Badge variant="secondary" className="text-xs">Private</Badge>
+                        )}
+                        <span className="text-muted-foreground ml-auto">
+                          {channel.memberCount} members
+                        </span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {selectedChannels.length > 0 && !channelsLoading && !channelsError && (
+                <p className="text-sm text-muted-foreground">
+                  Unique members across these channels will count toward your seat cap
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Exclude Guests Toggle */}
           <div className="flex items-center justify-between p-4 rounded-lg border bg-card">

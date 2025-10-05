@@ -2092,6 +2092,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Slack resource endpoints for Audience configuration
+  // Simple in-memory cache with TTL
+  const slackResourceCache = new Map<string, { data: any; expires: number }>();
+  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+  app.get('/api/slack/user-groups', requireAuth, async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const cacheKey = `usergroups:${orgId}`;
+      
+      // Check cache
+      const cached = slackResourceCache.get(cacheKey);
+      if (cached && cached.expires > Date.now()) {
+        return res.json(cached.data);
+      }
+      
+      const slackTeam = await storage.getSlackTeamByOrgId(orgId);
+      if (!slackTeam) {
+        return res.status(400).json({ error: 'Slack team not found' });
+      }
+      
+      const { WebClient } = await import('@slack/web-api');
+      const client = new WebClient(slackTeam.accessToken);
+      
+      const resp = await client.usergroups.list({
+        include_count: true,
+        include_disabled: false,
+      });
+      
+      const userGroups = (resp.usergroups || []).map((ug: any) => ({
+        id: ug.id,
+        handle: ug.handle,
+        name: ug.name,
+        description: ug.description || '',
+        userCount: ug.user_count || 0,
+      }));
+      
+      // Cache the result
+      slackResourceCache.set(cacheKey, {
+        data: userGroups,
+        expires: Date.now() + CACHE_TTL,
+      });
+      
+      res.json(userGroups);
+    } catch (error) {
+      console.error('Get user groups error:', error);
+      res.status(500).json({ error: 'Failed to fetch user groups' });
+    }
+  });
+
+  app.get('/api/slack/channels', requireAuth, async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const cacheKey = `channels:${orgId}`;
+      
+      // Check cache
+      const cached = slackResourceCache.get(cacheKey);
+      if (cached && cached.expires > Date.now()) {
+        return res.json(cached.data);
+      }
+      
+      const slackTeam = await storage.getSlackTeamByOrgId(orgId);
+      if (!slackTeam) {
+        return res.status(400).json({ error: 'Slack team not found' });
+      }
+      
+      const { WebClient } = await import('@slack/web-api');
+      const client = new WebClient(slackTeam.accessToken);
+      
+      const channels: any[] = [];
+      let cursor: string | undefined;
+      let pageCount = 0;
+      const MAX_PAGES = 5; // Limit to first 1000 channels (200 * 5) to prevent excessive API calls
+      
+      do {
+        const resp = await client.conversations.list({
+          types: 'public_channel,private_channel',
+          exclude_archived: true,
+          limit: 200,
+          cursor,
+        });
+        
+        channels.push(...(resp.channels || []));
+        cursor = (resp.response_metadata?.next_cursor || '') || undefined;
+        pageCount++;
+      } while (cursor && pageCount < MAX_PAGES);
+      
+      const channelList = channels.map((ch: any) => ({
+        id: ch.id,
+        name: ch.name,
+        isPrivate: ch.is_private || false,
+        memberCount: ch.num_members || 0,
+      }));
+      
+      // Cache the result
+      slackResourceCache.set(cacheKey, {
+        data: channelList,
+        expires: Date.now() + CACHE_TTL,
+      });
+      
+      res.json(channelList);
+    } catch (error) {
+      console.error('Get channels error:', error);
+      res.status(500).json({ error: 'Failed to fetch channels' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
