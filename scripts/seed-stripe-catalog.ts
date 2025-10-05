@@ -160,6 +160,14 @@ async function archiveOld(productId: string) {
   
   console.log(`\n🗄️  Archiving prices from old product: ${productId}...\n`);
   
+  // First, clear the default price from the product
+  try {
+    await stripe.products.update(productId, { default_price: null as any });
+    console.log("  ✓ Cleared default price from product\n");
+  } catch (error: any) {
+    console.log(`  ⚠️  Could not clear default price: ${error.message}\n`);
+  }
+  
   const prices = await stripe.prices.list({
     product: productId,
     limit: 100,
@@ -168,9 +176,13 @@ async function archiveOld(productId: string) {
   let archived = 0;
   for (const p of prices.data) {
     if (p.active) {
-      await stripe.prices.update(p.id, { active: false });
-      console.log(`  ✓ Archived: ${p.id} (${p.lookup_key || "no lookup key"})`);
-      archived++;
+      try {
+        await stripe.prices.update(p.id, { active: false });
+        console.log(`  ✓ Archived: ${p.id} (${p.lookup_key || "no lookup key"})`);
+        archived++;
+      } catch (error: any) {
+        console.log(`  ✗ Failed to archive ${p.id}: ${error.message}`);
+      }
     }
   }
   
