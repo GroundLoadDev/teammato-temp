@@ -227,16 +227,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const plan = settings.plan || 'trial';
       const trialEndsAt = settings.trialEndsAt;
       
-      // Count Slack workspace members if connected
+      // Get eligible member count from org_usage (respects Audience settings)
       let detectedMembers = 0;
       if (slackTeam && slackTeam.accessToken) {
-        try {
-          const client = new WebClient(slackTeam.accessToken);
-          const result = await client.users.list({});
-          detectedMembers = result.members?.filter((m: any) => !m.is_bot && !m.deleted).length || 0;
-        } catch (error) {
-          console.error('Failed to count Slack members:', error);
+        // Try to get cached eligible count from org_usage
+        let usage = await storage.getOrgUsage(orgId);
+        
+        // If no usage record exists, create one with initial count
+        if (!usage) {
+          let audience = await storage.getOrgAudience(orgId);
+          if (!audience) {
+            // Create default audience settings
+            audience = await storage.upsertOrgAudience({
+              orgId,
+              mode: 'workspace',
+              excludeGuests: true,
+            });
+          }
+          
+          // Compute initial count
+          const { recomputeEligibleCount } = await import('./services/audience');
+          const eligibleCount = await recomputeEligibleCount(slackTeam.accessToken, audience);
+          usage = await storage.upsertOrgUsage({
+            orgId,
+            eligibleCount,
+          });
         }
+        
+        detectedMembers = usage.eligibleCount;
       }
       
       // Determine seat cap based on plan
