@@ -2,7 +2,7 @@ import Stripe from 'stripe';
 
 // Initialize Stripe with test key
 const stripe = new Stripe(process.env.TESTING_STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-12-18.acacia',
+  apiVersion: '2025-08-27.basil',
 });
 
 const PRODUCT_ID = 'prod_TBGpuPZxwUmfYl';
