@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, jsonb, boolean, uuid, integer, unique, date, customType } from "drizzle-orm/pg-core";
+import { pgTable, pgView, text, varchar, timestamp, jsonb, boolean, uuid, integer, unique, date, customType } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -237,6 +237,67 @@ export const orgUsage = pgTable("org_usage", {
   lastSynced: timestamp("last_synced").notNull().defaultNow(),
 });
 
+// K-Anonymity Views
+// These views enforce k-anonymity by filtering threads/comments based on participant count
+export const vThreads = pgView("v_threads", {
+  orgId: uuid("org_id"),
+  id: uuid("id"),
+  topicId: uuid("topic_id"),
+  title: text("title"),
+  status: text("status"),
+  kThreshold: integer("k_threshold"),
+  participantCount: integer("participant_count"),
+  slackMessageTs: text("slack_message_ts"),
+  slackChannelId: text("slack_channel_id"),
+  moderationStatus: text("moderation_status"),
+  moderationNotes: text("moderation_notes"),
+  moderatedBy: uuid("moderated_by"),
+  moderatedAt: timestamp("moderated_at"),
+  createdAt: timestamp("created_at"),
+  renderState: text("render_state").$type<'visible' | 'suppressed'>(),
+}).as(sql`
+  SELECT
+    t.org_id, t.id, t.topic_id, t.title, t.status, t.k_threshold,
+    t.participant_count, t.slack_message_ts, t.slack_channel_id,
+    t.moderation_status, t.moderation_notes, t.moderated_by, t.moderated_at,
+    t.created_at,
+    CASE 
+      WHEN t.participant_count >= t.k_threshold THEN 'visible'::text
+      ELSE 'suppressed'::text
+    END AS render_state
+  FROM feedback_threads t
+`);
+
+export const vComments = pgView("v_comments", {
+  id: uuid("id"),
+  threadId: uuid("thread_id"),
+  orgId: uuid("org_id"),
+  slackUserId: text("slack_user_id"),
+  content: text("content"),
+  behavior: text("behavior"),
+  impact: text("impact"),
+  situationCoarse: varchar("situation_coarse", { length: 120 }),
+  submitterHash: varchar("submitter_hash", { length: 64 }),
+  createdAtDay: date("created_at_day"),
+  status: text("status"),
+  moderationStatus: text("moderation_status"),
+  moderationNotes: text("moderation_notes"),
+  moderatorId: uuid("moderator_id"),
+  moderatedAt: timestamp("moderated_at"),
+  createdAt: timestamp("created_at"),
+  renderState: text("render_state").$type<'visible' | 'suppressed'>(),
+}).as(sql`
+  SELECT
+    c.id, c.thread_id, c.org_id, c.slack_user_id, c.content,
+    c.behavior, c.impact, c.situation_coarse, c.submitter_hash,
+    c.created_at_day, c.status, c.moderation_status, c.moderation_notes,
+    c.moderator_id, c.moderated_at, c.created_at,
+    v.render_state
+  FROM feedback_items c
+  JOIN v_threads v ON v.org_id = c.org_id AND v.id = c.thread_id
+  WHERE c.status != 'removed'
+`);
+
 // Insert schemas
 export const insertOrgSchema = createInsertSchema(orgs).omit({ id: true, createdAt: true });
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
@@ -303,6 +364,10 @@ export type InsertOrgAudience = z.infer<typeof insertOrgAudienceSchema>;
 
 export type OrgUsage = typeof orgUsage.$inferSelect;
 export type InsertOrgUsage = z.infer<typeof insertOrgUsageSchema>;
+
+// K-Anonymity View Types
+export type VThread = typeof vThreads.$inferSelect;
+export type VComment = typeof vComments.$inferSelect;
 
 // Audience Mode Enum
 export const AUDIENCE_MODE = {
