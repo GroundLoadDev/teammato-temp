@@ -1,0 +1,29 @@
+Trust & Security page
+Section	Text (Before)	Text (After)
+Hero tagline	“Privacy by default. Encryption at rest. K-anonymity applied across UI and exports.”	“Privacy by default. Ciphertext at rest with per-org keys (XChaCha20-Poly1305). K-anonymity (k=5) across UI and exports.”
+End-to-end encryption tile	“End-to-end encryption at rest with per-org 256-bit keys; plaintext never stored.”	“Ciphertext at rest with per-org 256-bit keys (XChaCha20-Poly1305 AEAD); message content never stored in plaintext.”
+No PII in logs tile	“No PII in logs.”	“Content-free logs: no message text; tokens and identifiers redacted. Limited operational metadata only.”
+Export safety tile	“Export safety – Requires k-anonymity; data stays safe.”	“Exports use k-safe views; no ciphertext; only summaries and metadata.”
+Security controls — SRE monitoring	“SRE monitoring: 24×7 uptime monitoring and incident response processes.”	“Continuous monitoring and a documented incident-response program.” (Use this if coverage isn’t true 24×7 staffed)
+Security controls — Retention	“30/90/365 or custom, legal hold freezes deletion.”	(Keep but add disclaimer) “30/90/365 or custom; Admin-controlled retention. Legal hold freezes deletion if required.”
+K-anonymity section	“K-anonymity, enforced everywhere… No identities are stored or exposed.”	“K-anonymity enforced everywhere (default k=5). Small-n cohorts suppressed. Users should avoid self-identifying details in submissions.”
+Compliance posture	“SOC 2 readiness — GDPR/CCPA — Incident response — Business continuity”	“Designed to meet SOC 2 controls (independent audit planned). Supports GDPR/CCPA compliance (DPA & SCCs available). Incident response & business continuity in place.”
+Footer note	(none about regulated data)	“Not designed for PHI, PCI primary account numbers, or other highly regulated data types.”
+Home page
+Section	Text (Before)	Text (After)
+Hero subheadline	“Make it safe to speak up—right in Slack. Posts with Teammato are end-to-end encrypted and anonymous by default.”	“Make it safe to speak up—right in Slack. Posts with Teammato are ciphertext at rest and anonymous by default (k=5).”
+Guarantee badges	“End-to-end encryption at rest” / “No PII in logs” / “K-anonymous by default” / “Org-scoped isolation”	“Ciphertext at rest (XChaCha20-Poly1305 AEAD)” / “Content-free logs (no message text; identifiers redacted)” / “K-anonymous by default (k=5)” / “Org-scoped isolation (row-level security).”
+How data flows (Step 2)	“Process & encrypt: Content filtered for PII, then encrypted at rest with XChaCha20-Poly1305 AEAD.” (sometimes shown as “end-to-end”)	“Process & encrypt: Filter message PII, then encrypt at rest (per-org DEKs; XChaCha20-Poly1305 AEAD).”
+Weekly digests callout	“We show themes, not people. No identities, ever.”	“We show themes, not people. No identities, ever — enforced with k-anonymity (k=5).”
+Objections FAQ — “Do you store plaintext anywhere?”	“We don’t store plaintext.”	“We don’t store message content in plaintext. Limited account/billing/admin info is stored as needed to operate the service.”
+Objections FAQ — “Can we export data?”	“Yes, you can export.”	“Yes — exports are k-safe (summaries + metadata only, no plaintext message content).”
+Compliance/Legal badges (footer)	“SOC 2 readiness / GDPR / CCPA”	“Designed to meet SOC 2 controls (audit planned) • Supports GDPR/CCPA compliance (DPA & SCCs available)”
+✅ Why this matters
+
+Removes absolute statements that could create liability (“no PII,” “plaintext never stored”).
+
+Avoids implying end-to-end encryption when it’s really per-org server-side encryption at rest.
+
+Reframes SOC 2 / GDPR claims as support for compliance rather than certification.
+
+Adds disclaimers about regulated data categories you don’t want to handle.

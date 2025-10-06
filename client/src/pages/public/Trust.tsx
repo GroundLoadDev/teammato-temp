@@ -26,7 +26,7 @@ function TrustHero() {
       <div className="mx-auto max-w-6xl px-6 pb-8 pt-16 md:pt-20">
         <h1 className="text-4xl font-semibold tracking-tight md:text-5xl" data-testid="text-trust-title">Trust &amp; Security</h1>
         <p className="mt-3 max-w-2xl text-lg text-muted-foreground" data-testid="text-trust-subtitle">
-          Privacy by default. Encryption at rest. K-anonymity applied across UI and exports. Built for audits and peace of mind.
+          Privacy by default. Ciphertext at rest with per-org keys (XChaCha20-Poly1305). K-anonymity (k=5) across UI and exports. Built for audits and peace of mind.
         </p>
 
         <div className="mt-5 flex flex-wrap gap-2">
@@ -47,8 +47,8 @@ function TrustHero() {
 function AtAGlance() {
   const items = [
     {
-      title: "End-to-end encryption at rest",
-      sub: "XChaCha20-Poly1305 AEAD with per-org 256-bit keys; plaintext never stored.",
+      title: "Ciphertext at rest",
+      sub: "Ciphertext at rest with per-org 256-bit keys (XChaCha20-Poly1305 AEAD); message content never stored in plaintext.",
       icon: Lock,
     },
     {
@@ -58,12 +58,12 @@ function AtAGlance() {
     },
     {
       title: "No PII in logs",
-      sub: "Request/response logs scrub content & identifiers.",
+      sub: "Content-free logs: no message text; tokens and identifiers redacted. Limited operational metadata only.",
       icon: Shield,
     },
     {
       title: "Export safety",
-      sub: "Threads, comments, and audit logs enforce k-anonymity at the database level via view-based filtering.",
+      sub: "Exports use k-safe views; no ciphertext; only summaries and metadata.",
       icon: FileShield,
     },
   ];
@@ -84,12 +84,12 @@ function AtAGlance() {
 
 function ControlsGrid() {
   const cards = [
-    { title: "Retention controls", sub: "30/90/365 or custom; legal hold freezes deletion." },
+    { title: "Retention controls", sub: "30/90/365 or custom; Admin-controlled retention. Legal hold freezes deletion if required." },
     { title: "Roles & access", sub: "Owner/Admin/Analyst; least privilege; no one sees identities." },
     { title: "Audit logging", sub: "Admin activity & export events logged with timestamp and actor role." },
     { title: "Secret management", sub: "App credentials and keys stored in a managed KMS; rotation policy applied." },
     { title: "Vuln management", sub: "Automated scanning and regular third-party penetration testing." },
-    { title: "SRE monitoring", sub: "24×7 uptime monitoring and incident response procedures." },
+    { title: "SRE monitoring", sub: "Continuous monitoring and a documented incident-response program." },
   ];
   return (
     <section className="mx-auto max-w-6xl px-6 pb-4">
@@ -109,7 +109,7 @@ function ControlsGrid() {
 function DataFlow() {
   const steps = [
     { h: "1) Post in Slack", s: "User types /teammato; identity never leaves Slack." },
-    { h: "2) Process & encrypt", s: "Content filtered for PII, then encrypted at rest (XChaCha20-Poly1305 AEAD)." },
+    { h: "2) Process & encrypt", s: "Filter message PII, then encrypt at rest (per-org DEKs; XChaCha20-Poly1305 AEAD)." },
     { h: "3) Theme only", s: "Topics aggregated; items below k are suppressed." },
     { h: "4) Digest & analytics", s: "Weekly summaries and charts—no identities, ever." },
   ];
@@ -147,10 +147,10 @@ function KAnon() {
     <section className="mx-auto max-w-6xl px-6 py-10">
       <div className="grid gap-6 md:grid-cols-12">
         <div className="md:col-span-6">
-          <h2 className="text-xl font-semibold" data-testid="text-kanon-title">K-anonymity, enforced everywhere</h2>
+          <h2 className="text-xl font-semibold" data-testid="text-kanon-title">K-anonymity enforced everywhere (default k=5)</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             The long tail is where re-identification risk lives. We apply a minimum topic count (<em>k</em>) across UI and exports to prevent
-            small-n inference. No identities are stored or exposed.
+            small-n inference. Small-n cohorts suppressed. Users should avoid self-identifying details in submissions.
           </p>
           <ul className="mt-4 space-y-2 text-sm">
             {rows.map((r) => (
@@ -189,24 +189,24 @@ function KAnon() {
 function Compliance() {
   const items = [
     {
-      title: "SOC 2 readiness",
+      title: "SOC 2 controls",
       copy:
-        "Controls aligned to SOC 2; annual third-party testing and continuous monitoring. Reports available under NDA.",
+        "Designed to meet SOC 2 controls (independent audit planned). Controls implemented and continuously monitored.",
     },
     {
-      title: "GDPR/CCPA",
+      title: "GDPR/CCPA compliance",
       copy:
-        "DPA, SCCs, and data subject request process. Regional data residency options on request.",
+        "Supports GDPR/CCPA compliance (DPA & SCCs available). Data subject request process and regional data residency options on request.",
     },
     {
       title: "Incident response",
       copy:
-        "Documented runbooks, 24×7 paging, customer notification policy aligned with regulatory timelines.",
+        "Documented runbooks, continuous monitoring, customer notification policy aligned with regulatory timelines.",
     },
     {
       title: "Business continuity",
       copy:
-        "Automated backups, immutability windows, and periodic recovery tests.",
+        "Automated backups, immutability windows, and periodic recovery tests in place.",
     },
   ];
   return (
@@ -233,7 +233,7 @@ function ContactStrip() {
         <div className="md:col-span-8">
           <h3 className="text-xl font-semibold" data-testid="text-contact-title">Security questions or a review?</h3>
           <p className="mt-1 text-sm text-muted-foreground" data-testid="text-contact-subtitle">
-            No sales pitches. Transparency over gatekeeping: all security documents are published here. Contact teammato if you need something custom.
+            No sales pitches. Transparency over gatekeeping: all security documents are published here. Contact teammato if you need something custom. Note: Not designed for PHI, PCI primary account numbers, or other highly regulated data types.
           </p>
         </div>
         <div className="md:col-span-4">

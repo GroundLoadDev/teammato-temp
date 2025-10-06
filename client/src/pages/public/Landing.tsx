@@ -137,14 +137,14 @@ const FAQ_DATA: QA[] = [
   {
     id: "plaintext",
     q: "Do you store plaintext anywhere?",
-    a: "No. Payloads are encrypted at rest; operational logs exclude message content and PII.",
+    a: "We don't store message content in plaintext. Limited account/billing/admin info is stored as needed to operate the service.",
     topics: ["privacy"],
     icon: Lock,
   },
   {
     id: "exports",
     q: "Can we export data?",
-    a: "Yes—CSV exports respect the same k-threshold and exclude suppressed topics.",
+    a: "Yes — exports are k-safe (summaries + metadata only, no plaintext message content).",
     topics: ["exports", "admin"],
     icon: FileDown,
   },
@@ -300,8 +300,7 @@ export default function Landing() {
                 Make it safe to speak up—right in Slack.
               </h1>
               <p className="mt-5 max-w-xl text-lg text-muted-foreground">
-                Post with <span className="font-mono">/teammato</span>. We store ciphertext
-                and enforce k-anonymity by default—so people share and teams act.
+                Posts with Teammato are ciphertext at rest and anonymous by default (k=5).
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -426,11 +425,11 @@ export default function Landing() {
               </li>
               <li className="flex items-start gap-3">
                 <Lock className="mt-0.5 h-5 w-5 text-emerald-600" />
-                <span><strong>Ciphertext storage</strong> — plaintext is never stored.</span>
+                <span><strong>Ciphertext storage</strong> — message content never stored in plaintext.</span>
               </li>
               <li className="flex items-start gap-3">
                 <EyeOff className="mt-0.5 h-5 w-5 text-emerald-600" />
-                <span><strong>No PII in logs</strong> — scrubbed at ingestion.</span>
+                <span><strong>Content-free logs</strong> — no message text; identifiers redacted.</span>
               </li>
             </ul>
 
@@ -606,25 +605,25 @@ export default function Landing() {
             {[
               {
                 icon: ShieldCheck,
-                title: "K-anonymous by default",
+                title: "K-anonymous by default (k=5)",
                 proof: "No small-n views or exports.",
                 detail: "Topics with count < k are hidden in UI and CSV.",
               },
               {
                 icon: Lock,
-                title: "Ciphertext at rest",
-                proof: "Plaintext is never stored.",
-                detail: "Encrypted payloads; keys separate; audited access.",
+                title: "Ciphertext at rest (XChaCha20-Poly1305 AEAD)",
+                proof: "Message content never stored in plaintext.",
+                detail: "Encrypted payloads with per-org DEKs; keys separate; audited access.",
               },
               {
                 icon: EyeOff,
-                title: "No PII in logs",
-                proof: "Scrubbed at ingestion.",
+                title: "Content-free logs (no message text; identifiers redacted)",
+                proof: "Limited operational metadata only.",
                 detail: "Request/response logs exclude content and identifiers.",
               },
               {
                 icon: Layers3,
-                title: "Org-scoped isolation",
+                title: "Org-scoped isolation (row-level security)",
                 proof: "Strict RLS by workspace.",
                 detail: "Every query is bounded by org_id row-level security.",
               },
@@ -872,7 +871,7 @@ export default function Landing() {
                 Turn anonymous feedback into weekly decisions.
               </h2>
               <p className="mt-4 max-w-xl text-lg text-neutral-300">
-                Install in Slack in minutes. K-anonymous digests your leaders can act on—no plaintext stored.
+                Install in Slack in minutes. K-anonymous digests your leaders can act on—enforced with k-anonymity (k=5).
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -902,15 +901,15 @@ export default function Landing() {
               <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-neutral-400">
                 <span className="inline-flex items-center gap-2 rounded-full border border-neutral-800 bg-neutral-900/60 px-3 py-1">
                   <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                  k-anonymous by default
+                  k-anonymous by default (k=5)
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-neutral-800 bg-neutral-900/60 px-3 py-1">
                   <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                  ciphertext at rest
+                  ciphertext at rest (XChaCha20-Poly1305 AEAD)
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-neutral-800 bg-neutral-900/60 px-3 py-1">
                   <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                  no PII in logs
+                  content-free logs
                 </span>
               </div>
             </div>
