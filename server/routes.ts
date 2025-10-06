@@ -576,6 +576,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Export API (admin-only)
+  app.post('/api/export/analytics', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const { format, timeRange } = req.body;
+      
+      if (!['csv', 'json'].includes(format)) {
+        return res.status(400).json({ error: 'Invalid format. Supported formats: csv, json' });
+      }
+      
+      const activity = await storage.getTopicActivity(orgId);
+      const participantCount = await storage.getUniqueParticipantCount(orgId);
+      
+      let data = '';
+      if (format === 'csv') {
+        data = 'Topic,Thread Count,Item Count\n';
+        activity.forEach((item: any) => {
+          const topicName = (item.topicName || 'Unnamed').replace(/"/g, '""');
+          data += `"${topicName}",${item.threadCount || 0},${item.itemCount || 0}\n`;
+        });
+        data += `\nTotal Participants,${participantCount}\n`;
+        data += `Time Range,${timeRange}\n`;
+      } else if (format === 'json') {
+        data = JSON.stringify({ activity, participantCount, timeRange, exportedAt: new Date().toISOString() }, null, 2);
+      }
+      
+      res.json({ data });
+    } catch (error) {
+      console.error('Export analytics error:', error);
+      res.status(500).json({ error: 'Failed to export analytics' });
+    }
+  });
+
+  app.post('/api/export/threads', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const threads = await storage.getFeedbackThreads(orgId);
+      
+      const exportData = threads.map((thread: any) => ({
+        id: thread.id,
+        topicId: thread.topicId,
+        status: thread.status,
+        createdAt: thread.createdAt,
+        participantCount: thread.participantCount || 0,
+      }));
+      
+      res.json({ data: JSON.stringify(exportData, null, 2) });
+    } catch (error) {
+      console.error('Export threads error:', error);
+      res.status(500).json({ error: 'Failed to export threads' });
+    }
+  });
+
+  app.post('/api/export/comments', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const threads = await storage.getFeedbackThreads(orgId);
+      
+      const allItems: any[] = [];
+      for (const thread of threads) {
+        const items = await storage.getFeedbackItemsByThread(thread.id);
+        items.forEach((item: any) => {
+          allItems.push({
+            threadId: thread.id,
+            itemId: item.id,
+            status: item.status,
+            createdAt: item.createdAt,
+          });
+        });
+      }
+      
+      res.json({ data: JSON.stringify(allItems, null, 2) });
+    } catch (error) {
+      console.error('Export comments error:', error);
+      res.status(500).json({ error: 'Failed to export feedback items' });
+    }
+  });
+
+  app.post('/api/export/audit', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      
+      const threads = await storage.getFeedbackThreads(orgId);
+      const allAudit: any[] = [];
+      
+      for (const thread of threads) {
+        const threadAudit = await storage.getModerationAudit('thread', thread.id, orgId);
+        allAudit.push(...threadAudit);
+        
+        const items = await storage.getFeedbackItemsByThread(thread.id);
+        for (const item of items) {
+          const itemAudit = await storage.getModerationAudit('item', item.id, orgId);
+          allAudit.push(...itemAudit);
+        }
+      }
+      
+      let data = 'Timestamp,Action Type,Target Type,Target ID,Moderator ID,Reason\n';
+      allAudit.forEach((log: any) => {
+        const timestamp = new Date(log.createdAt).toISOString();
+        const reason = (log.reason || '').replace(/"/g, '""');
+        data += `"${timestamp}","${log.actionType}","${log.targetType}","${log.targetId}","${log.moderatorId || 'N/A'}","${reason}"\n`;
+      });
+      
+      res.json({ data });
+    } catch (error) {
+      console.error('Export audit error:', error);
+      res.status(500).json({ error: 'Failed to export audit log' });
+    }
+  });
+
   // Slack Settings API (admin-only)
   app.get('/api/slack-settings', requireRole('owner', 'admin'), async (req, res) => {
     try {
