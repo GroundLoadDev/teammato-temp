@@ -201,6 +201,10 @@ function ContactForm() {
               <li>Most product questions are answered in the FAQ.</li>
             </ul>
           </div>
+
+          <div className="mt-3 rounded-2xl border bg-background p-4 text-sm">
+            <p className="font-medium">Need Standard Contractual Clauses (SCCs) for GDPR transfers? Contact Trust@teammato.com and we'll provide them.</p>
+          </div>
         </div>
 
         {/* Form column */}
@@ -320,7 +324,7 @@ type Topic = "security" | "privacy" | "billing" | "incident" | "product" | "othe
 function TopicTip({ topic }: { topic: Topic }) {
   const tip = {
     security:
-      "Looking for SOC2-like artifacts, SCCs, or a DPA? You can download them on the Trust page—no NDA or meeting required.",
+      "Looking for SOC2 control details or our DPA? You can download them on the Trust page — no NDA or meeting required.",
     privacy:
       "Data subject request? Email privacy@teammato.com. Most privacy answers are in the Trust and FAQ pages.",
     billing:
