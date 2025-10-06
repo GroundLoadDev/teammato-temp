@@ -31,6 +31,17 @@ export const orgs = pgTable("orgs", {
     retention_days: 365,
     legal_hold: false
   }),
+  // Stripe billing fields
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  billingStatus: text("billing_status").default('trialing'),
+  seatCap: integer("seat_cap").default(250),
+  billingPeriod: text("billing_period").default('monthly'),
+  priceAmount: integer("price_amount").default(0), // in cents
+  trialEnd: timestamp("trial_end"),
+  cancelsAt: timestamp("cancels_at"),
+  graceEndsAt: timestamp("grace_ends_at"),
+  billingEmail: text("billing_email"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

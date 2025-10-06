@@ -1,0 +1,520 @@
+1) Billing page — feature checklist
+
+Top banners (context)
+
+Trial banner (days left, “Upgrade now”)
+
+Near-cap (≥90%), Over-cap (>100%) and Grace (timer) banners
+
+Past_due / unpaid banner (“Manage billing” opens Portal)
+
+Current subscription card
+
+Status chip: trialing, active, past_due, cancels_on, canceled
+
+Seat cap, billing period, current price
+
+Usage bar: eligible_count / seat_cap (with link to Audience)
+
+Buttons: Change plan (opens modal), Manage billing (Portal), Download invoices
+
+Change plan modal
+
+Toggle: Monthly / Annual
+
+Caps: 250 / 500 / 1k / 2.5k / 5k / 10k / 25k (and optional 50k/100k)
+
+Shows computed price and proration note
+
+Primary CTA: Continue to Checkout
+
+Billing history
+
+Invoices table (date, period, amount, status, PDF link)
+
+Billing settings
+
+Billing email on file (from Stripe)
+
+Tax ID (if present) with “Edit in Portal”
+
+Cancellation state (“Cancels at end of period on …” with Resume via Portal)
+
+Audience summary (side or footer)
+
+Mode: Workspace / User group / Channels
+
+Eligible members count, last synced
+
+Button: Manage audience (to /admin/audience)
+
+2) Drop-in page (shadcn + Tailwind)
+
+File: app/admin/billing/page.tsx
+
+'use client';
+
+import * as React from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
+
+type BillingStatus =
+  | 'trialing'
+  | 'active'
+  | 'past_due'
+  | 'unpaid'
+  | 'canceled'
+  | 'incomplete'
+  | 'incomplete_expired';
+
+type PricePlan = {
+  cap: number;
+  monthly: number;
+  annual: number;
+  monthlyLookup: string;
+  annualLookup: string;
+};
+
+type Invoice = {
+  id: string;
+  number: string;
+  date: string; // ISO
+  amount: number; // cents
+  status: 'paid' | 'open' | 'void' | 'uncollectible' | 'draft';
+  hostedInvoiceUrl?: string;
+  pdfUrl?: string;
+};
+
+type AudienceSummary = {
+  mode: 'workspace' | 'user_group' | 'channels';
+  eligibleCount: number;
+  lastSynced?: string;
+};
+
+type BillingState = {
+  orgId: string;
+  status: BillingStatus;
+  seatCap: number;
+  period: 'monthly' | 'annual';
+  price: number; // cents
+  trialEnd?: string | null; // ISO
+  cancelsAt?: string | null; // ISO
+  graceEndsAt?: string | null; // ISO
+  eligibleCount: number;
+  percent: number; // 0..100
+  customerEmail?: string;
+  invoices: Invoice[];
+  audience: AudienceSummary;
+  prices: PricePlan[];
+};
+
+function formatUSD(cents: number) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0}).format(
+    Math.round(cents / 100),
+  );
+}
+function daysLeft(iso?: string | null) {
+  if (!iso) return null;
+  const end = new Date(iso).getTime();
+  const now = Date.now();
+  const d = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+  return d > 0 ? d : 0;
+}
+
+export default function BillingPage() {
+  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<BillingState | null>(null);
+  const [period, setPeriod] = useState<'monthly' | 'annual'>('monthly');
+  const [cap, setCap] = useState<number>(250);
+  const [changing, setChanging] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const res = await fetch('/api/billing/status', { cache: 'no-store' });
+      const json: BillingState = await res.json();
+      setState(json);
+      setPeriod(json.period);
+      setCap(json.seatCap);
+      setLoading(false);
+    })();
+  }, []);
+
+  const currentBanner = useMemo(() => {
+    if (!state) return null;
+    const pct = state.percent;
+    if (state.status === 'trialing' && state.trialEnd) {
+      const d = daysLeft(state.trialEnd);
+      return (
+        <Alert className="border-emerald-300 bg-emerald-50">
+          <AlertTitle className="font-semibold">Trial ends in {d} day{d === 1 ? '' : 's'}</AlertTitle>
+          <AlertDescription>Try everything now. Upgrade to keep your settings and data.</AlertDescription>
+        </Alert>
+      );
+    }
+    if (pct >= 90 && pct <= 100) {
+      return (
+        <Alert className="border-amber-300 bg-amber-50">
+          <AlertTitle className="font-semibold">You’re near your seat cap</AlertTitle>
+          <AlertDescription>
+            {state.eligibleCount} / {state.seatCap} eligible members. Reduce your audience or upgrade your cap.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+    if (pct > 100) {
+      const g = state.graceEndsAt ? daysLeft(state.graceEndsAt) : null;
+      return (
+        <Alert className="border-rose-300 bg-rose-50">
+          <AlertTitle className="font-semibold">Over cap</AlertTitle>
+          <AlertDescription>
+            Posting will pause {g !== null ? <>in <b>{g} days</b></> : 'soon'} unless usage drops or you upgrade.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+    if (state.status === 'past_due' || state.status === 'unpaid') {
+      return (
+        <Alert className="border-rose-300 bg-rose-50">
+          <AlertTitle className="font-semibold">Payment issue</AlertTitle>
+          <AlertDescription>Update your payment method to avoid interruption.</AlertDescription>
+        </Alert>
+      );
+    }
+    if (state.cancelsAt) {
+      const d = daysLeft(state.cancelsAt);
+      return (
+        <Alert className="border-slate-300 bg-slate-50">
+          <AlertTitle className="font-semibold">Cancels at end of period</AlertTitle>
+          <AlertDescription>Access remains for {d} days unless you resume in Billing.</AlertDescription>
+        </Alert>
+      );
+    }
+    return null;
+  }, [state]);
+
+  if (loading || !state) {
+    return (
+      <div className="p-6">
+        <Card><CardContent className="p-12 text-sm text-slate-500">Loading billing…</CardContent></Card>
+      </div>
+    );
+  }
+
+  const progress = Math.min(100, state.percent);
+
+  return (
+    <div className="p-6 space-y-6">
+      {currentBanner}
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div className="space-y-1">
+            <CardTitle>Current Plan</CardTitle>
+            <div className="flex items-center gap-2 text-sm text-slate-600">
+              <Badge variant="secondary" className={cn(
+                state.status === 'active' && 'bg-emerald-100 text-emerald-900',
+                state.status === 'trialing' && 'bg-sky-100 text-sky-900',
+                (state.status === 'past_due' || state.status === 'unpaid') && 'bg-rose-100 text-rose-900',
+              )}>
+                {state.status}
+              </Badge>
+              <span>• {state.seatCap.toLocaleString()} cap • {state.period}</span>
+              <span>• {formatUSD(state.price)} / {state.period === 'annual' ? 'yr' : 'mo'}</span>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={openPortal}>Manage billing</Button>
+            <ChangePlanDialog
+              prices={state.prices}
+              initialCap={state.seatCap}
+              initialPeriod={state.period}
+              onCheckout={(lookupKey) => startCheckout(lookupKey, setChanging)}
+              changing={changing}
+            />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <div className="mb-2 flex justify-between text-sm text-slate-600">
+              <span>Eligible members</span>
+              <span>{state.eligibleCount.toLocaleString()} / {state.seatCap.toLocaleString()}</span>
+            </div>
+            <Progress value={progress} className={cn(progress >= 100 ? 'bg-rose-100' : 'bg-slate-100')} />
+            <div className="mt-2 text-xs text-slate-500">
+              Audience: <b className="capitalize">{state.audience.mode}</b> •{' '}
+              <a className="underline hover:no-underline" href="/admin/audience">Manage audience</a>
+            </div>
+          </div>
+          {state.cancelsAt && (
+            <>
+              <Separator />
+              <div className="text-sm text-slate-600">
+                Subscription set to cancel on <b>{new Date(state.cancelsAt).toLocaleDateString()}</b>. You can resume in
+                the Stripe Portal.
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Billing History</CardTitle></CardHeader>
+        <CardContent>
+          {state.invoices.length === 0 ? (
+            <div className="text-sm text-slate-500">No invoices yet.</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Invoice #</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {state.invoices.map(inv => (
+                  <TableRow key={inv.id}>
+                    <TableCell>{new Date(inv.date).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      {inv.hostedInvoiceUrl ? (
+                        <a href={inv.hostedInvoiceUrl} target="_blank" className="underline">{inv.number}</a>
+                      ) : inv.number}
+                    </TableCell>
+                    <TableCell><Badge variant="secondary" className="capitalize">{inv.status}</Badge></TableCell>
+                    <TableCell className="text-right">{formatUSD(inv.amount)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Billing Settings</CardTitle></CardHeader>
+        <CardContent className="text-sm text-slate-600 space-y-2">
+          <div>Billing email: <b>{state.customerEmail ?? '—'}</b></div>
+          <div>Manage payment methods, tax details, and receipts in the Stripe Portal.</div>
+          <Button variant="secondary" onClick={openPortal}>Open Stripe Portal</Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  async function openPortal() {
+    const res = await fetch('/api/billing/portal', { method: 'POST' });
+    const { url } = await res.json();
+    window.location.href = url;
+  }
+}
+
+function ChangePlanDialog({
+  prices, initialCap, initialPeriod, onCheckout, changing,
+}: {
+  prices: PricePlan[];
+  initialCap: number;
+  initialPeriod: 'monthly' | 'annual';
+  onCheckout: (lookupKey: string) => void;
+  changing: boolean;
+}) {
+  const [period, setPeriod] = useState<'monthly' | 'annual'>(initialPeriod);
+  const [cap, setCap] = useState<number>(initialCap);
+
+  const selected = useMemo(() => {
+    const p = prices.find(x => x.cap === cap);
+    if (!p) return null;
+    const cents = (period === 'monthly' ? p.monthly : p.annual) * 100;
+    const lookup = period === 'monthly' ? p.monthlyLookup : p.annualLookup;
+    return { cents, lookup };
+  }, [prices, cap, period]);
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button>Change plan</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Change plan</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <Tabs value={period} onValueChange={(v) => setPeriod(v as any)}>
+            <TabsList className="grid grid-cols-2 w-full">
+              <TabsTrigger value="monthly">Monthly</TabsTrigger>
+              <TabsTrigger value="annual">Annual (save 2 months)</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <div className="flex items-center gap-2">
+            <div className="w-44 text-sm">Seat cap</div>
+            <Select value={String(cap)} onValueChange={(v) => setCap(Number(v))}>
+              <SelectTrigger><SelectValue placeholder="Choose cap" /></SelectTrigger>
+              <SelectContent>
+                {prices.map(p => (
+                  <SelectItem key={p.cap} value={String(p.cap)}>
+                    {p.cap.toLocaleString()}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="text-sm text-slate-600">
+            Price: <b>{selected ? formatUSD(selected.cents) : '—'}</b> / {period === 'annual' ? 'yr' : 'mo'}
+            <div className="text-xs text-slate-500 mt-1">
+              Changes prorate immediately. Downgrades may take effect at the next renewal per your billing settings.
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            disabled={!selected || changing}
+            onClick={() => selected && onCheckout(selected.lookup)}
+          >
+            {changing ? 'Redirecting…' : 'Continue to Checkout'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+async function startCheckout(lookupKey: string, setChanging: (v: boolean) => void) {
+  setChanging(true);
+  const res = await fetch('/api/billing/checkout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ priceLookupKey: lookupKey }),
+  });
+  const { url } = await res.json();
+  window.location.href = url;
+}
+
+3) Minimal API routes
+
+These mirror the Stripe endpoints you already have/will add. They’re intentionally slim—Replit can hook to your existing services.
+
+app/api/billing/status/route.ts
+
+import { NextResponse } from 'next/server';
+
+// Replace with real DB + Stripe mirror read
+export async function GET() {
+  // Example shape
+  const json = {
+    orgId: 'org_123',
+    status: 'active',
+    seatCap: 250,
+    period: 'monthly',
+    price: 9900,
+    trialEnd: null,
+    cancelsAt: null,
+    graceEndsAt: null,
+    eligibleCount: 184,
+    percent: Math.round((184/250)*100),
+    customerEmail: 'billing@acme.co',
+    audience: { mode: 'workspace', eligibleCount: 184, lastSynced: new Date().toISOString() },
+    invoices: [],
+    prices: [
+      { cap:250, monthly:99, annual:999, monthlyLookup:'cap_250_m', annualLookup:'cap_250_a' },
+      { cap:500, monthly:149, annual:1490, monthlyLookup:'cap_500_m', annualLookup:'cap_500_a' },
+      { cap:1000, monthly:199, annual:1990, monthlyLookup:'cap_1k_m', annualLookup:'cap_1k_a' },
+      { cap:2500, monthly:299, annual:2990, monthlyLookup:'cap_2_5k_m', annualLookup:'cap_2_5k_a' },
+      { cap:5000, monthly:399, annual:3990, monthlyLookup:'cap_5k_m', annualLookup:'cap_5k_a' },
+      { cap:10000, monthly:599, annual:5990, monthlyLookup:'cap_10k_m', annualLookup:'cap_10k_a' },
+      { cap:25000, monthly:999, annual:9990, monthlyLookup:'cap_25k_m', annualLookup:'cap_25k_a' },
+    ],
+  };
+  return NextResponse.json(json);
+}
+
+
+app/api/billing/checkout/route.ts
+
+import { NextRequest, NextResponse } from 'next/server';
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' });
+
+export async function POST(req: NextRequest) {
+  const { priceLookupKey } = await req.json();
+
+  // Look up org + customer; omitted for brevity
+  const customer = await stripe.customers.create({ metadata: { org_id: 'org_123' } });
+
+  const price = await stripe.prices.list({ lookup_keys: [priceLookupKey], expand: ['data.product'] });
+  const priceId = price.data[0].id;
+
+  const session = await stripe.checkout.sessions.create({
+    mode: 'subscription',
+    line_items: [{ price: priceId, quantity: 1 }],
+    allow_promotion_codes: true,
+    subscription_data: { trial_period_days: 14, metadata: { org_id: 'org_123' } },
+    success_url: `${process.env.BILLING_RETURN_URL}?success=1`,
+    cancel_url: `${process.env.BILLING_RETURN_URL}?canceled=1`,
+    customer: customer.id,
+  });
+
+  return NextResponse.json({ url: session.url });
+}
+
+
+app/api/billing/portal/route.ts
+
+import { NextResponse } from 'next/server';
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' });
+
+export async function POST() {
+  // Fetch stripe_customer_id for the org from DB; mocked here:
+  const customerId = 'cus_123';
+  const session = await stripe.billingPortal.sessions.create({
+    customer: customerId,
+    return_url: process.env.BILLING_RETURN_URL!,
+  });
+  return NextResponse.json({ url: session.url });
+}
+
+
+app/api/billing/invoices/route.ts (optional; status route can include invoices)
+
+import { NextResponse } from 'next/server';
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' });
+
+export async function GET() {
+  const customerId = 'cus_123'; // from DB
+  const list = await stripe.invoices.list({ customer: customerId, limit: 20 });
+  const invoices = list.data.map(i => ({
+    id: i.id,
+    number: i.number!,
+    date: new Date(i.created * 1000).toISOString(),
+    amount: i.total!,
+    status: i.status!,
+    hostedInvoiceUrl: i.hosted_invoice_url ?? undefined,
+    pdfUrl: i.invoice_pdf ?? undefined,
+  }));
+  return NextResponse.json(invoices);
+}
+
+Notes
+
+The UI expects your billing mirror to return a consolidated BillingState. That way, the page is fast and doesn’t fan out across endpoints.
+
+The “Change plan” modal uses lookup_keys only; it doesn’t hardcode price IDs.
+
+Enforcement (over/near/grace) messaging is aligned with the server middleware you already built.
+
+The Audience summary links back to /admin/audience (done and functional per your note).

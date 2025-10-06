@@ -10,6 +10,7 @@ import { buildFeedbackModal } from "./utils/slackModal";
 import { WebClient } from '@slack/web-api';
 import adminKeysRouter from "./routes/admin-keys";
 import themesRouter from "./routes/themes";
+import Stripe from 'stripe';
 
 // Slack OAuth configuration
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
@@ -43,6 +44,23 @@ const USER_SCOPES = [
 
 // In-memory state storage (TODO: use Redis/session store in production)
 const oauthStates = new Map<string, number>();
+
+// Stripe configuration
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || process.env.TESTING_STRIPE_SECRET_KEY;
+const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY, {
+  apiVersion: '2025-08-27.basil',
+}) : null;
+
+// Pricing plans with lookup keys matching Stripe catalog
+const PRICE_PLANS = [
+  { cap: 250, monthly: 99, annual: 999, monthlyLookup: 'cap_250_m', annualLookup: 'cap_250_a' },
+  { cap: 500, monthly: 149, annual: 1490, monthlyLookup: 'cap_500_m', annualLookup: 'cap_500_a' },
+  { cap: 1000, monthly: 199, annual: 1990, monthlyLookup: 'cap_1k_m', annualLookup: 'cap_1k_a' },
+  { cap: 2500, monthly: 299, annual: 2990, monthlyLookup: 'cap_2_5k_m', annualLookup: 'cap_2_5k_a' },
+  { cap: 5000, monthly: 399, annual: 3990, monthlyLookup: 'cap_5k_m', annualLookup: 'cap_5k_a' },
+  { cap: 10000, monthly: 599, annual: 5990, monthlyLookup: 'cap_10k_m', annualLookup: 'cap_10k_a' },
+  { cap: 25000, monthly: 999, annual: 9990, monthlyLookup: 'cap_25k_m', annualLookup: 'cap_25k_a' },
+];
 
 // Helper function to get ISO week number
 function getWeekNumber(date: Date): number {
@@ -215,7 +233,208 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Billing API
+  // Billing API - Consolidated Status
+  app.get('/api/billing/status', requireAuth, async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const org = await storage.getOrg(orgId);
+      const slackTeam = await storage.getSlackTeamByOrgId(orgId);
+      
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+
+      // Get eligible member count from org_usage (respects Audience settings)
+      let eligibleCount = 0;
+      let audienceMode: 'workspace' | 'user_group' | 'channels' = 'workspace';
+      let lastSynced: string | undefined;
+
+      if (slackTeam && slackTeam.accessToken) {
+        let usage = await storage.getOrgUsage(orgId);
+        let audience = await storage.getOrgAudience(orgId);
+        
+        if (!audience) {
+          audience = await storage.upsertOrgAudience({
+            orgId,
+            mode: 'workspace',
+            excludeGuests: true,
+          });
+        }
+        
+        if (!usage) {
+          const { recomputeEligibleCount } = await import('./services/audience');
+          eligibleCount = await recomputeEligibleCount(slackTeam.accessToken, audience);
+          usage = await storage.upsertOrgUsage({
+            orgId,
+            eligibleCount,
+          });
+        } else {
+          eligibleCount = usage.eligibleCount;
+        }
+        
+        audienceMode = audience.mode as any || 'workspace';
+        lastSynced = usage.lastSynced?.toISOString();
+      }
+
+      // Get billing data from org record
+      const status = org.billingStatus || 'trialing';
+      const seatCap = org.seatCap || 250;
+      const period = org.billingPeriod || 'monthly';
+      const price = org.priceAmount || 0;
+      const trialEnd = org.trialEnd?.toISOString() || null;
+      const cancelsAt = org.cancelsAt?.toISOString() || null;
+      const graceEndsAt = org.graceEndsAt?.toISOString() || null;
+      const customerEmail = org.billingEmail || null;
+
+      // Calculate usage percentage
+      const percent = seatCap > 0 ? Math.round((eligibleCount / seatCap) * 100) : 0;
+
+      // Fetch invoices from Stripe if available
+      let invoices: any[] = [];
+      if (stripe && org.stripeCustomerId) {
+        try {
+          const invoiceList = await stripe.invoices.list({
+            customer: org.stripeCustomerId,
+            limit: 20,
+          });
+          invoices = invoiceList.data.map(inv => ({
+            id: inv.id,
+            number: inv.number || inv.id,
+            date: new Date(inv.created * 1000).toISOString(),
+            amount: inv.total,
+            status: inv.status,
+            hostedInvoiceUrl: inv.hosted_invoice_url,
+            pdfUrl: inv.invoice_pdf,
+          }));
+        } catch (error) {
+          console.error('Failed to fetch invoices:', error);
+        }
+      }
+
+      res.json({
+        orgId,
+        status,
+        seatCap,
+        period,
+        price,
+        trialEnd,
+        cancelsAt,
+        graceEndsAt,
+        eligibleCount,
+        percent,
+        customerEmail,
+        invoices,
+        audience: {
+          mode: audienceMode,
+          eligibleCount,
+          lastSynced,
+        },
+        prices: PRICE_PLANS,
+      });
+    } catch (error) {
+      console.error('Billing status error:', error);
+      res.status(500).json({ error: 'Failed to fetch billing status' });
+    }
+  });
+
+  // Billing API - Create Checkout Session
+  app.post('/api/billing/checkout', requireAuth, async (req, res) => {
+    try {
+      if (!stripe) {
+        return res.status(503).json({ error: 'Stripe not configured' });
+      }
+
+      const orgId = req.session.orgId!;
+      const org = await storage.getOrg(orgId);
+      
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+
+      const { priceLookupKey } = req.body;
+      if (!priceLookupKey) {
+        return res.status(400).json({ error: 'priceLookupKey required' });
+      }
+
+      // Get or create Stripe customer
+      let customerId = org.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: org.billingEmail || undefined,
+          metadata: { org_id: orgId },
+        });
+        customerId = customer.id;
+        // Update org with customer ID (you'll need to add this to storage interface)
+      }
+
+      // Look up price by lookup key
+      const prices = await stripe.prices.list({
+        lookup_keys: [priceLookupKey],
+        expand: ['data.product'],
+      });
+
+      if (prices.data.length === 0) {
+        return res.status(404).json({ error: 'Price not found' });
+      }
+
+      const priceId = prices.data[0].id;
+      
+      // Determine success/cancel URLs
+      const baseUrl = process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'http://localhost:5000';
+      const successUrl = `${baseUrl}/admin/billing?success=1`;
+      const cancelUrl = `${baseUrl}/admin/billing?canceled=1`;
+
+      // Create checkout session
+      const session = await stripe.checkout.sessions.create({
+        mode: 'subscription',
+        customer: customerId,
+        line_items: [{ price: priceId, quantity: 1 }],
+        allow_promotion_codes: true,
+        subscription_data: {
+          trial_period_days: org.billingStatus === 'trialing' ? 14 : undefined,
+          metadata: { org_id: orgId },
+        },
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+      });
+
+      res.json({ url: session.url });
+    } catch (error) {
+      console.error('Checkout error:', error);
+      res.status(500).json({ error: 'Failed to create checkout session' });
+    }
+  });
+
+  // Billing API - Create Portal Session
+  app.post('/api/billing/portal', requireAuth, async (req, res) => {
+    try {
+      if (!stripe) {
+        return res.status(503).json({ error: 'Stripe not configured' });
+      }
+
+      const orgId = req.session.orgId!;
+      const org = await storage.getOrg(orgId);
+      
+      if (!org || !org.stripeCustomerId) {
+        return res.status(400).json({ error: 'No billing account found' });
+      }
+
+      const baseUrl = process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'http://localhost:5000';
+      const returnUrl = `${baseUrl}/admin/billing`;
+
+      const session = await stripe.billingPortal.sessions.create({
+        customer: org.stripeCustomerId,
+        return_url: returnUrl,
+      });
+
+      res.json({ url: session.url });
+    } catch (error) {
+      console.error('Portal error:', error);
+      res.status(500).json({ error: 'Failed to create portal session' });
+    }
+  });
+
+  // Keep legacy /api/billing/usage for backwards compatibility
   app.get('/api/billing/usage', requireAuth, async (req, res) => {
     try {
       const orgId = req.session.orgId!;
@@ -230,17 +449,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const plan = settings.plan || 'trial';
       const trialEndsAt = settings.trialEndsAt;
       
-      // Get eligible member count from org_usage (respects Audience settings)
       let detectedMembers = 0;
       if (slackTeam && slackTeam.accessToken) {
-        // Try to get cached eligible count from org_usage
         let usage = await storage.getOrgUsage(orgId);
         
-        // If no usage record exists, create one with initial count
         if (!usage) {
           let audience = await storage.getOrgAudience(orgId);
           if (!audience) {
-            // Create default audience settings
             audience = await storage.upsertOrgAudience({
               orgId,
               mode: 'workspace',
@@ -248,7 +463,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
           
-          // Compute initial count
           const { recomputeEligibleCount } = await import('./services/audience');
           const eligibleCount = await recomputeEligibleCount(slackTeam.accessToken, audience);
           usage = await storage.upsertOrgUsage({
@@ -260,32 +474,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         detectedMembers = usage.eligibleCount;
       }
       
-      // Determine seat cap based on plan
-      let seatCap = 0;
-      if (plan === 'trial') {
-        seatCap = 250; // Trial gets Pro features
-      } else if (plan === 'pro_250') {
-        seatCap = 250;
-      } else if (plan === 'scale_500') {
-        seatCap = 500;
-      } else if (plan === 'scale_1000') {
-        seatCap = 1000;
-      } else if (plan === 'scale_2500') {
-        seatCap = 2500;
-      } else if (plan === 'scale_5000') {
-        seatCap = 5000;
-      }
-      
-      // Calculate trial days left
+      const seatCap = org.seatCap || 250;
       let trialDaysLeft = null;
-      if (plan === 'trial' && trialEndsAt) {
+      if (org.trialEnd) {
         const now = new Date();
-        const endsAt = new Date(trialEndsAt);
-        const diff = endsAt.getTime() - now.getTime();
+        const diff = org.trialEnd.getTime() - now.getTime();
         trialDaysLeft = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
       }
       
-      // Calculate usage percentage
       const usagePercent = seatCap > 0 ? Math.round((detectedMembers / seatCap) * 100) : 0;
       
       res.json({
@@ -300,33 +496,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Billing usage error:', error);
       res.status(500).json({ error: 'Failed to fetch billing usage' });
-    }
-  });
-
-  app.get('/api/billing/subscription', requireAuth, async (req, res) => {
-    try {
-      const orgId = req.session.orgId!;
-      const org = await storage.getOrg(orgId);
-      
-      if (!org) {
-        return res.status(404).json({ error: 'Organization not found' });
-      }
-
-      const settings = org.settings as any || {};
-      const plan = settings.plan || 'trial';
-      const term = settings.term || 'monthly';
-      
-      // Mock Stripe data for now - will integrate real Stripe later
-      res.json({
-        plan,
-        term,
-        nextBillDate: null,
-        amount: null,
-        paymentMethod: null,
-      });
-    } catch (error) {
-      console.error('Billing subscription error:', error);
-      res.status(500).json({ error: 'Failed to fetch subscription' });
     }
   });
 
