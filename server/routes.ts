@@ -1244,7 +1244,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         adminUserId: moderatorId,
       });
       
-      res.json(updatedItem);
+      // Sanitize response to remove PII (slackUserId) for moderators
+      const sanitizedItem = updatedItem ? {
+        id: updatedItem.id,
+        threadId: updatedItem.threadId,
+        topicId: updatedItem.topicId,
+        orgId: updatedItem.orgId,
+        content: updatedItem.content,
+        behavior: updatedItem.behavior,
+        impact: updatedItem.impact,
+        situationCoarse: updatedItem.situationCoarse,
+        submitterHash: updatedItem.submitterHash,
+        createdAtDay: updatedItem.createdAtDay,
+        status: updatedItem.status,
+        moderationStatus: updatedItem.moderationStatus,
+        moderationNotes: updatedItem.moderationNotes,
+        moderatorId: updatedItem.moderatorId,
+        moderatedAt: updatedItem.moderatedAt,
+        createdAt: updatedItem.createdAt,
+        // Explicitly exclude slackUserId, contentCt, behaviorCt, impactCt, nonce, aadHash
+      } : null;
+      
+      res.json(sanitizedItem);
     } catch (error) {
       console.error('Moderate item error:', error);
       res.status(500).json({ error: 'Failed to moderate item' });
