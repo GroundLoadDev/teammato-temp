@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Check, X, Lightbulb } from "lucide-react";
+import { Check, X, Lightbulb, MessageSquare, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -77,13 +77,70 @@ export default function TopicSuggestions() {
       {isLoading ? (
         <p className="text-muted-foreground">Loading suggestions...</p>
       ) : !suggestions || suggestions.length === 0 ? (
-        <Card className="p-8 text-center" data-testid="card-no-suggestions">
-          <Lightbulb className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground mb-2">No topic suggestions yet</p>
-          <p className="text-sm text-muted-foreground">
-            Team members can suggest topics using the /teammato command in Slack
-          </p>
-        </Card>
+        <div className="space-y-4">
+          <Card className="p-8 text-center" data-testid="card-no-suggestions">
+            <Lightbulb className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No topic suggestions yet</h3>
+            <p className="text-muted-foreground mb-4">
+              Team members can suggest new feedback topics directly from Slack
+            </p>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Command className="w-5 h-5 text-primary" />
+                How to Suggest Topics via Slack
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-start gap-3 p-3 bg-muted rounded-lg">
+                  <MessageSquare className="w-5 h-5 text-muted-foreground mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold mb-1">Suggest a Topic</p>
+                    <code className="text-xs bg-background px-2 py-1 rounded">
+                      /teammato suggest "Your Topic Name"
+                    </code>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Submits a new topic suggestion for admin review
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3 p-3 bg-muted rounded-lg">
+                  <MessageSquare className="w-5 h-5 text-muted-foreground mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold mb-1">View Available Commands</p>
+                    <code className="text-xs bg-background px-2 py-1 rounded">
+                      /teammato help
+                    </code>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Shows all available Teammato commands
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-muted rounded-lg">
+                  <MessageSquare className="w-5 h-5 text-muted-foreground mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold mb-1">Submit Feedback</p>
+                    <code className="text-xs bg-background px-2 py-1 rounded">
+                      /teammato [topic-slug]
+                    </code>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Opens a form to submit anonymous feedback for a topic
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <p className="text-xs text-muted-foreground border-t pt-3">
+                <strong>Note:</strong> Suggestions appear here for admin approval. Once approved, they become active topics for feedback collection.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       ) : (
         <div className="space-y-8">
           {/* Pending Suggestions */}
