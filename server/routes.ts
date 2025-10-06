@@ -5,7 +5,7 @@ import crypto from "crypto";
 import { z } from "zod";
 import "./types"; // Load session type extensions
 import { filterAnonymousFeedback, generateSubmitterHash, coarsenSituation } from "./utils/contentFilter";
-import { sendContributionReceipt, postActionNotesToChannel } from "./utils/slackMessaging";
+import { sendContributionReceipt, postActionNotesToChannel, sendInstallerWelcomeDM } from "./utils/slackMessaging";
 import { buildFeedbackModal } from "./utils/slackModal";
 import { WebClient } from '@slack/web-api';
 import adminKeysRouter from "./routes/admin-keys";
@@ -1453,6 +1453,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Slack Events API - Handle events like app_uninstalled
+  app.post('/api/slack/events', async (req, res) => {
+    try {
+      const event = req.body;
+      
+      // Handle URL verification challenge
+      if (event.type === 'url_verification') {
+        return res.json({ challenge: event.challenge });
+      }
+      
+      // Acknowledge receipt immediately (Slack requires <3s response)
+      res.status(200).send();
+      
+      // Process event asynchronously
+      if (event.type === 'event_callback') {
+        const eventData = event.event;
+        
+        if (eventData.type === 'app_uninstalled') {
+          // Handle app uninstall
+          const teamId = event.team_id;
+          
+          try {
+            const slackTeam = await storage.getSlackTeamByTeamId(teamId);
+            if (slackTeam) {
+              // Mark org as disconnected by removing Slack team access token
+              await storage.updateSlackTeamToken(teamId, '');
+              console.log(`[Slack Events] App uninstalled from team ${teamId}, org ${slackTeam.orgId}`);
+            }
+          } catch (error) {
+            console.error('[Slack Events] Error handling app_uninstalled:', error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[Slack Events] Error processing event:', error);
+      // Still return 200 to avoid retries
+      res.status(200).send();
+    }
+  });
+
   // Slack Modal Submission - Handle feedback modal submissions
   app.post('/api/slack/modal', async (req, res) => {
     console.log('[MODAL] Received modal submission');
@@ -2205,6 +2245,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (error) {
         console.error('Failed to recompute eligible count on install:', error);
         // Don't block installation if recount fails
+      }
+
+      // Send welcome DM to installer
+      if (authed_user?.id) {
+        const dashboardUrl = `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/admin/get-started`;
+        sendInstallerWelcomeDM(access_token, authed_user.id, team.name, dashboardUrl).catch(err => {
+          console.error('Failed to send installer welcome DM:', err);
+        });
       }
 
       // Create session for the installer with session regeneration

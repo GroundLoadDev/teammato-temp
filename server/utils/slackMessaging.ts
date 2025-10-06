@@ -162,3 +162,66 @@ export async function postActionNotesToChannel(
     throw error; // Re-throw so caller knows it failed
   }
 }
+
+export async function sendInstallerWelcomeDM(
+  accessToken: string,
+  installerUserId: string,
+  teamName: string,
+  dashboardUrl: string
+): Promise<void> {
+  const client = new WebClient(accessToken);
+
+  const message = {
+    channel: installerUserId,
+    text: `🎉 Welcome to Teammato! Your workspace "${teamName}" is ready for anonymous feedback.`,
+    blocks: [
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `🎉 *Welcome to Teammato!*\n\nYour workspace *"${teamName}"* is now set up for anonymous feedback. Your team can now share honest feedback safely and anonymously.`
+        }
+      },
+      {
+        type: 'divider'
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: '*Next Steps:*\n\n1️⃣ *Configure Your Audience* - Choose who can submit feedback\n2️⃣ *Create Your First Topic* - Start collecting feedback\n3️⃣ *Invite Team Members* - Add admins and moderators\n\n🔒 *Privacy First:* All feedback is encrypted and released only when k-anonymity thresholds are met.'
+        }
+      },
+      {
+        type: 'actions',
+        elements: [
+          {
+            type: 'button',
+            text: {
+              type: 'plain_text',
+              text: 'Open Dashboard'
+            },
+            url: dashboardUrl,
+            style: 'primary'
+          }
+        ]
+      },
+      {
+        type: 'context',
+        elements: [
+          {
+            type: 'mrkdwn',
+            text: '💡 Need help? Visit your dashboard to get started or reach out to support.'
+          }
+        ]
+      }
+    ]
+  };
+
+  try {
+    await client.chat.postMessage(message);
+  } catch (error) {
+    console.error('Failed to send installer welcome DM:', error);
+    // Don't throw - we don't want to fail the installation if DM fails
+  }
+}
