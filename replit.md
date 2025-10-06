@@ -23,6 +23,7 @@ The frontend uses React, TypeScript, Vite, and Tailwind CSS, focusing on a clean
 - **User Management**: Slack-native invitation system, role management, and user removal.
 - **Security**: Session regeneration, CSRF protection, and robust org-scoping.
 - **Theming System**: CPU-based ML pipeline for zero-cost local processing of feedback embeddings (@xenova/transformers on ONNX runtime) using agglomerative hierarchical clustering, c-TF-IDF keywording, and template-based summarization. Access controlled by `enable_theming` flag and k-anonymity thresholds.
+- **Billing & Subscription**: Comprehensive Stripe integration with 7 pricing tiers (250 to 25k seats), monthly/annual billing options, seat-based capacity management linked to Audience settings, contextual banners for trial/grace/over-cap states, invoice history with download links, and deep integration with Stripe Checkout and Customer Portal. Database tracks customer IDs, subscription status, billing periods, seat caps, trial/cancel/grace timestamps, and billing email.
 
 #### System Design Choices
 - **Multi-tenancy**: Achieved through RLS using `current_org_id()` from JWT claims and per-org encryption.
