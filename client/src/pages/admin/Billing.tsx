@@ -1,244 +1,488 @@
-import { useQuery } from "@tanstack/react-query";
-import { Check, Zap, Building2, TrendingUp } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { Check, AlertTriangle, AlertCircle, CreditCard, Download, ExternalLink, Sparkles, Shield, TrendingUp, Users, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 
-interface BillingUsage {
-  detectedMembers: number;
+interface BillingStatus {
+  orgId: number;
+  status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'paused' | 'grace_period';
   seatCap: number;
-  plan: string;
-  trialDaysLeft: number | null;
-  usagePercent: number;
-  isOverCap: boolean;
-  isNearCap: boolean;
+  period: 'monthly' | 'annual';
+  price: number;
+  trialEnd: string | null;
+  cancelsAt: string | null;
+  graceEndsAt: string | null;
+  eligibleCount: number;
+  percent: number;
+  customerEmail: string | null;
+  invoices: Array<{
+    id: string;
+    number: string;
+    date: string;
+    amount: number;
+    status: string;
+    hostedInvoiceUrl: string | null;
+    pdfUrl: string | null;
+  }>;
+  audience: {
+    mode: 'workspace' | 'user_group' | 'channels';
+    eligibleCount: number;
+    lastSynced?: string;
+  };
+  prices: Array<{
+    cap: number;
+    monthly: number;
+    annual: number;
+    monthlyLookup: string;
+    annualLookup: string;
+  }>;
 }
-
-interface PlanFeature {
-  name: string;
-  included: boolean;
-}
-
-interface Plan {
-  id: string;
-  name: string;
-  price: string;
-  period: string;
-  description: string;
-  seatCap: number;
-  features: PlanFeature[];
-  highlight?: boolean;
-}
-
-const plans: Plan[] = [
-  {
-    id: 'trial',
-    name: 'Trial',
-    price: 'Free',
-    period: '14 days',
-    description: 'Test Teammato with your team',
-    seatCap: 50,
-    features: [
-      { name: 'Up to 50 members', included: true },
-      { name: 'Unlimited topics', included: true },
-      { name: 'K-anonymity protection', included: true },
-      { name: 'Daily digest', included: true },
-      { name: 'Basic analytics', included: true },
-      { name: 'Email support', included: false },
-      { name: 'DPA signing', included: false },
-    ],
-  },
-  {
-    id: 'pro_250',
-    name: 'Pro',
-    price: '$99',
-    period: '/month',
-    description: 'For growing teams',
-    seatCap: 250,
-    features: [
-      { name: 'Up to 250 members', included: true },
-      { name: 'Unlimited topics', included: true },
-      { name: 'K-anonymity protection', included: true },
-      { name: 'Daily digest', included: true },
-      { name: 'Advanced analytics', included: true },
-      { name: 'Email support', included: true },
-      { name: 'DPA signing', included: true },
-    ],
-    highlight: true,
-  },
-  {
-    id: 'scale_500',
-    name: 'Scale',
-    price: '$149',
-    period: '/month',
-    description: 'For larger organizations',
-    seatCap: 500,
-    features: [
-      { name: '500+ members (customizable)', included: true },
-      { name: 'Unlimited topics', included: true },
-      { name: 'K-anonymity protection', included: true },
-      { name: 'Daily digest', included: true },
-      { name: 'Enterprise analytics', included: true },
-      { name: 'Priority support', included: true },
-      { name: 'DPA signing', included: true },
-      { name: 'Custom integrations', included: true },
-    ],
-  },
-];
 
 export default function Billing() {
-  const { data: billingUsage, isLoading } = useQuery<BillingUsage>({
-    queryKey: ['/api/billing/usage'],
+  const { toast } = useToast();
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
+  const [selectedPlan, setSelectedPlan] = useState<number | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
+
+  const { data: billing, isLoading, refetch } = useQuery<BillingStatus>({
+    queryKey: ['/api/billing/status'],
   });
 
-  const currentPlan = plans.find(p => p.id === billingUsage?.plan) || plans[0];
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('success') === '1') {
+      setShowSuccessBanner(true);
+      refetch();
+      window.history.replaceState({}, '', '/admin/billing');
+    }
+  }, [refetch]);
+
+  const checkoutMutation = useMutation({
+    mutationFn: async (priceLookupKey: string) => {
+      const result = await apiRequest<{ url: string }>('/api/billing/checkout', {
+        method: 'POST',
+        body: JSON.stringify({ priceLookupKey }),
+      });
+      return result;
+    },
+    onSuccess: (data) => {
+      window.location.href = data.url;
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Checkout failed",
+        description: "Unable to start checkout. Please try again.",
+      });
+    },
+  });
+
+  const portalMutation = useMutation({
+    mutationFn: async () => {
+      const result = await apiRequest<{ url: string }>('/api/billing/portal', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      return result;
+    },
+    onSuccess: (data) => {
+      window.location.href = data.url;
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Portal access failed",
+        description: "Unable to open billing portal. Please try again.",
+      });
+    },
+  });
+
+  if (isLoading || !billing) {
+    return (
+      <div className="p-8">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-muted rounded w-1/3"></div>
+          <div className="h-32 bg-muted rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  const currentPlanData = billing.prices.find(p => p.cap === billing.seatCap);
+  const isTrialing = billing.status === 'trialing';
+  const isActive = billing.status === 'active';
+  const isGrace = billing.status === 'grace_period';
+  const isPastDue = billing.status === 'past_due';
+  const isCanceled = billing.status === 'canceled';
+  const isOverCap = billing.eligibleCount > billing.seatCap;
+  const isNearCap = billing.percent >= 90;
+
+  const trialDaysLeft = billing.trialEnd ? Math.max(0, Math.ceil((new Date(billing.trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0;
+  const graceDaysLeft = billing.graceEndsAt ? Math.max(0, Math.ceil((new Date(billing.graceEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0;
+
+  const handleSelectPlan = (cap: number) => {
+    setSelectedPlan(cap);
+    setShowUpgradeModal(true);
+  };
+
+  const handleConfirmUpgrade = () => {
+    if (!selectedPlan) return;
+    const plan = billing.prices.find(p => p.cap === selectedPlan);
+    if (!plan) return;
+    
+    const lookupKey = billingPeriod === 'monthly' ? plan.monthlyLookup : plan.annualLookup;
+    checkoutMutation.mutate(lookupKey);
+  };
+
+  const selectedPlanData = selectedPlan ? billing.prices.find(p => p.cap === selectedPlan) : null;
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-8 space-y-6">
       <div>
         <h1 className="text-3xl font-semibold mb-2" data-testid="text-billing-title">Billing & Plans</h1>
         <p className="text-muted-foreground">Manage your subscription and view usage</p>
       </div>
 
-      {/* Current Plan Card */}
-      {!isLoading && billingUsage && (
-        <Card data-testid="card-current-plan">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {currentPlan.id === 'trial' && <Zap className="w-5 h-5 text-yellow-500" />}
-              {currentPlan.id === 'pro_250' && <TrendingUp className="w-5 h-5 text-emerald-600" />}
-              {currentPlan.id.startsWith('scale_') && <Building2 className="w-5 h-5 text-blue-600" />}
-              Current Plan: {currentPlan.name}
-            </CardTitle>
-            <CardDescription>
-              {billingUsage.plan === 'trial' && billingUsage.trialDaysLeft !== null
-                ? `${billingUsage.trialDaysLeft} days remaining in trial`
-                : currentPlan.description}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      {/* Success Banner */}
+      {showSuccessBanner && (
+        <Alert className="bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900" data-testid="alert-success">
+          <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+          <AlertDescription className="text-emerald-800 dark:text-emerald-200">
+            Your subscription has been successfully updated!
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Trial Warning Banner */}
+      {isTrialing && trialDaysLeft <= 7 && (
+        <Alert className="bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900" data-testid="alert-trial-warning">
+          <Sparkles className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+          <AlertDescription className="text-yellow-800 dark:text-yellow-200">
+            Your trial ends in {trialDaysLeft} day{trialDaysLeft !== 1 ? 's' : ''}. Upgrade now to keep your feedback flowing.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Over-Cap Warning */}
+      {isOverCap && (
+        <Alert variant="destructive" data-testid="alert-over-cap">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            You've exceeded your seat cap ({billing.eligibleCount} of {billing.seatCap} seats used). 
+            {isGrace ? ` Grace period ends in ${graceDaysLeft} day${graceDaysLeft !== 1 ? 's' : ''}.` : ' Upgrade now to restore full access.'}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Near-Cap Warning */}
+      {isNearCap && !isOverCap && (
+        <Alert className="bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900" data-testid="alert-near-cap">
+          <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+          <AlertDescription className="text-yellow-800 dark:text-yellow-200">
+            Approaching your seat limit ({billing.eligibleCount} of {billing.seatCap} seats). Consider upgrading to avoid service interruption.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Past Due Warning */}
+      {isPastDue && (
+        <Alert variant="destructive" data-testid="alert-past-due">
+          <CreditCard className="h-4 w-4" />
+          <AlertDescription>
+            Payment required. Please update your payment method to continue service.
+            <Button 
+              variant="link" 
+              className="p-0 h-auto ml-2 text-destructive hover:text-destructive/80"
+              onClick={() => portalMutation.mutate()}
+              data-testid="button-update-payment"
+            >
+              Update Payment
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Canceled Warning */}
+      {isCanceled && billing.cancelsAt && (
+        <Alert className="bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900" data-testid="alert-canceled">
+          <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+          <AlertDescription className="text-orange-800 dark:text-orange-200">
+            Your subscription will end on {new Date(billing.cancelsAt).toLocaleDateString()}. Reactivate to continue service.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Current Plan & Usage */}
+      <Card data-testid="card-current-plan">
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Workspace Members</span>
-                <span className="text-sm text-muted-foreground">
-                  {billingUsage.detectedMembers} / {billingUsage.seatCap}
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="w-5 h-5 text-primary" />
+                Current Plan: {billing.seatCap.toLocaleString()} Seats
+              </CardTitle>
+              <CardDescription>
+                {isTrialing ? `Trial • ${trialDaysLeft} days remaining` : 
+                 isActive ? `Active • ${billing.period === 'monthly' ? 'Monthly' : 'Annual'} billing` :
+                 billing.status.replace('_', ' ')}
+              </CardDescription>
+            </div>
+            {isActive && (
+              <Button 
+                variant="outline" 
+                onClick={() => portalMutation.mutate()}
+                data-testid="button-manage-billing"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Manage Billing
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">Eligible Members</span>
+              <span className="text-sm text-muted-foreground">
+                {billing.eligibleCount.toLocaleString()} / {billing.seatCap.toLocaleString()}
+              </span>
+            </div>
+            <Progress 
+              value={Math.min(billing.percent, 100)} 
+              className="h-2" 
+              data-testid="progress-usage" 
+            />
+            <div className="mt-2 flex items-center justify-between">
+              <Link href="/admin/audience">
+                <Button variant="link" className="p-0 h-auto text-xs" data-testid="link-audience-settings">
+                  Based on Audience settings ({billing.audience.mode})
+                </Button>
+              </Link>
+              {billing.audience.lastSynced && (
+                <span className="text-xs text-muted-foreground">
+                  Updated {new Date(billing.audience.lastSynced).toLocaleTimeString()}
                 </span>
-              </div>
-              <Progress value={billingUsage.usagePercent} className="h-2" data-testid="progress-usage" />
-              {billingUsage.isOverCap && (
-                <p className="text-sm text-destructive mt-2">
-                  You've exceeded your seat limit. Upgrade to continue using Teammato.
-                </p>
-              )}
-              {billingUsage.isNearCap && !billingUsage.isOverCap && (
-                <p className="text-sm text-yellow-700 dark:text-yellow-500 mt-2">
-                  Approaching seat limit. Consider upgrading soon.
-                </p>
               )}
             </div>
-            
-            {billingUsage.plan === 'trial' && (
-              <div className="flex gap-2">
-                <Button data-testid="button-upgrade-to-pro">
-                  Upgrade to Pro
-                </Button>
-                <Button variant="outline" data-testid="button-explore-scale">
-                  Explore Scale
-                </Button>
-              </div>
-            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Plan Selection */}
+      <div>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-semibold">Available Plans</h2>
+          <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
+            <Button
+              variant={billingPeriod === 'monthly' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setBillingPeriod('monthly')}
+              data-testid="button-monthly"
+            >
+              Monthly
+            </Button>
+            <Button
+              variant={billingPeriod === 'annual' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setBillingPeriod('annual')}
+              data-testid="button-annual"
+            >
+              Annual
+              <Badge variant="secondary" className="ml-2">Save 17%</Badge>
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-4">
+          {billing.prices.map((plan) => {
+            const price = billingPeriod === 'monthly' ? plan.monthly : plan.annual;
+            const perMonth = billingPeriod === 'annual' ? Math.round(plan.annual / 12) : plan.monthly;
+            const isCurrentPlan = plan.cap === billing.seatCap && billing.period === billingPeriod;
+            const isPopular = plan.cap === 500;
+
+            return (
+              <Card 
+                key={plan.cap}
+                className={isPopular ? 'border-primary shadow-lg' : ''}
+                data-testid={`card-plan-${plan.cap}`}
+              >
+                <CardHeader className="pb-4">
+                  {isPopular && (
+                    <Badge className="w-fit mb-2" data-testid="badge-popular">Popular</Badge>
+                  )}
+                  <CardTitle className="text-lg">{plan.cap.toLocaleString()} Seats</CardTitle>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-bold">${price.toLocaleString()}</span>
+                    <span className="text-muted-foreground text-sm">/{billingPeriod === 'monthly' ? 'mo' : 'yr'}</span>
+                  </div>
+                  {billingPeriod === 'annual' && (
+                    <p className="text-xs text-muted-foreground">${perMonth}/mo billed annually</p>
+                  )}
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <ul className="space-y-2 mb-4 text-sm">
+                    <li className="flex items-start gap-2">
+                      <Users className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
+                      <span>Up to {plan.cap.toLocaleString()} members</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <TrendingUp className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
+                      <span>Unlimited feedback topics</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Shield className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
+                      <span>K-anonymity protection</span>
+                    </li>
+                  </ul>
+                  {isCurrentPlan ? (
+                    <Button variant="outline" className="w-full" disabled data-testid={`button-current-${plan.cap}`}>
+                      Current Plan
+                    </Button>
+                  ) : (
+                    <Button 
+                      variant={isPopular ? 'default' : 'outline'}
+                      className="w-full"
+                      onClick={() => handleSelectPlan(plan.cap)}
+                      data-testid={`button-select-${plan.cap}`}
+                    >
+                      {plan.cap > billing.seatCap ? 'Upgrade' : 'Switch Plan'}
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Invoice History */}
+      {billing.invoices.length > 0 && (
+        <Card data-testid="card-billing-history">
+          <CardHeader>
+            <CardTitle>Invoice History</CardTitle>
+            <CardDescription>View and download past invoices</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Invoice</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {billing.invoices.map((invoice) => (
+                  <TableRow key={invoice.id} data-testid={`row-invoice-${invoice.id}`}>
+                    <TableCell className="font-medium">{invoice.number}</TableCell>
+                    <TableCell>{new Date(invoice.date).toLocaleDateString()}</TableCell>
+                    <TableCell>${(invoice.amount / 100).toFixed(2)}</TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant={invoice.status === 'paid' ? 'default' : 'secondary'}
+                        data-testid={`badge-status-${invoice.id}`}
+                      >
+                        {invoice.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {invoice.pdfUrl && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          asChild
+                          data-testid={`button-download-${invoice.id}`}
+                        >
+                          <a href={invoice.pdfUrl} target="_blank" rel="noopener noreferrer">
+                            <Download className="w-4 h-4" />
+                          </a>
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       )}
 
-      {/* Plan Comparison */}
-      <div>
-        <h2 className="text-2xl font-semibold mb-4">Available Plans</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {plans.map((plan) => (
-            <Card 
-              key={plan.id}
-              className={plan.highlight ? 'border-emerald-600 shadow-lg' : ''}
-              data-testid={`card-plan-${plan.id}`}
-            >
-              <CardHeader>
-                {plan.highlight && (
-                  <Badge className="w-fit mb-2" data-testid="badge-popular">Most Popular</Badge>
-                )}
-                <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-bold">{plan.price}</span>
-                  <span className="text-muted-foreground">{plan.period}</span>
-                </div>
-                <CardDescription>{plan.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3 mb-6">
-                  {plan.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-sm">
-                      <Check className={`w-4 h-4 mt-0.5 flex-shrink-0 ${feature.included ? 'text-emerald-600' : 'text-muted-foreground opacity-30'}`} />
-                      <span className={feature.included ? '' : 'text-muted-foreground line-through'}>
-                        {feature.name}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                {billingUsage?.plan === plan.id ? (
-                  <Button variant="outline" className="w-full" disabled>
-                    Current Plan
-                  </Button>
-                ) : (
-                  <Button 
-                    variant={plan.highlight ? 'default' : 'outline'}
-                    className="w-full"
-                    data-testid={`button-select-${plan.id}`}
-                  >
-                    {billingUsage?.plan === 'trial' ? 'Upgrade' : 'Switch Plan'}
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      {/* Billing History Placeholder */}
-      <Card data-testid="card-billing-history">
-        <CardHeader>
-          <CardTitle>Billing History</CardTitle>
-          <CardDescription>View and download past invoices</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <p className="text-muted-foreground text-sm">
-              {billingUsage?.plan === 'trial' 
-                ? 'No billing history yet. Upgrade to a paid plan to see invoices here.' 
-                : 'No invoices yet. Your billing history will appear here.'}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Contact for Enterprise */}
-      <Card className="bg-gradient-to-r from-emerald-50 to-background dark:from-emerald-950/20">
+      {/* Enterprise CTA */}
+      <Card className="bg-gradient-to-r from-primary/5 to-background">
         <CardContent className="p-6">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
-              <h3 className="font-semibold text-lg mb-1">Need more than 5,000 seats?</h3>
+              <h3 className="font-semibold text-lg mb-1">Need more than 25,000 seats?</h3>
               <p className="text-sm text-muted-foreground">
                 Contact us for custom Enterprise pricing and dedicated support.
               </p>
             </div>
-            <Link href="/contact">
-              <Button variant="outline" data-testid="button-contact-sales">
-                Contact Sales
-              </Button>
-            </Link>
+            <Button variant="outline" data-testid="button-contact-sales">
+              Contact Sales
+            </Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Upgrade Confirmation Modal */}
+      <Dialog open={showUpgradeModal} onOpenChange={setShowUpgradeModal}>
+        <DialogContent data-testid="dialog-upgrade">
+          <DialogHeader>
+            <DialogTitle>Confirm Plan Change</DialogTitle>
+            <DialogDescription>
+              You're about to {selectedPlan && selectedPlan > billing.seatCap ? 'upgrade' : 'change'} to the {selectedPlanData?.cap.toLocaleString()} seat plan.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedPlanData && (
+            <div className="space-y-4">
+              <div className="bg-muted p-4 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium">New Plan</span>
+                  <span className="text-2xl font-bold">
+                    ${(billingPeriod === 'monthly' ? selectedPlanData.monthly : selectedPlanData.annual).toLocaleString()}
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {billingPeriod === 'monthly' ? 'Billed monthly' : `$${Math.round(selectedPlanData.annual / 12)}/mo billed annually`}
+                </p>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                <p>• Up to {selectedPlanData.cap.toLocaleString()} eligible members</p>
+                <p>• Unlimited feedback topics</p>
+                <p>• Full k-anonymity protection</p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowUpgradeModal(false)}
+              data-testid="button-cancel-upgrade"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleConfirmUpgrade}
+              disabled={checkoutMutation.isPending}
+              data-testid="button-confirm-upgrade"
+            >
+              {checkoutMutation.isPending ? 'Processing...' : 'Continue to Checkout'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
