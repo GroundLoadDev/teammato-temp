@@ -1088,9 +1088,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const items = await storage.getFeedbackItemsByThread(thread.id);
       
+      // Sanitize items to remove PII (slackUserId) for moderators
+      const sanitizedItems = items.map(item => ({
+        id: item.id,
+        threadId: item.threadId,
+        topicId: item.topicId,
+        orgId: item.orgId,
+        content: item.content,
+        behavior: item.behavior,
+        impact: item.impact,
+        situationCoarse: item.situationCoarse,
+        submitterHash: item.submitterHash,
+        createdAtDay: item.createdAtDay,
+        status: item.status,
+        moderationStatus: item.moderationStatus,
+        moderationNotes: item.moderationNotes,
+        moderatorId: item.moderatorId,
+        moderatedAt: item.moderatedAt,
+        createdAt: item.createdAt,
+        // Explicitly exclude slackUserId, contentCt, behaviorCt, impactCt, nonce, aadHash
+      }));
+      
       res.json({
         ...thread,
-        items,
+        items: sanitizedItems,
       });
     } catch (error) {
       console.error('Get thread error:', error);
