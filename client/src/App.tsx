@@ -87,6 +87,17 @@ function Router() {
 }
 
 function AdminLayout({ children }: { children: React.ReactNode }) {
+  const [, navigate] = useLocation();
+  
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      navigate('/');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full">
@@ -95,6 +106,20 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
           <header className="flex h-14 items-center gap-4 border-b px-6">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <div className="flex-1" />
+            <a 
+              href="/" 
+              className="text-sm text-muted-foreground hover:text-foreground"
+              data-testid="link-homepage"
+            >
+              Homepage
+            </a>
+            <button
+              onClick={handleLogout}
+              className="text-sm text-muted-foreground hover:text-foreground"
+              data-testid="button-logout"
+            >
+              Logout
+            </button>
           </header>
           <main className="flex-1 overflow-auto">
             {children}
