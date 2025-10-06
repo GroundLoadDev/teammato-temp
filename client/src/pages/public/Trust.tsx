@@ -37,7 +37,7 @@ function TrustHero() {
         </div>
 
         <div className="mt-6 flex flex-wrap gap-3">
-          <a href="/Teammato_DPA.pdf" download className="rounded-xl border px-4 py-2 text-sm hover:bg-muted" data-testid="link-dpa">Download DPA</a>
+          <a href="/dpa" className="rounded-xl border px-4 py-2 text-sm hover:bg-muted" data-testid="link-dpa">View DPA</a>
         </div>
       </div>
     </section>

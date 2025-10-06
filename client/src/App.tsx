@@ -16,6 +16,7 @@ import Contact from "@/pages/public/Contact";
 import Privacy from "@/pages/public/Privacy";
 import Trust from "@/pages/public/Trust";
 import Terms from "@/pages/public/Terms";
+import DPA from "@/pages/public/DPA";
 import HowItWorks from "@/pages/public/HowItWorks";
 import Status from "@/pages/public/Status";
 import Sample from "@/pages/Sample";
@@ -55,6 +56,7 @@ function Router() {
       <Route path="/privacy" component={Privacy} />
       <Route path="/trust" component={Trust} />
       <Route path="/terms" component={Terms} />
+      <Route path="/dpa" component={DPA} />
       <Route path="/how-it-works" component={HowItWorks} />
       <Route path="/status" component={Status} />
       <Route path="/sample" component={Sample} />
