@@ -6,6 +6,15 @@ Teammato is an enterprise-grade, Slack-first SaaS platform designed for anonymou
 ### User Preferences
 I prefer iterative development and clear, concise explanations. Ask before making major changes to the architecture or core functionalities. Ensure all new features align with the privacy-first principle.
 
+### Recent Changes (October 2025)
+
+#### KSAFE-280: K-Safe Export Implementation (Completed)
+- **Database Views**: Created `v_threads` and `v_comments` views that calculate `renderState` field based on `participantCount` vs k-threshold
+- **Storage Methods**: Implemented k-safe storage methods (`getKSafeThreads()`, `getKSafeComments()`, `getKSafeCommentsByThread()`) that enforce k-anonymity at database query level
+- **Export Hardening**: Updated all three export routes (threads, comments, audit logs) to use k-safe methods with belt-and-suspenders protection (view-based + filter-based)
+- **Content Updates**: Enhanced Trust & Security, FAQ, Compliance, and Features pages to reflect robust database-level k-safe export architecture
+- **How It Works Page Redesign**: Expanded human/tech toggle from hero section to ALL sections (StorySteps, FlowRail, PrivacyPoster, UnderTheHood, NotWhatWeDo) with comprehensive technical details about k-safe exports in both modes
+
 ### System Architecture
 
 #### UI/UX Decisions
