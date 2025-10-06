@@ -15,7 +15,7 @@ const nav = {
   resources: [
     { label: "Docs", href: "/docs" },
     { label: "Trust & Security", href: "/trust" },
-    { label: "Status", href: "https://status.teammato.com" },
+    { label: "Status", href: "/status" },
   ],
   legal: [
     { label: "Privacy", href: "/privacy" },
