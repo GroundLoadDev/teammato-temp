@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, AlertCircle, Activity, Database, Zap, MessageSquare, Sparkles, Shield, CreditCard } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CheckCircle2, AlertCircle, Activity, Database, Zap, MessageSquare, Sparkles, Shield, CreditCard, ArrowLeft } from "lucide-react";
 
 interface ComponentStatus {
   name: string;
@@ -103,14 +104,27 @@ export default function Status() {
       {/* Header */}
       <div className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="mx-auto max-w-5xl px-6 py-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div>
               <a href="/" className="text-2xl font-semibold text-foreground hover:text-emerald-600 transition-colors">
                 Teammato
               </a>
               <p className="text-sm text-muted-foreground mt-1">System Status</p>
             </div>
-            {getStatusBadge(overallStatus)}
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                asChild 
+                size="sm"
+                data-testid="button-return-to-site"
+              >
+                <a href="/">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Return to Site
+                </a>
+              </Button>
+              {getStatusBadge(overallStatus)}
+            </div>
           </div>
         </div>
       </div>
