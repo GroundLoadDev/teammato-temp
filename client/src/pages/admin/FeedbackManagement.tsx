@@ -77,12 +77,12 @@ export default function FeedbackManagement() {
   });
 
   const { data: threadDetails, isLoading: detailsLoading } = useQuery<ThreadWithItems>({
-    queryKey: [`/api/feedback/threads/${selectedThreadId}`, selectedThreadId],
+    queryKey: ['/api/feedback/threads', selectedThreadId],
     enabled: !!selectedThreadId,
   });
 
   const { data: auditTrail } = useQuery<ModerationAuditEntry[]>({
-    queryKey: [`/api/moderation/audit/thread/${selectedThreadId}`, 'thread', selectedThreadId],
+    queryKey: ['/api/moderation/audit/thread', selectedThreadId],
     enabled: !!selectedThreadId && auditDialogOpen,
   });
 
@@ -100,7 +100,7 @@ export default function FeedbackManagement() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/feedback/threads/${selectedThreadId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/feedback/threads', selectedThreadId] });
       queryClient.invalidateQueries({ queryKey: ['/api/feedback/threads'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       setModerationDialogOpen(false);
@@ -130,7 +130,7 @@ export default function FeedbackManagement() {
       return apiRequest('POST', `/api/moderation/items/${itemId}`, { moderationStatus, reason });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/feedback/threads/${selectedThreadId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/feedback/threads', selectedThreadId] });
       queryClient.invalidateQueries({ queryKey: ['/api/feedback/threads'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       toast({
