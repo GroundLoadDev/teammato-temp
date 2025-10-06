@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import {
@@ -238,12 +239,37 @@ export default function FeedbackManagement() {
                     <h3 className="font-semibold truncate" data-testid={`text-thread-title-${thread.id}`}>
                       {thread.title}
                     </h3>
-                    <Badge variant={getStatusVariant(thread.status)} data-testid={`badge-status-${thread.id}`}>
-                      {thread.status}
-                    </Badge>
-                    <Badge variant={getModerationStatusVariant(thread.moderationStatus)} data-testid={`badge-moderation-${thread.id}`}>
-                      {thread.moderationStatus}
-                    </Badge>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge variant={getStatusVariant(thread.status)} data-testid={`badge-status-${thread.id}`}>
+                          {thread.status}
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-sm">
+                          {thread.status === 'ready' 
+                            ? 'K-anonymity threshold met. Feedback is visible and ready for review.' 
+                            : `Collecting feedback. ${thread.kThreshold - thread.participantCount} more participant(s) needed.`}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge variant={getModerationStatusVariant(thread.moderationStatus)} data-testid={`badge-moderation-${thread.id}`}>
+                          {thread.moderationStatus}
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-sm">
+                          {thread.moderationStatus === 'approved' && 'This thread has been approved and is publicly visible'}
+                          {thread.moderationStatus === 'auto_approved' && 'Automatically approved based on content filtering'}
+                          {thread.moderationStatus === 'pending_review' && 'Awaiting moderator review before publication'}
+                          {thread.moderationStatus === 'flagged' && 'Flagged for review due to potential policy violations'}
+                          {thread.moderationStatus === 'hidden' && 'Hidden from public view by moderator'}
+                          {thread.moderationStatus === 'archived' && 'Archived and no longer actively reviewed'}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <span data-testid={`text-participants-${thread.id}`}>
