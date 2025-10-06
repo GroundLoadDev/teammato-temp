@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ThemeCard, ThemeCardProps } from "@/components/ThemeCard";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Sparkles, Calendar, RefreshCw } from "lucide-react";
+import { Sparkles, Calendar, RefreshCw, AlertCircle, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type PeriodType = 'week' | 'month';
@@ -55,10 +56,29 @@ export default function Themes() {
         refetch();
       }, 5000);
     },
-    onError: () => {
+    onError: (error: any) => {
+      const errorMessage = error?.message || '';
+      
+      let title = "Generation failed";
+      let description = "Unable to generate themes. Please try again.";
+      
+      if (errorMessage.includes('k-anonymity') || errorMessage.includes('threshold')) {
+        title = "Not enough participants";
+        description = "Theme generation requires meeting k-anonymity thresholds. Wait for more feedback submissions.";
+      } else if (errorMessage.includes('no feedback') || errorMessage.includes('insufficient data')) {
+        title = "Insufficient feedback data";
+        description = "No feedback found for this period. Try selecting a different time range or wait for more submissions.";
+      } else if (errorMessage.includes('disabled') || errorMessage.includes('feature')) {
+        title = "Feature not enabled";
+        description = "Theme generation is not enabled for your organization. Contact your administrator.";
+      } else if (errorMessage.includes('processing') || errorMessage.includes('timeout')) {
+        title = "Processing timeout";
+        description = "Theme generation took too long. Try a shorter time period or fewer data points.";
+      }
+      
       toast({
-        title: "Generation failed",
-        description: "Unable to generate themes. Please try again.",
+        title,
+        description,
         variant: "destructive",
       });
     },
