@@ -75,11 +75,30 @@ export default function Billing() {
     onSuccess: (data) => {
       window.location.href = data.url;
     },
-    onError: () => {
+    onError: (error: any) => {
+      const errorMessage = error?.message || '';
+      
+      let title = "Checkout failed";
+      let description = "Unable to start checkout. Please try again.";
+      
+      if (errorMessage.includes('Stripe') || errorMessage.includes('payment')) {
+        title = "Payment service error";
+        description = "There was an issue connecting to the payment service. Please try again in a few moments.";
+      } else if (errorMessage.includes('session') || errorMessage.includes('expired')) {
+        title = "Session expired";
+        description = "Your session has expired. Please refresh the page and try again.";
+      } else if (errorMessage.includes('plan') || errorMessage.includes('price')) {
+        title = "Plan unavailable";
+        description = "The selected plan is currently unavailable. Please contact support.";
+      } else if (errorMessage.includes('subscription') || errorMessage.includes('already')) {
+        title = "Existing subscription";
+        description = "You already have an active subscription. Use the billing portal to make changes.";
+      }
+      
       toast({
         variant: "destructive",
-        title: "Checkout failed",
-        description: "Unable to start checkout. Please try again.",
+        title,
+        description,
       });
     },
   });
@@ -92,11 +111,27 @@ export default function Billing() {
     onSuccess: (data) => {
       window.location.href = data.url;
     },
-    onError: () => {
+    onError: (error: any) => {
+      const errorMessage = error?.message || '';
+      
+      let title = "Portal access failed";
+      let description = "Unable to open billing portal. Please try again.";
+      
+      if (errorMessage.includes('customer') || errorMessage.includes('not found')) {
+        title = "No billing account";
+        description = "No billing account found. Please subscribe to a plan first.";
+      } else if (errorMessage.includes('Stripe') || errorMessage.includes('service')) {
+        title = "Service unavailable";
+        description = "The billing portal is temporarily unavailable. Please try again shortly.";
+      } else if (errorMessage.includes('session') || errorMessage.includes('expired')) {
+        title = "Session expired";
+        description = "Your session has expired. Please refresh the page and try again.";
+      }
+      
       toast({
         variant: "destructive",
-        title: "Portal access failed",
-        description: "Unable to open billing portal. Please try again.",
+        title,
+        description,
       });
     },
   });
