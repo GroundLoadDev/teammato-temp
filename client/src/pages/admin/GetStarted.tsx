@@ -682,6 +682,23 @@ export default function GetStarted() {
                 <li>Create your first topic to organize feedback campaigns</li>
                 <li>Configure the daily digest to stay updated on new feedback</li>
               </ul>
+              
+              <div className="pt-3 mt-3 border-t space-y-1.5 text-xs" data-testid="section-trust-bullets-welcome">
+                <p className="font-medium text-foreground mb-2">Privacy Guarantees:</p>
+                <div className="flex items-start gap-2 text-muted-foreground">
+                  <span className="text-emerald-600 shrink-0">✓</span>
+                  <span><strong>K-anonymity enforced:</strong> Feedback needs 5+ participants before visibility</span>
+                </div>
+                <div className="flex items-start gap-2 text-muted-foreground">
+                  <span className="text-emerald-600 shrink-0">✓</span>
+                  <span><strong>End-to-end encrypted:</strong> Per-org encryption with isolated data</span>
+                </div>
+                <div className="flex items-start gap-2 text-muted-foreground">
+                  <span className="text-emerald-600 shrink-0">✓</span>
+                  <span><strong>Anti-retaliation protection:</strong> Built into platform design</span>
+                </div>
+              </div>
+              
               <p className="text-xs text-muted-foreground pt-2">
                 Follow the checklist above to complete your setup.
               </p>

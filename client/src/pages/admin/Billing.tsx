@@ -513,6 +513,22 @@ export default function Billing() {
                 <p>• Unlimited feedback topics</p>
                 <p>• Full k-anonymity protection</p>
               </div>
+              
+              <div className="pt-4 mt-4 border-t space-y-1.5 text-xs text-muted-foreground" data-testid="section-trust-bullets-upgrade">
+                <p className="font-medium text-foreground mb-2">Privacy Guarantees:</p>
+                <div className="flex items-start gap-2">
+                  <span className="text-emerald-600 shrink-0">✓</span>
+                  <span>K-anonymity: 5+ participants required before visibility</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-emerald-600 shrink-0">✓</span>
+                  <span>Per-org encryption with isolated data</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-emerald-600 shrink-0">✓</span>
+                  <span>Anti-retaliation protection built-in</span>
+                </div>
+              </div>
             </div>
           )}
           <DialogFooter>

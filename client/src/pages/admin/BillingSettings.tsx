@@ -13,10 +13,26 @@ export default function BillingSettings() {
       <div className="max-w-2xl space-y-6">
         <div className="p-6 rounded-md border bg-card">
           <div className="flex items-start justify-between mb-4">
-            <div>
+            <div className="flex-1">
               <h3 className="font-semibold mb-1">Current Plan</h3>
               <Badge className="mb-2" data-testid="badge-plan">Trial</Badge>
               <p className="text-sm text-muted-foreground">11 days remaining</p>
+              
+              <div className="mt-4 pt-4 border-t space-y-1.5 text-xs text-muted-foreground" data-testid="section-trust-bullets-billing">
+                <p className="font-medium text-foreground mb-2">Privacy Guarantees:</p>
+                <div className="flex items-start gap-2">
+                  <span className="text-emerald-600 shrink-0">✓</span>
+                  <span>K-anonymity: 5+ participants required before visibility</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-emerald-600 shrink-0">✓</span>
+                  <span>Per-org encryption with isolated data</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-emerald-600 shrink-0">✓</span>
+                  <span>Anti-retaliation protection built-in</span>
+                </div>
+              </div>
             </div>
             <Button data-testid="button-upgrade">Upgrade to Pro</Button>
           </div>

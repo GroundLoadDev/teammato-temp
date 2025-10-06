@@ -174,6 +174,20 @@ function SeatSizer({
             <p className="mt-3 text-xs text-muted-foreground" data-testid="text-trial-info">
               Trial is 14 days. After that, your workspace becomes read-only until you upgrade.
             </p>
+            <div className="mt-4 space-y-1.5 text-xs text-muted-foreground" data-testid="section-trust-bullets">
+              <div className="flex items-start gap-2">
+                <span className="text-emerald-600 shrink-0">✓</span>
+                <span>K-anonymity enforced: 5+ participants required before visibility</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-emerald-600 shrink-0">✓</span>
+                <span>End-to-end encrypted per-org with isolated data</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-emerald-600 shrink-0">✓</span>
+                <span>Anti-retaliation policy protection built-in</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -239,6 +253,20 @@ function PlansChooser({ term }: { term: Term }) {
           >
             Choose Pro
           </a>
+          <div className="mt-4 pt-4 border-t space-y-1.5 text-xs text-muted-foreground" data-testid="section-trust-bullets-pro">
+            <div className="flex items-start gap-1.5">
+              <span className="text-emerald-600 shrink-0 text-xs">✓</span>
+              <span>K-anonymity: 5+ required</span>
+            </div>
+            <div className="flex items-start gap-1.5">
+              <span className="text-emerald-600 shrink-0 text-xs">✓</span>
+              <span>Per-org encryption</span>
+            </div>
+            <div className="flex items-start gap-1.5">
+              <span className="text-emerald-600 shrink-0 text-xs">✓</span>
+              <span>Anti-retaliation protection</span>
+            </div>
+          </div>
         </article>
 
         {/* SCALE with band rail */}
@@ -304,6 +332,20 @@ function PlansChooser({ term }: { term: Term }) {
             Choose Scale
           </a>
           <p className="mt-2 text-xs text-muted-foreground">Change size anytime in the Billing Portal.</p>
+          <div className="mt-4 pt-4 border-t space-y-1.5 text-xs text-muted-foreground" data-testid="section-trust-bullets-scale">
+            <div className="flex items-start gap-1.5">
+              <span className="text-emerald-600 shrink-0 text-xs">✓</span>
+              <span>K-anonymity: 5+ required</span>
+            </div>
+            <div className="flex items-start gap-1.5">
+              <span className="text-emerald-600 shrink-0 text-xs">✓</span>
+              <span>Per-org encryption</span>
+            </div>
+            <div className="flex items-start gap-1.5">
+              <span className="text-emerald-600 shrink-0 text-xs">✓</span>
+              <span>Anti-retaliation protection</span>
+            </div>
+          </div>
         </article>
       </div>
 
