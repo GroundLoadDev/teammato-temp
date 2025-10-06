@@ -17,6 +17,7 @@ import Privacy from "@/pages/public/Privacy";
 import Trust from "@/pages/public/Trust";
 import Terms from "@/pages/public/Terms";
 import HowItWorks from "@/pages/public/HowItWorks";
+import Status from "@/pages/public/Status";
 import Sample from "@/pages/Sample";
 
 // Auth pages
@@ -55,6 +56,7 @@ function Router() {
       <Route path="/trust" component={Trust} />
       <Route path="/terms" component={Terms} />
       <Route path="/how-it-works" component={HowItWorks} />
+      <Route path="/status" component={Status} />
       <Route path="/sample" component={Sample} />
 
       {/* Auth pages */}
