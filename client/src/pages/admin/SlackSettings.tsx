@@ -3,9 +3,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Slack, AlertCircle } from "lucide-react";
+import { Slack, AlertCircle, Bell, BellOff, CheckCircle2 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -123,15 +124,43 @@ export default function SlackSettings() {
             </Card>
 
             <Card className="p-6">
-              <h3 className="font-semibold mb-4">Notification Settings</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold">Notification Settings</h3>
+                {digestEnabled ? (
+                  <Badge variant="default" className="flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" />
+                    Active
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    <BellOff className="w-3 h-3" />
+                    Inactive
+                  </Badge>
+                )}
+              </div>
               
               <div className="space-y-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <Label htmlFor="digest-enabled" className="text-base">Daily Digest</Label>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Send a daily summary of new feedback to a Slack channel
-                    </p>
+                <div className={`flex items-start justify-between gap-4 p-4 rounded-lg border-2 transition-colors ${
+                  digestEnabled 
+                    ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900' 
+                    : 'bg-muted/50 border-muted'
+                }`}>
+                  <div className="flex items-start gap-3 flex-1">
+                    {digestEnabled ? (
+                      <Bell className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mt-0.5" />
+                    ) : (
+                      <BellOff className="w-5 h-5 text-muted-foreground mt-0.5" />
+                    )}
+                    <div className="flex-1">
+                      <Label htmlFor="digest-enabled" className={`text-base cursor-pointer ${digestEnabled ? 'text-emerald-900 dark:text-emerald-100' : ''}`}>
+                        Daily Digest
+                      </Label>
+                      <p className={`text-sm mt-1 ${digestEnabled ? 'text-emerald-800 dark:text-emerald-200' : 'text-muted-foreground'}`}>
+                        {digestEnabled 
+                          ? 'Daily summaries are being sent to your configured channel'
+                          : 'Send a daily summary of new feedback to a Slack channel'}
+                      </p>
+                    </div>
                   </div>
                   <Switch 
                     id="digest-enabled"
