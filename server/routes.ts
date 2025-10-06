@@ -625,7 +625,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/export/threads', requireRole('owner', 'admin'), async (req, res) => {
     try {
       const orgId = req.session.orgId!;
-      const threads = await storage.getFeedbackThreads(orgId);
+      // Use k-safe method that only returns threads meeting k-anonymity threshold
+      const threads = await storage.getKSafeThreads(orgId);
       
       const exportData = threads.map((thread: any) => ({
         id: thread.id,
@@ -633,6 +634,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: thread.status,
         createdAt: thread.createdAt,
         participantCount: thread.participantCount || 0,
+        renderState: thread.renderState, // Include render_state for transparency
       }));
       
       res.json({ data: JSON.stringify(exportData, null, 2) });
@@ -645,22 +647,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/export/comments', requireRole('owner', 'admin'), async (req, res) => {
     try {
       const orgId = req.session.orgId!;
-      const threads = await storage.getFeedbackThreads(orgId);
+      // Use k-safe method that only returns comments from threads meeting k-anonymity threshold
+      const comments = await storage.getKSafeComments(orgId);
       
-      const allItems: any[] = [];
-      for (const thread of threads) {
-        const items = await storage.getFeedbackItemsByThread(thread.id);
-        items.forEach((item: any) => {
-          allItems.push({
-            threadId: thread.id,
-            itemId: item.id,
-            status: item.status,
-            createdAt: item.createdAt,
-          });
-        });
-      }
+      const exportData = comments.map((comment: any) => ({
+        id: comment.id,
+        threadId: comment.threadId,
+        status: comment.status,
+        createdAt: comment.createdAt,
+        renderState: comment.renderState, // Include render_state for transparency
+      }));
       
-      res.json({ data: JSON.stringify(allItems, null, 2) });
+      res.json({ data: JSON.stringify(exportData, null, 2) });
     } catch (error) {
       console.error('Export comments error:', error);
       res.status(500).json({ error: 'Failed to export feedback items' });
@@ -671,18 +669,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const orgId = req.session.orgId!;
       
-      const threads = await storage.getFeedbackThreads(orgId);
+      // Only export audit logs for threads and comments that meet k-anonymity threshold
+      const threads = await storage.getKSafeThreads(orgId);
+      const comments = await storage.getKSafeComments(orgId);
       const allAudit: any[] = [];
       
+      // Get audit entries only for k-safe threads
       for (const thread of threads) {
         const threadAudit = await storage.getModerationAudit('thread', thread.id, orgId);
         allAudit.push(...threadAudit);
-        
-        const items = await storage.getFeedbackItemsByThread(thread.id);
-        for (const item of items) {
-          const itemAudit = await storage.getModerationAudit('item', item.id, orgId);
-          allAudit.push(...itemAudit);
-        }
+      }
+      
+      // Get audit entries only for k-safe comments
+      for (const comment of comments) {
+        const itemAudit = await storage.getModerationAudit('item', comment.id, orgId);
+        allAudit.push(...itemAudit);
       }
       
       let data = 'Timestamp,Action Type,Target Type,Target ID,Moderator ID,Reason\n';
