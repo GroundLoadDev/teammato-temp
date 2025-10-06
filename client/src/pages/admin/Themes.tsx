@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -33,12 +33,22 @@ function getDateRange(periodType: PeriodType): { start: string; end: string } {
 export default function Themes() {
   const { toast } = useToast();
   const [periodType, setPeriodType] = useState<PeriodType>('week');
+  const [showSampleBanner, setShowSampleBanner] = useState(false);
   const dateRange = getDateRange(periodType);
 
   const { data: themes, isLoading, refetch } = useQuery<ThemeCardProps[]>({
     queryKey: ['/api/themes', dateRange],
     enabled: true,
   });
+
+  // Check if themes are samples and show banner
+  useEffect(() => {
+    if (themes && themes.some((t: any) => t.isSample)) {
+      setShowSampleBanner(true);
+    } else {
+      setShowSampleBanner(false);
+    }
+  }, [themes]);
 
   const generateMutation = useMutation({
     mutationFn: async () => {
@@ -47,14 +57,26 @@ export default function Themes() {
         periodEnd: dateRange.end,
       });
     },
-    onSuccess: () => {
-      toast({
-        title: "Theme generation started",
-        description: "Themes will be available shortly. This may take up to 60 seconds for large datasets.",
-      });
-      setTimeout(() => {
+    onSuccess: (data: any) => {
+      if (data.isSample) {
+        // Non-paid user - show sample themes
+        setShowSampleBanner(true);
+        toast({
+          title: "Sample themes preview",
+          description: data.message || "Upgrade to a paid plan to generate real themes from your feedback data.",
+        });
         refetch();
-      }, 5000);
+      } else {
+        // Paid user - real theme generation
+        setShowSampleBanner(false);
+        toast({
+          title: "Theme generation started",
+          description: "Themes will be available shortly. This may take up to 60 seconds for large datasets.",
+        });
+        setTimeout(() => {
+          refetch();
+        }, 5000);
+      }
     },
     onError: (error: any) => {
       const errorMessage = error?.message || '';
@@ -167,6 +189,17 @@ export default function Themes() {
           </div>
         </div>
       </Card>
+
+      {/* Sample Themes Banner */}
+      {showSampleBanner && themes && themes.some((t: any) => t.isSample) && (
+        <Alert className="mb-6 bg-blue-50 border-blue-200">
+          <Info className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-sm text-blue-900">
+            <strong>Sample themes preview:</strong> These are example themes based on what typical feedback patterns may look like. 
+            Themes are only available for paid plans. Upgrade to generate real themes from your organization's feedback data.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Themes Grid */}
       {isLoading ? (
