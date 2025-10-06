@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Edit2, Trash2, Tag, Hash } from "lucide-react";
+import { Plus, Edit2, Trash2, Tag, Hash, Lock, AlertCircle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import {
@@ -519,20 +522,46 @@ export default function TopicManagement() {
                 Channel where feedback will be posted
               </p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="kThreshold">K-Anonymity Threshold</Label>
-              <Input
-                id="kThreshold"
-                type="number"
-                min="1"
-                max="100"
-                value={formData.kThreshold}
-                onChange={(e) => setFormData({ ...formData, kThreshold: parseInt(e.target.value) || 5 })}
-                data-testid="input-k-threshold"
-              />
-              <p className="text-xs text-muted-foreground">
-                Minimum participants required before revealing feedback
-              </p>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="kThreshold">K-Anonymity Threshold</Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-4 h-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="text-sm">Minimum participants needed before feedback becomes visible. Minimum value is 3 to ensure anonymity protection.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center gap-4">
+                  <Slider
+                    id="kThreshold"
+                    min={3}
+                    max={20}
+                    step={1}
+                    value={[formData.kThreshold]}
+                    onValueChange={(value) => setFormData({ ...formData, kThreshold: value[0] })}
+                    className="flex-1"
+                    data-testid="slider-k-threshold"
+                  />
+                  <div className="w-12 text-center">
+                    <Badge variant="outline" className="font-mono">{formData.kThreshold}</Badge>
+                  </div>
+                </div>
+                {formData.kThreshold < 3 && (
+                  <Alert variant="destructive" className="py-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="text-sm">
+                      Minimum k-threshold is 3 to ensure anonymity
+                    </AlertDescription>
+                  </Alert>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {formData.kThreshold} participants required before revealing feedback
+                </p>
+              </div>
             </div>
             <div className="flex items-center space-x-2">
               <Switch
@@ -614,20 +643,47 @@ export default function TopicManagement() {
                 Channel where feedback will be posted
               </p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-kThreshold">K-Anonymity Threshold</Label>
-              <Input
-                id="edit-kThreshold"
-                type="number"
-                min="1"
-                max="100"
-                value={formData.kThreshold}
-                onChange={(e) => setFormData({ ...formData, kThreshold: parseInt(e.target.value) || 5 })}
-                data-testid="input-edit-k-threshold"
-              />
-              <p className="text-xs text-muted-foreground">
-                Minimum participants required before revealing feedback
-              </p>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="edit-kThreshold">K-Anonymity Threshold</Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-4 h-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="text-sm">Cannot be changed after feedback collection to prevent de-anonymization</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center gap-4">
+                  <Slider
+                    id="edit-kThreshold"
+                    min={3}
+                    max={20}
+                    step={1}
+                    value={[formData.kThreshold]}
+                    onValueChange={(value) => setFormData({ ...formData, kThreshold: value[0] })}
+                    className="flex-1"
+                    disabled={editingTopic?.status !== 'collecting'}
+                    data-testid="slider-edit-k-threshold"
+                  />
+                  <div className="w-12 text-center">
+                    <Badge variant="outline" className="font-mono">{formData.kThreshold}</Badge>
+                  </div>
+                </div>
+                {editingTopic?.status !== 'collecting' && (
+                  <Alert className="py-2">
+                    <Lock className="h-4 w-4" />
+                    <AlertDescription className="text-sm">
+                      K-threshold is locked to prevent de-anonymization after feedback collection
+                    </AlertDescription>
+                  </Alert>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {formData.kThreshold} participants required before revealing feedback
+                </p>
+              </div>
             </div>
             <div className="flex items-center space-x-2">
               <Switch
