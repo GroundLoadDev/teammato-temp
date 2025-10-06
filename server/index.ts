@@ -31,6 +31,8 @@ app.use(session({
 // Capture raw body for Slack signature verification
 app.use('/api/slack/command', express.raw({ type: 'application/x-www-form-urlencoded' }));
 app.use('/api/slack/modal', express.raw({ type: 'application/x-www-form-urlencoded' }));
+// Capture raw body for Stripe webhook signature verification
+app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

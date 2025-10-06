@@ -11,6 +11,7 @@ import { WebClient } from '@slack/web-api';
 import adminKeysRouter from "./routes/admin-keys";
 import themesRouter from "./routes/themes";
 import Stripe from 'stripe';
+import { handleStripeWebhook } from './webhooks/stripe';
 
 // Slack OAuth configuration
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
@@ -231,6 +232,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Slack status error:', error);
       res.status(500).json({ error: 'Failed to fetch Slack status' });
     }
+  });
+
+  // Stripe Webhook - Must use raw body for signature verification
+  app.post('/api/stripe/webhook', async (req, res) => {
+    if (!stripe) {
+      return res.status(503).json({ error: 'Stripe not configured' });
+    }
+    await handleStripeWebhook(req, res, stripe, storage);
   });
 
   // Billing API - Consolidated Status
