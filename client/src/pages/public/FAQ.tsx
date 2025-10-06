@@ -112,8 +112,14 @@ const QAS: QA[] = [
   {
     id: "exports",
     q: "Can we export data?",
-    a: "Yes - CSV exports respect the same k-threshold and exclude suppressed topics.",
+    a: "Yes - all exports (threads, comments, audit logs) respect the same k-threshold and exclude suppressed topics.",
     topics: ["exports", "threshold"],
+  },
+  {
+    id: "export-technical",
+    q: "How do you technically enforce k-anonymity in exports?",
+    a: "Database views calculate a renderState field based on participant count vs k-threshold. Export endpoints query these views and filter WHERE renderState='visible', ensuring only k-safe data is exported. This provides belt-and-suspenders protection at the database level.",
+    topics: ["exports", "security", "threshold"],
   },
   {
     id: "roles",

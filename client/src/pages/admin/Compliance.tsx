@@ -50,12 +50,12 @@ export default function Compliance() {
               <Download className="w-5 h-5" />
               Data Export
             </CardTitle>
-            <CardDescription>Export all feedback data for compliance</CardDescription>
+            <CardDescription>Export k-safe feedback data for compliance</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm text-muted-foreground mb-3">
-                Export feedback threads, topics, and metadata in CSV or JSON format for audits or GDPR requests.
+                Export threads, comments, and audit logs in CSV or JSON format for audits or GDPR requests. All exports enforce k-anonymity at the database level via view-based filtering.
               </p>
             </div>
             <Link href="/admin/export">

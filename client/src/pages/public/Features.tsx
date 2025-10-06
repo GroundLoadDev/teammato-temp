@@ -171,7 +171,7 @@ function SafetyRow() {
 function AdminStrip() {
   const cards = [
     { title: "Retention controls", sub: "30/90/365 or custom; legal hold freezes deletion." },
-    { title: "Exports (thresholded)", sub: "CSV obeys the same k rules as the UI." },
+    { title: "K-safe exports", sub: "Threads, comments, and audit logs enforce k-anonymity at database level." },
     { title: "Workspace roles", sub: "Owner/Admin/Analyst—no one can see identities." },
   ];
   return (

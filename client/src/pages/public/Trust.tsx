@@ -63,7 +63,7 @@ function AtAGlance() {
     },
     {
       title: "Export safety",
-      sub: "CSV uses the same k-threshold suppression as UI.",
+      sub: "Threads, comments, and audit logs enforce k-anonymity at the database level via view-based filtering.",
       icon: FileShield,
     },
   ];
@@ -139,7 +139,7 @@ function DataFlow() {
 function KAnon() {
   const rows = [
     { label: "UI views", rule: "Topics with count < k are hidden across all dashboards." },
-    { label: "Exports", rule: "CSV excludes suppressed topics; row counts obey k." },
+    { label: "Exports", rule: "Database views calculate renderState; only k-safe data (threads, comments, audit logs) can be exported." },
     { label: "Search", rule: "Autocomplete and filters exclude topics below k." },
     { label: "Config", rule: "Admins can set k based on risk tolerance (org-level)." },
   ];

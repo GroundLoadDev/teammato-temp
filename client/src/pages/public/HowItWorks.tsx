@@ -3,16 +3,18 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
 export default function HowItWorksPage() {
+  const [mode, setMode] = useState<"human" | "tech">("human");
+
   return (
     <>
       <Header />
       <main id="main">
-        <Hero />
-        <StorySteps />
-        <FlowRail />
-        <PrivacyPoster />
-        <UnderTheHood />
-        <NotWhatWeDo />
+        <Hero mode={mode} setMode={setMode} />
+        <StorySteps mode={mode} />
+        <FlowRail mode={mode} />
+        <PrivacyPoster mode={mode} />
+        <UnderTheHood mode={mode} />
+        <NotWhatWeDo mode={mode} />
         <CTA />
       </main>
       <Footer />
@@ -22,9 +24,7 @@ export default function HowItWorksPage() {
 
 /* ----------------------------- HERO ----------------------------- */
 
-function Hero() {
-  const [mode, setMode] = useState<"human" | "tech">("human");
-
+function Hero({ mode, setMode }: { mode: "human" | "tech"; setMode: (m: "human" | "tech") => void }) {
   return (
     <section className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(1200px_380px_at_50%_-80px,rgba(16,185,129,0.12),transparent)]" />
@@ -74,7 +74,7 @@ function Hero() {
           <div className="mt-6 grid gap-3 md:grid-cols-3">
             {[
               { h: "Ingestion", p: "Slash command payload → PII scrub → AEAD encrypt (XChaCha20-Poly1305) with per-org 256-bit keys." },
-              { h: "K-anonymity", p: "Below-k topics suppressed across UI/exports. No plaintext stored. Row-level org isolation on all reads." },
+              { h: "K-anonymity", p: "Database views enforce renderState='visible' only when participantCount ≥ k. No plaintext stored." },
               { h: "Signals", p: "Open-source embeddings + clustering (no LLM) produce weekly themes. Quotes shown only when ≥ k." },
             ].map((x) => (
               <div key={x.h} className="rounded-2xl border bg-background p-5">
@@ -91,8 +91,8 @@ function Hero() {
 
 /* ----------------------------- STORY STEPS ----------------------------- */
 
-function StorySteps() {
-  const items = [
+function StorySteps({ mode }: { mode: "human" | "tech" }) {
+  const humanItems = [
     {
       k: "1",
       h: "Post",
@@ -103,15 +103,38 @@ function StorySteps() {
       k: "2",
       h: "Protect",
       sub: "Privacy is a feature",
-      p: "We scrub PII, then encrypt message bodies at rest. Topics with fewer than k posts stay hidden everywhere.",
+      p: "We scrub PII, then encrypt message bodies at rest. Topics with fewer than k posts stay hidden in the UI and all exports.",
     },
     {
       k: "3",
       h: "Share",
       sub: "Themes over time",
-      p: "Open-source embeddings group similar posts into themes—no LLM required. Leaders see patterns and suggested next steps.",
+      p: "Open-source embeddings group similar posts into themes—no LLM required. Leaders see patterns, but exports only include k-safe data.",
     },
   ];
+
+  const techItems = [
+    {
+      k: "1",
+      h: "Ingest",
+      sub: "Slack → Database",
+      p: "Slash command → PII regex scrub → XChaCha20-Poly1305 AEAD encryption → PostgreSQL with org-scoped RLS.",
+    },
+    {
+      k: "2",
+      h: "Enforce k",
+      sub: "View-based filtering",
+      p: "v_threads and v_comments calculate renderState based on participantCount. Exports query these views and filter WHERE renderState='visible'.",
+    },
+    {
+      k: "3",
+      h: "Export & Cluster",
+      sub: "K-safe throughout",
+      p: "All exports (threads, comments, audit) enforce k-anonymity at database level. Clustering uses MiniLM embeddings with c-TF-IDF keywording.",
+    },
+  ];
+
+  const items = mode === "human" ? humanItems : techItems;
 
   return (
     <section className="mx-auto max-w-6xl px-6 py-10">
@@ -132,14 +155,25 @@ function StorySteps() {
 
 /* ----------------------------- FLOW RAIL ----------------------------- */
 
-function FlowRail() {
-  const steps = [
+function FlowRail({ mode }: { mode: "human" | "tech" }) {
+  const humanSteps = [
     { title: "Slack", text: "User posts via /teammato", hint: "identity stays in Slack" },
     { title: "Scrub", text: "PII filters at ingestion", hint: "no emails, IDs, @mentions" },
-    { title: "Encrypt", text: "AEAD at rest", hint: "XChaCha20-Poly1305 · per-org keys" },
+    { title: "Encrypt", text: "Bodies locked down", hint: "XChaCha20-Poly1305 AEAD" },
     { title: "Cluster", text: "Embeddings → themes", hint: "no LLM in the loop" },
     { title: "Digest", text: "Weekly themes & trends", hint: "quotes only when ≥ k" },
   ];
+
+  const techSteps = [
+    { title: "Slack API", text: "Slash command payload", hint: "OAuth v2 + Events API" },
+    { title: "PII Scrub", text: "Regex + heuristics", hint: "emails · IDs · @mentions" },
+    { title: "AEAD Encrypt", text: "XChaCha20-Poly1305", hint: "per-org 256-bit DEKs" },
+    { title: "Embeddings", text: "MiniLM all-MiniLM-L6-v2", hint: "cosine clustering locally" },
+    { title: "K-safe Export", text: "v_threads/v_comments views", hint: "renderState='visible' only" },
+  ];
+
+  const steps = mode === "human" ? humanSteps : techSteps;
+
   return (
     <section className="mx-auto max-w-6xl px-6 py-6">
       <div className="rounded-3xl border bg-muted/40 p-6 md:p-8">
@@ -156,7 +190,11 @@ function FlowRail() {
             </div>
           ))}
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">Plaintext bodies are never stored. k-anonymity enforced across UI and exports.</p>
+        <p className="mt-3 text-xs text-muted-foreground">
+          {mode === "human"
+            ? "Plaintext bodies are never stored. k-anonymity enforced across UI and exports."
+            : "Database views calculate renderState; exports filter WHERE renderState='visible' for belt-and-suspenders k-safety."}
+        </p>
       </div>
     </section>
   );
@@ -164,12 +202,21 @@ function FlowRail() {
 
 /* ----------------------------- PRIVACY POSTER ----------------------------- */
 
-function PrivacyPoster() {
-  const badges = [
-    { h: "K-anonymous by default", p: "Topics below k are hidden across dashboards and exports." },
+function PrivacyPoster({ mode }: { mode: "human" | "tech" }) {
+  const humanBadges = [
+    { h: "K-anonymous by default", p: "Topics below k are hidden across dashboards. All exports (threads, comments, audit logs) respect the same k-threshold." },
     { h: "AEAD encryption at rest", p: "XChaCha20-Poly1305 with per-org 256-bit keys. Row-level isolation on queries." },
-    { h: "No PII in logs", p: "We scrub at ingestion. Operational logs exclude message content and identifiers." },
+    { h: "Export safety guaranteed", p: "Database views calculate which data is k-safe. Exports filter at the database level to ensure only visible data is included." },
   ];
+
+  const techBadges = [
+    { h: "Database-level k-enforcement", p: "v_threads/v_comments calculate renderState. Export endpoints query views and filter WHERE renderState='visible' for belt-and-suspenders protection." },
+    { h: "XChaCha20-Poly1305 AEAD", p: "Per-org 256-bit DEKs wrapped locally. Transient in-memory decryption for UI/exports only." },
+    { h: "Three k-safe export types", p: "Threads, comments, and audit logs all enforce k-anonymity via database views. No bypass routes exist." },
+  ];
+
+  const badges = mode === "human" ? humanBadges : techBadges;
+
   return (
     <section className="mx-auto max-w-6xl px-6 py-10">
       <div className="rounded-3xl border bg-background p-6 md:p-8">
@@ -194,15 +241,27 @@ function PrivacyPoster() {
 
 /* ----------------------------- UNDER THE HOOD ----------------------------- */
 
-function UnderTheHood() {
+function UnderTheHood({ mode }: { mode: "human" | "tech" }) {
   const [open, setOpen] = useState(false);
-  const rows = [
-    { label: "Scrub & validate", detail: "Regex + heuristics remove emails, phone numbers, Slack IDs, and @mentions before storage." },
-    { label: "Encrypt bodies", detail: "Message bodies encrypted at rest (XChaCha20-Poly1305 AEAD). Per-org data keys wrapped locally and cached briefly." },
-    { label: "Cluster without LLM", detail: "MiniLM embeddings + cosine clustering group similar posts. Labels via c-TF-IDF keywords." },
-    { label: "k-enforcement", detail: "Quotes and sub-themes only render when counts ≥ k; otherwise they stay suppressed." },
-    { label: "Exports & digests", detail: "CSV and weekly Slack digests mirror the same rules; decryption occurs transiently in memory." },
+
+  const humanRows = [
+    { label: "Scrub & validate", detail: "We remove emails, phone numbers, Slack IDs, and @mentions before storage." },
+    { label: "Encrypt bodies", detail: "Message bodies are encrypted at rest. Per-org keys are wrapped locally and cached briefly." },
+    { label: "Cluster without LLM", detail: "Open-source embeddings group similar posts. Labels come from keyword analysis." },
+    { label: "k-enforcement everywhere", detail: "Quotes and sub-themes only show when counts ≥ k in UI, exports, and digests—no exceptions." },
+    { label: "Export safety", detail: "Database determines what's k-safe before any export. Threads, comments, and audit logs all respect k-threshold." },
   ];
+
+  const techRows = [
+    { label: "PII scrub", detail: "Regex + heuristics remove emails, phone numbers, Slack user IDs, and @mentions at ingestion." },
+    { label: "XChaCha20-Poly1305", detail: "Message bodies encrypted with per-org 256-bit DEKs. Keys wrapped with master KEK, cached 5min." },
+    { label: "MiniLM embeddings", detail: "@xenova/transformers (ONNX runtime) + agglomerative clustering. c-TF-IDF for keywording." },
+    { label: "Database view enforcement", detail: "v_threads and v_comments calculate renderState based on participantCount vs k-threshold at query time." },
+    { label: "K-safe export routes", detail: "All three export types (threads, comments, audit) query views and filter WHERE renderState='visible'. Belt-and-suspenders protection." },
+  ];
+
+  const rows = mode === "human" ? humanRows : techRows;
+
   return (
     <section className="mx-auto max-w-6xl px-6 py-6">
       <div className="rounded-3xl border bg-muted/40 p-6 md:p-8">
@@ -228,7 +287,9 @@ function UnderTheHood() {
         )}
         {!open && (
           <p className="mt-3 text-sm text-muted-foreground">
-            Lightweight, open-source stack by default. No vendor LLMs required.
+            {mode === "human"
+              ? "Lightweight, open-source stack by default. No vendor LLMs required."
+              : "CPU-based ML pipeline. Zero external API calls for theming. Database-level k-anonymity enforcement."}
           </p>
         )}
       </div>
@@ -238,12 +299,21 @@ function UnderTheHood() {
 
 /* ----------------------------- NOT WHAT WE DO ----------------------------- */
 
-function NotWhatWeDo() {
-  const items = [
+function NotWhatWeDo({ mode }: { mode: "human" | "tech" }) {
+  const humanItems = [
     { h: "No people dashboards", p: "We never show individual timelines or identity traces—only themes." },
-    { h: "No dark patterns", p: 'No "gotcha" gotchas. Controls and exports reflect the same k-rules.' },
+    { h: "No dark patterns", p: 'No "gotcha" surprises. Controls and exports reflect the same k-rules.' },
     { h: "No surprise vendors", p: "We keep third-party access limited. Encryption and theming run locally." },
   ];
+
+  const techItems = [
+    { h: "No identity linking", p: "Daily-rotating submitter hashes prevent cross-topic correlation. No identity graphs." },
+    { h: "No k-bypass routes", p: "All exports (threads, comments, audit) enforce renderState='visible' at database level." },
+    { h: "No external ML", p: "Embeddings and clustering run on CPU via ONNX runtime. Zero LLM API calls for theming." },
+  ];
+
+  const items = mode === "human" ? humanItems : techItems;
+
   return (
     <section className="mx-auto max-w-6xl px-6 py-8">
       <div className="grid gap-3 md:grid-cols-3">
