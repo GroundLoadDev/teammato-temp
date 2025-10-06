@@ -337,8 +337,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Billing API - Create Checkout Session
-  app.post('/api/billing/checkout', requireAuth, async (req, res) => {
+  // Billing API - Create Checkout Session (Owner only)
+  app.post('/api/billing/checkout', requireRole('owner'), async (req, res) => {
     try {
       if (!stripe) {
         return res.status(503).json({ error: 'Stripe not configured' });
@@ -405,8 +405,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Billing API - Create Portal Session
-  app.post('/api/billing/portal', requireAuth, async (req, res) => {
+  // Billing API - Create Portal Session (Owner only)
+  app.post('/api/billing/portal', requireRole('owner'), async (req, res) => {
     try {
       if (!stripe) {
         return res.status(503).json({ error: 'Stripe not configured' });

@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { Check, AlertTriangle, AlertCircle, CreditCard, Download, ExternalLink, Sparkles, Shield, TrendingUp, Users, ChevronDown } from "lucide-react";
+import { Check, AlertTriangle, AlertCircle, CreditCard, Download, ExternalLink, Sparkles, Shield, TrendingUp, Users, ChevronDown, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -54,9 +54,15 @@ export default function Billing() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
 
+  const { data: authData } = useQuery<{ user: { id: string; email: string; role: string } }>({
+    queryKey: ['/api/auth/me'],
+  });
+
   const { data: billing, isLoading, refetch } = useQuery<BillingStatus>({
     queryKey: ['/api/billing/status'],
   });
+  
+  const isOwner = authData?.user?.role === 'owner';
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -182,6 +188,16 @@ export default function Billing() {
         <p className="text-muted-foreground">Manage your subscription and view usage</p>
       </div>
 
+      {/* Owner-Only Warning */}
+      {!isOwner && (
+        <Alert className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900" data-testid="alert-owner-only">
+          <Lock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <AlertDescription className="text-blue-800 dark:text-blue-200">
+            Billing changes can only be made by organization owners. Contact your owner to upgrade or modify your subscription.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Success Banner */}
       {showSuccessBanner && (
         <Alert className="bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900" data-testid="alert-success">
@@ -231,8 +247,10 @@ export default function Billing() {
             Payment required. Please update your payment method to continue service.
             <button 
               className="ml-2 text-destructive hover:text-destructive/80 underline font-medium"
-              onClick={() => portalMutation.mutate()}
+              onClick={() => isOwner && portalMutation.mutate()}
+              disabled={!isOwner}
               data-testid="button-update-payment"
+              style={{ cursor: isOwner ? 'pointer' : 'not-allowed', opacity: isOwner ? 1 : 0.6 }}
             >
               Update Payment
             </button>
@@ -269,9 +287,11 @@ export default function Billing() {
               <Button 
                 variant="outline" 
                 onClick={() => portalMutation.mutate()}
+                disabled={!isOwner || portalMutation.isPending}
                 data-testid="button-manage-billing"
               >
-                <ExternalLink className="w-4 h-4 mr-2" />
+                {!isOwner && <Lock className="w-4 h-4 mr-2" />}
+                {isOwner && <ExternalLink className="w-4 h-4 mr-2" />}
                 Manage Billing
               </Button>
             )}
@@ -381,8 +401,10 @@ export default function Billing() {
                       variant={isPopular ? 'default' : 'outline'}
                       className="w-full"
                       onClick={() => handleSelectPlan(plan.cap)}
+                      disabled={!isOwner}
                       data-testid={`button-select-${plan.cap}`}
                     >
+                      {!isOwner && <Lock className="w-4 h-4 mr-2" />}
                       {plan.cap > billing.seatCap ? 'Upgrade' : 'Switch Plan'}
                     </Button>
                   )}
