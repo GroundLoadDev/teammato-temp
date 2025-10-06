@@ -22,6 +22,7 @@ export interface IStorage {
   // Orgs
   getOrg(id: string): Promise<Org | undefined>;
   createOrg(org: InsertOrg): Promise<Org>;
+  updateOrg(id: string, updates: Partial<InsertOrg>): Promise<Org | undefined>;
   
   // Users
   getUser(id: string): Promise<User | undefined>;
@@ -150,6 +151,14 @@ export class PgStorage implements IStorage {
 
   async createOrg(insertOrg: InsertOrg): Promise<Org> {
     const result = await db.insert(orgs).values(insertOrg).returning();
+    return result[0];
+  }
+
+  async updateOrg(id: string, updates: Partial<InsertOrg>): Promise<Org | undefined> {
+    const result = await db.update(orgs)
+      .set(updates)
+      .where(eq(orgs.id, id))
+      .returning();
     return result[0];
   }
 

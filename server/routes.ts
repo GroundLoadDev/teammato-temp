@@ -364,7 +364,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           metadata: { org_id: orgId },
         });
         customerId = customer.id;
-        // Update org with customer ID (you'll need to add this to storage interface)
+        
+        // Update org with customer ID
+        await storage.updateOrg(orgId, { stripeCustomerId: customerId });
       }
 
       // Look up price by lookup key
