@@ -45,6 +45,10 @@ export const orgs = pgTable("orgs", {
   cancelsAt: timestamp("cancels_at"),
   graceEndsAt: timestamp("grace_ends_at"),
   billingEmail: text("billing_email"),
+  // Seat-cap notification tracking
+  lastSeatCapNotif90: timestamp("last_seat_cap_notif_90"),
+  lastSeatCapNotif100: timestamp("last_seat_cap_notif_100"),
+  lastSeatCapNotif110: timestamp("last_seat_cap_notif_110"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

@@ -9,6 +9,7 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import { storage } from '../storage';
+import { sendSeatCapNotifications } from '../utils/seatCapNotifications';
 
 export interface SeatCapStatus {
   eligibleCount: number;
@@ -45,6 +46,11 @@ export async function getSeatCapStatus(orgId: string): Promise<SeatCapStatus> {
 
   // Determine status
   if (percentage > 110 || (graceExpired && percentage > 100)) {
+    // Send blocked notifications (async - don't wait)
+    sendSeatCapNotifications(orgId, percentage, 'blocked', org.graceEndsAt || undefined).catch(err => {
+      console.error('Failed to send seat-cap blocked notifications:', err);
+    });
+    
     return {
       eligibleCount,
       seatCap,
@@ -63,6 +69,11 @@ export async function getSeatCapStatus(orgId: string): Promise<SeatCapStatus> {
       const graceEnd = new Date();
       graceEnd.setDate(graceEnd.getDate() + 7); // 7 days from now
       await storage.updateOrg(orgId, { graceEndsAt: graceEnd });
+      
+      // Send grace period notifications (async - don't wait)
+      sendSeatCapNotifications(orgId, percentage, 'grace', graceEnd).catch(err => {
+        console.error('Failed to send seat-cap grace notifications:', err);
+      });
       
       return {
         eligibleCount,
@@ -85,6 +96,11 @@ export async function getSeatCapStatus(orgId: string): Promise<SeatCapStatus> {
   }
 
   if (percentage >= 90) {
+    // Send warning notifications (async - don't wait)
+    sendSeatCapNotifications(orgId, percentage, 'warning').catch(err => {
+      console.error('Failed to send seat-cap warning notifications:', err);
+    });
+    
     return {
       eligibleCount,
       seatCap,

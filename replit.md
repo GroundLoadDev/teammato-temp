@@ -24,6 +24,7 @@ The frontend uses React, TypeScript, Vite, and Tailwind CSS, focusing on a clean
 - **Security**: Session regeneration, CSRF protection, and robust org-scoping.
 - **Theming System**: CPU-based ML pipeline for zero-cost local processing of feedback embeddings (@xenova/transformers on ONNX runtime) using agglomerative hierarchical clustering, c-TF-IDF keywording, and template-based summarization. Access controlled by `enable_theming` flag and k-anonymity thresholds.
 - **Billing & Subscription**: Comprehensive Stripe integration with 7 pricing tiers (250 to 25k seats), monthly/annual billing options, seat-based capacity management linked to Audience settings, contextual banners for trial/grace/over-cap states, invoice history with download links, and deep integration with Stripe Checkout and Customer Portal. Database tracks customer IDs, subscription status, billing periods, seat caps, trial/cancel/grace timestamps, and billing email.
+- **Seat-Cap Notifications**: Automated Slack DM and email notifications for owner/admin users at capacity thresholds: warning at ≥90%, grace period start at >100%, and blocking at >110% or grace expiry. Includes 24-hour cooldown to prevent spam and tracks last notification timestamps per threshold.
 
 #### System Design Choices
 - **Multi-tenancy**: Achieved through RLS using `current_org_id()` from JWT claims and per-org encryption.
@@ -40,5 +41,6 @@ The frontend uses React, TypeScript, Vite, and Tailwind CSS, focusing on a clean
 - **Machine Learning**: @xenova/transformers (ONNX runtime)
 - **Billing**: Stripe
 - **Integration Platform**: Slack (OAuth v2, Slash Commands, Events API)
+- **Email**: Resend (transactional emails for seat-cap notifications)
 - **Session Store**: Redis (production)
 - **Serverless Functions**: Supabase Edge Functions

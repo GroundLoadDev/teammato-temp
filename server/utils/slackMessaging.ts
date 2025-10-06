@@ -225,3 +225,90 @@ export async function sendInstallerWelcomeDM(
     // Don't throw - we don't want to fail the installation if DM fails
   }
 }
+
+export async function sendSeatCapNotification(
+  accessToken: string,
+  userId: string,
+  orgName: string,
+  percentage: number,
+  status: 'warning' | 'grace' | 'blocked',
+  graceEndsAt?: string
+): Promise<void> {
+  const client = new WebClient(accessToken);
+
+  const dashboardUrl = `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/admin/billing`;
+
+  let emoji = '⚠️';
+  let title = 'Seat Capacity Warning';
+  let messageText = '';
+  
+  if (status === 'warning') {
+    emoji = '⚠️';
+    title = 'Approaching Seat Capacity';
+    messageText = `Your organization *${orgName}* is at *${percentage.toFixed(0)}%* of your seat capacity.\n\n*What this means:*\nYou're approaching your plan limit. Consider upgrading to ensure uninterrupted service.\n\n*Next Steps:*\n• Review your current usage\n• Upgrade your plan to increase capacity\n• Remove inactive users if needed`;
+  } else if (status === 'grace') {
+    emoji = '🚨';
+    title = 'Seat Capacity Exceeded - Grace Period Active';
+    messageText = `Your organization *${orgName}* is at *${percentage.toFixed(0)}%* of your seat capacity.\n\n*Grace Period:*\nYou have until *${graceEndsAt ? new Date(graceEndsAt).toLocaleDateString() : 'soon'}* to upgrade your plan or reduce usage.\n\n*What happens next:*\nIf you don't take action, feedback submissions will be blocked after the grace period expires.\n\n*Action Required:*\n• Upgrade your plan immediately\n• Or reduce your audience size`;
+  } else if (status === 'blocked') {
+    emoji = '🛑';
+    title = 'Seat Capacity Exceeded - Service Blocked';
+    messageText = `Your organization *${orgName}* has exceeded seat capacity limits.\n\n*Service Status:*\nFeedback submissions are currently blocked to prevent data quality issues.\n\n*Immediate Action Required:*\n• Upgrade your plan now to restore service\n• Or significantly reduce your audience size`;
+  }
+
+  const message = {
+    channel: userId,
+    text: `${emoji} ${title} - ${orgName}`,
+    blocks: [
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `${emoji} *${title}*`
+        }
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: messageText
+        }
+      },
+      {
+        type: 'divider'
+      },
+      {
+        type: 'actions',
+        elements: [
+          {
+            type: 'button',
+            text: {
+              type: 'plain_text',
+              text: 'Upgrade Plan'
+            },
+            url: dashboardUrl,
+            style: status === 'blocked' ? 'danger' : 'primary'
+          }
+        ]
+      },
+      {
+        type: 'context',
+        elements: [
+          {
+            type: 'mrkdwn',
+            text: status === 'blocked' 
+              ? '🛡️ *Privacy Protection:* We block over-capacity submissions to maintain k-anonymity guarantees.'
+              : '💡 Need help choosing a plan? Contact our support team.'
+          }
+        ]
+      }
+    ]
+  };
+
+  try {
+    await client.chat.postMessage(message);
+  } catch (error) {
+    console.error('Failed to send seat-cap notification:', error);
+    // Don't throw - notifications are best-effort
+  }
+}
