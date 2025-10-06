@@ -12,6 +12,8 @@ import adminKeysRouter from "./routes/admin-keys";
 import themesRouter from "./routes/themes";
 import Stripe from 'stripe';
 import { handleStripeWebhook } from './webhooks/stripe';
+import { generateDigest, sendDigestToOrg } from "./cron/digestWeekly";
+import { enforceSeatCap, getSeatCapStatus } from "./middleware/seatCap";
 
 // Slack OAuth configuration
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
@@ -1616,6 +1618,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { topicId, orgId } = metadata;
       console.log(`[MODAL] TopicId: ${topicId}, OrgId: ${orgId}`);
 
+      // Check seat cap before accepting feedback
+      const seatCapStatus = await getSeatCapStatus(orgId);
+      if (seatCapStatus.status === 'blocked') {
+        return res.json({
+          response_action: 'errors',
+          errors: {
+            behavior_block: {
+              behavior_input: seatCapStatus.message || 'Seat capacity exceeded. Please contact your administrator.',
+            },
+          },
+        });
+      }
+
       // Extract form values
       const values = view.state.values;
       const suggestTopic = values.suggest_topic_block?.suggest_topic_input?.value?.trim();
@@ -2290,6 +2305,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Themes API endpoints
   app.use('/api/themes', themesRouter);
+
+  // Seat Cap API endpoint
+  app.get('/api/billing/seat-cap-status', requireAuth, async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const status = await getSeatCapStatus(orgId);
+      res.json(status);
+    } catch (error) {
+      console.error('Seat cap status error:', error);
+      res.status(500).json({ error: 'Failed to get seat cap status' });
+    }
+  });
+
+  // Weekly Digest API endpoints
+  app.get('/api/digests/preview', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      
+      const digest = await generateDigest(orgId);
+      if (!digest) {
+        return res.json({
+          hasContent: false,
+          message: 'No feedback has met k-anonymity thresholds yet.',
+        });
+      }
+      
+      res.json({
+        hasContent: true,
+        ...digest,
+      });
+    } catch (error) {
+      console.error('Preview digest error:', error);
+      res.status(500).json({ error: 'Failed to generate digest preview' });
+    }
+  });
+
+  app.post('/api/digests/sendNow', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      
+      const success = await sendDigestToOrg(orgId);
+      if (!success) {
+        return res.status(400).json({ 
+          error: 'Failed to send digest. Make sure Slack is connected and there is content available.' 
+        });
+      }
+      
+      res.json({ success: true, message: 'Digest sent to all admins' });
+    } catch (error) {
+      console.error('Send digest error:', error);
+      res.status(500).json({ error: 'Failed to send digest' });
+    }
+  });
 
   // Contact form endpoint (public)
   app.post('/api/contact', async (req, res) => {

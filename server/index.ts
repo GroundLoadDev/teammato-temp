@@ -4,6 +4,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startTopicExpiryCron, startInstanceRotationCron } from "./cron/topicExpiry";
 import { startAudienceSyncCron } from "./cron/audienceSync";
+import { startWeeklyDigestCron } from "./cron/digestWeekly";
 
 const app = express();
 
@@ -104,5 +105,6 @@ app.use((req, res, next) => {
     startTopicExpiryCron();
     startInstanceRotationCron();
     startAudienceSyncCron();
+    startWeeklyDigestCron();
   });
 })();
