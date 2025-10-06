@@ -3,7 +3,7 @@ import { db } from "./db";
 import { 
   orgs, users, slackTeams, slackSettings, topics,
   feedbackThreads, feedbackItems, moderationAudit, topicSuggestions, invitations,
-  orgAudience, orgUsage,
+  orgAudience, orgUsage, vThreads, vComments,
   type Org, type InsertOrg,
   type User, type InsertUser,
   type SlackTeam, type InsertSlackTeam,
@@ -15,7 +15,8 @@ import {
   type TopicSuggestion, type InsertTopicSuggestion,
   type Invitation, type InsertInvitation,
   type OrgAudience, type InsertOrgAudience,
-  type OrgUsage, type InsertOrgUsage
+  type OrgUsage, type InsertOrgUsage,
+  type VThread, type VComment
 } from "@shared/schema";
 
 export interface IStorage {
@@ -88,6 +89,11 @@ export interface IStorage {
   getFeedbackItemsByThread(threadId: string): Promise<FeedbackItem[]>;
   getUniqueParticipants(threadId: string): Promise<string[]>;
   updateFeedbackItemStatus(itemId: string, status: string, moderatorId: string, orgId: string): Promise<void>;
+  
+  // K-Safe Exports (enforce k-anonymity)
+  getKSafeThreads(orgId: string): Promise<VThread[]>;
+  getKSafeComments(orgId: string): Promise<VComment[]>;
+  getKSafeCommentsByThread(threadId: string): Promise<VComment[]>;
   
   // Dashboard Stats
   getOrgStats(orgId: string): Promise<{
@@ -631,6 +637,40 @@ export class PgStorage implements IStorage {
         eq(feedbackItems.id, itemId),
         eq(feedbackItems.orgId, orgId)
       ));
+  }
+
+  // K-Safe Exports - These methods query through views that enforce k-anonymity
+  async getKSafeThreads(orgId: string): Promise<VThread[]> {
+    const results = await db
+      .select()
+      .from(vThreads)
+      .where(and(
+        eq(vThreads.orgId, orgId),
+        eq(vThreads.renderState, 'visible')
+      ));
+    return results as VThread[];
+  }
+
+  async getKSafeComments(orgId: string): Promise<VComment[]> {
+    const results = await db
+      .select()
+      .from(vComments)
+      .where(and(
+        eq(vComments.orgId, orgId),
+        eq(vComments.renderState, 'visible')
+      ));
+    return results as VComment[];
+  }
+
+  async getKSafeCommentsByThread(threadId: string): Promise<VComment[]> {
+    const results = await db
+      .select()
+      .from(vComments)
+      .where(and(
+        eq(vComments.threadId, threadId),
+        eq(vComments.renderState, 'visible')
+      ));
+    return results as VComment[];
   }
 
   // Dashboard Stats
