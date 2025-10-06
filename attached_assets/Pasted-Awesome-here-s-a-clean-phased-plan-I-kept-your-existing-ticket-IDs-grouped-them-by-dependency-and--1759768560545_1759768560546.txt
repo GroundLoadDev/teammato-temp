@@ -1,0 +1,99 @@
+Awesome—here’s a clean phased plan. I kept your existing ticket IDs, grouped them by dependency and impact. No timelines mentioned.
+
+Phase 0 — Prep & Consistency (prevents rework)
+
+STR-240 Lookup key normalization
+
+Unify on cap_<cap>_{m|a}; add scripts README; CI guard that verifies catalog.
+
+AC: Checkout works for every cap; CI fails on mismatches.
+
+BILL-140 Stripe webhooks + mirror
+
+POST /api/stripe/webhook for subscription.*, invoice.*, checkout.session.completed; mirror fields: status, current_period_end, cancel_at_period_end, seat_cap, period, price_id, customer_id, subscription_id.
+
+AC: Org billing state updates within seconds of Stripe changes; Billing UI reflects current_period_end and price_id.
+
+AUD-120 Audience nightly sync
+
+Nightly job + on-install/on-save recount of eligible_count, last_synced.
+
+AC: eligible_count never >24h stale; manual “Recalculate” still works.
+
+Phase 1 — Activation & First Value (gets users to the “Aha”)
+
+SLK-180 Installer DM + ack<2s + uninstall
+
+DM on install with audience coach + icebreaker; command handler acks <2s; handle app_uninstalled.
+
+AC: DM reliably sent on OAuth success; slash commands always ack within 2s; uninstall revokes tokens/cleans rows.
+
+DIG-101 Weekly Digest MVP
+
+cron/digestWeekly.ts (k-gated from views), Admin Preview component, POST /api/digests/sendNow; use themes if present, fallback to Top Threads.
+
+AC: Preview shows only k-safe items; “Send now” posts real digest; weekly cron sends for orgs with ≥3 threads; logs include counts only.
+
+Phase 2 — Monetization & Fair Use (turns value into paid)
+
+ENF-160 Seat-cap middleware
+
+Server middleware on write: warn at ≥90%, start 7-day grace at >100%, block new posts at >110% or grace expiry; read/export always allowed; auto-manage graceEndsAt.
+
+AC: Over-cap writes return 403 with guidance; grace auto-creates/resets; reads/exports unaffected.
+
+NOTIF-260 Cap threshold notifications
+
+Slack DM + email at 90%, >100% (grace start), and >110%/grace expiry; idempotent (one per threshold per 7d).
+
+AC: Notifications fire exactly once per threshold window and include Upgrade & Audience links.
+
+TRUST-220 Inline trust copy
+
+Add trust bullets adjacent to Upgrade/Checkout and first-run: “XChaCha20-Poly1305 AEAD,” “Plaintext never stored,” “PII scrubbed,” link DPA/Trust.
+
+AC: Copy is visible on first-run, Billing, and Checkout; language matches Trust page.
+
+Phase 3 — Safety Hardening & Compliance (removes silent blockers)
+
+KSAFE-280 Exports → k-views + tests
+
+Route all exports through v_threads, v_comments, v_thread_participants; add integration tests that seed small-n and assert suppression; CI rule to forbid base-table access in export code.
+
+AC: Tests pass proving suppression; CI blocks PRs that query base tables from export paths.
+
+Security hardening mini-epics (can split)
+
+KEY-ROT-300 DEK rotation job (monthly) + metadata + canary org validation.
+
+LOG-310 Logging audit to prove no plaintext; add guardrails/tests.
+
+AC: Rotation produces verifiable audit trail; log scan finds no plaintext; tests enforce both.
+
+Phase 4 — Measurement & Optimization (prove what works)
+
+ANA-200 Event instrumentation v1
+
+Server-side, content-free events: audience_configured, audience_k_safe_reached, thread_created, digest_sent{manual|weekly}, digest_viewed, billing_checkout_opened, upgrade_succeeded, seatcap_warn_shown, post_blocked_overcap; append-only events table; basic funnel chart (Metabase/SQL).
+
+AC: Funnel visible for a test org from install → paid; events backfill into dashboard.
+
+UX-330 Storybook for Billing states (optional but helpful)
+
+Document banners: trial countdown, near-cap, over-cap, grace, past_due, canceled.
+
+AC: Designers/PMs can review copy/states without staging.
+
+Cross-phase dependencies (at a glance)
+
+DIG-101 depends on AUD-120 (accurate eligible_count) and benefits from SLK-180 (installer DM seeds content).
+
+ENF-160 depends on BILL-140 (mirror state + grace windows) and AUD-120 (correct denominator).
+
+NOTIF-260 relies on ENF-160 thresholds and BILL-140 dates.
+
+KSAFE-280 strengthens DIG-101 output integrity and any export UI.
+
+ANA-200 should wrap all of the above to show activation → conversion.
+
+If you want, I can turn this directly into your issue tracker with labels (phase:0–4, area:slack|billing|digest|security, severity:blocker|major|normal) and paste in the AC exactly as above.

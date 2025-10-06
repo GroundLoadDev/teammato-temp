@@ -1,0 +1,64 @@
+10 investigation questions for Replit (our “current state” audit)
+
+Please answer each with: (a) what exists today, (b) exact code locations (files, functions, routes), (c) sample payloads/screenshots where relevant, and (d) gaps vs. the acceptance criteria. Use short, verifiable evidence (snippets, API responses, DB schema).
+
+Audience Setup Coach & eligible_count
+
+Do we have an Admin → Audience page with mode selector (workspace / user group / channels), searchable pickers, “exclude guests,” Preview eligible_count and “Recalculate”? Identify where org_audience is persisted and where org_usage.eligible_count is computed. Provide an example response showing eligible_count, last_synced. 
+
+Teammato_Knowledgebase_HandOff
+
+K-anonymity enforcement end-to-end
+
+Confirm k=5 is enforced in SQL views, digests, and exports (no small-n leakage). Point to v_threads, v_comments, v_thread_participants definitions and any guards in the digest/export code paths. Show one query that demonstrates k-gating. 
+
+Teammato_Knowledgebase_HandOff
+
+Digest Preview + “Send now”
+
+Where is the weekly-digest pipeline and manual “Send now” implemented? Provide the job/handler that composes themes (rule-based clustering), applies k-gating, and posts/links in Slack. Show the Admin UI component (or plan) that renders a Preview and triggers “Send now.” 
+
+Teammato_Knowledgebase_HandOff
+
+Slack integration surfaces
+
+Verify OAuth route, slash command ack <2s, uninstall events, and scopes (commands, chat:write, users:read, usergroups:read, channels:read, groups:read). Show code that sends the T+0 installer DM and any channel-friendly nudges. 
+
+Teammato_Knowledgebase_HandOff
+
+Billing: Checkout, Portal, Webhooks
+
+Show the GET /api/billing/status, POST /api/billing/checkout (using price lookup_key), and POST /api/billing/portal implementations. Provide a sample status response. Confirm webhooks mirror status, current_period_end, cancel_at_period_end, seat_cap, period, price_id, customer_id, subscription_id. 
+
+Teammato_Knowledgebase_HandOff
+
+Stripe catalog & pricing metadata
+
+Have we run scripts/seed_stripe_catalog.ts and scripts/patch_stripe_catalog.ts? List currently provisioned products/prices (caps & monthly/annual), show a real price object with {cap, period} metadata, and share the lookup_key format in use. 
+
+Teammato_Knowledgebase_HandOff
+
+Seat-cap enforcement & UX
+
+Show where we compute over-cap and trigger 90% warn, 7-day grace >100%, block new posts at >110% or grace expiry. Provide the UI banners (Admin Billing) and the exact Slack/Email messages. Confirm read/export remain available when posting is blocked. 
+
+Teammato_Knowledgebase_HandOff
+
+Security posture in code & copy
+
+Prove the encryption path: fields encrypted with XChaCha20-Poly1305 AEAD, per-org DEKs, random nonce, auth tag verification; PII scrub before encryption; no plaintext in logs. Link the Trust copy strings used in UI and where they are surfaced (first-run, Billing, Checkout). 
+
+Teammato_Knowledgebase_HandOff
+
+Trial state, banners, and countdown
+
+Where is trial state persisted and read for UI banners (trial countdown, near-cap, over-cap, past_due, cancel_at_period_end)? Provide the Admin → Billing components and screenshots (or storybook) showing these states, including the Invoices table and Manage billing → Stripe Portal link. 
+
+Teammato_Knowledgebase_HandOff
+
+Analytics & funnels (content-free)
+
+Show telemetry events for:
+
+audience_configured, audience_k_safe_reached, thread_created, digest_sent {manual|weekly}, digest_viewed {role}, billing_checkout_opened, upgrade_succeeded, seatcap_warn_shown, post_blocked_overcap.
+Include schema (no message text), example payloads, and confirm dashboards exist for Install → k-safe → First post → Digest viewed → Checkout → Paid.
