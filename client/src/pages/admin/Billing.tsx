@@ -355,7 +355,7 @@ export default function Billing() {
           {billing.prices.map((plan) => {
             const price = billingPeriod === 'monthly' ? plan.monthly : plan.annual;
             const perMonth = billingPeriod === 'annual' ? Math.round(plan.annual / 12) : plan.monthly;
-            const isCurrentPlan = plan.cap === billing.seatCap && billing.period === billingPeriod;
+            const isCurrentPlan = !isTrialing && plan.cap === billing.seatCap && billing.period === billingPeriod;
             const isPopular = plan.cap === 500;
 
             return (

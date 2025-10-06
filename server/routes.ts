@@ -2291,6 +2291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const newOrg = await storage.createOrg({
           name: team.name,
           verifiedDomains: [],
+          trialEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days from now
         });
         
         orgId = newOrg.id;
