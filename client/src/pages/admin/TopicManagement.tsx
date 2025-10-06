@@ -454,23 +454,40 @@ export default function TopicManagement() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="slug">Slug</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="slug">Slug</Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-4 h-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="text-sm">Use lowercase letters, numbers, and hyphens only. This will be used in commands like /teammato your-slug</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Input
                 id="slug"
                 value={formData.slug}
-                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })}
                 placeholder="e.g., product-feedback"
                 data-testid="input-slug"
                 className={isDuplicateSlug ? "border-destructive" : ""}
+                maxLength={50}
               />
               {isDuplicateSlug ? (
-                <p className="text-xs text-destructive" data-testid="text-duplicate-error">
+                <p className="text-xs text-destructive flex items-center gap-1" data-testid="text-duplicate-error">
+                  <AlertCircle className="w-3 h-3" />
                   This topic slug already exists. Please choose a different name.
                 </p>
               ) : (
-                <p className="text-xs text-muted-foreground">
-                  Auto-generated from name, can be customized
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    Auto-generated from name, can be customized
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formData.slug.length}/50
+                  </p>
+                </div>
               )}
             </div>
             <div className="space-y-2">
