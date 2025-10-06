@@ -1,5 +1,6 @@
 import { Home, MessageSquare, Tag, Lightbulb, BarChart, Slack, FileText, Download, Clock, Users, Sparkles } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import logoImage from "@assets/galaxyai-image-1759612930294_1759613447444.png";
 import {
   Sidebar,
@@ -47,6 +48,17 @@ const navigationGroups = [
 
 export function AppSidebar() {
   const [location] = useLocation();
+  
+  const { data: authData } = useQuery({
+    queryKey: ['/api/auth/me'],
+  });
+
+  const user = authData?.user;
+  const initials = user?.email 
+    ? user.email.substring(0, 2).toUpperCase() 
+    : 'AD';
+  const displayEmail = user?.email || 'admin@example.com';
+  const displayName = user?.email?.split('@')[0] || 'Admin';
 
   return (
     <Sidebar>
@@ -95,12 +107,12 @@ export function AppSidebar() {
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
             <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-              AD
+              {initials}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col overflow-hidden">
-            <span className="text-sm font-medium truncate">Admin</span>
-            <span className="text-xs text-muted-foreground truncate">admin@example.com</span>
+            <span className="text-sm font-medium truncate" data-testid="text-user-name">{displayName}</span>
+            <span className="text-xs text-muted-foreground truncate" data-testid="text-user-email">{displayEmail}</span>
           </div>
         </div>
       </SidebarFooter>
