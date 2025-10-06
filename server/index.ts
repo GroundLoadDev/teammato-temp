@@ -3,6 +3,7 @@ import session from "express-session";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startTopicExpiryCron, startInstanceRotationCron } from "./cron/topicExpiry";
+import { startAudienceSyncCron } from "./cron/audienceSync";
 
 const app = express();
 
@@ -102,5 +103,6 @@ app.use((req, res, next) => {
     // Start cron jobs
     startTopicExpiryCron();
     startInstanceRotationCron();
+    startAudienceSyncCron();
   });
 })();

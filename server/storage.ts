@@ -22,6 +22,7 @@ export interface IStorage {
   // Orgs
   getOrg(id: string): Promise<Org | undefined>;
   getOrgByStripeCustomerId(customerId: string): Promise<Org | undefined>;
+  getAllOrgsWithSlack(): Promise<Array<{ orgId: string; accessToken: string }>>;
   createOrg(org: InsertOrg): Promise<Org>;
   updateOrg(id: string, updates: Partial<InsertOrg>): Promise<Org | undefined>;
   
@@ -153,6 +154,18 @@ export class PgStorage implements IStorage {
   async getOrgByStripeCustomerId(customerId: string): Promise<Org | undefined> {
     const result = await db.select().from(orgs).where(eq(orgs.stripeCustomerId, customerId)).limit(1);
     return result[0];
+  }
+
+  async getAllOrgsWithSlack(): Promise<Array<{ orgId: string; accessToken: string }>> {
+    const result = await db
+      .select({
+        orgId: slackTeams.orgId,
+        accessToken: slackTeams.accessToken,
+      })
+      .from(slackTeams)
+      .where(sqlOperator`${slackTeams.accessToken} IS NOT NULL AND ${slackTeams.accessToken} != ''`);
+    
+    return result;
   }
 
   async createOrg(insertOrg: InsertOrg): Promise<Org> {

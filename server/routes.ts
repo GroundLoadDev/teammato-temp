@@ -2183,6 +2183,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Recompute eligible count on install/reinstall
+      try {
+        let audience = await storage.getOrgAudience(orgId);
+        if (!audience) {
+          // Create default audience settings
+          audience = await storage.upsertOrgAudience({
+            orgId,
+            mode: 'workspace',
+            excludeGuests: true,
+          });
+        }
+        
+        const { recomputeEligibleCount } = await import('./services/audience');
+        const eligibleCount = await recomputeEligibleCount(access_token, audience);
+        
+        await storage.upsertOrgUsage({
+          orgId,
+          eligibleCount,
+        });
+      } catch (error) {
+        console.error('Failed to recompute eligible count on install:', error);
+        // Don't block installation if recount fails
+      }
+
       // Create session for the installer with session regeneration
       if (user) {
         req.session.regenerate((err) => {
