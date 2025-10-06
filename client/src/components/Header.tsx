@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import logoImage from "@assets/teammato_logo_transparent_1759614481870.png";
 
 type NavItem = { label: string; href: string };
@@ -23,6 +24,13 @@ export default function Header({
 }) {
   const [open, setOpen] = useState(false);
   const [solid, setSolid] = useState(!transparent);
+  
+  const { data: authData } = useQuery<{ user: { id: string; email: string; role: string } }>({
+    queryKey: ['/api/auth/me'],
+    retry: false,
+  });
+  
+  const isLoggedIn = !!authData?.user;
 
   useEffect(() => {
     if (!transparent) return;
@@ -66,21 +74,35 @@ export default function Header({
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
-          <a
-            href={signinUrl}
-            className="inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-            aria-label="Sign in with Slack"
-          >
-            <SlackGlyph className="h-4 w-4" />
-            <span>Sign in with Slack</span>
-          </a>
-          <a
-            href={installed ? "slack://open" : authorizeUrl}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
-          >
-            {!installed && <WhiteSlackLogo className="h-4 w-4" />}
-            {installed ? "Open in Slack" : "Add to Slack"}
-          </a>
+          {isLoggedIn ? (
+            <a
+              href="/admin/get-started"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+              data-testid="link-go-to-admin"
+            >
+              Go to Admin
+            </a>
+          ) : (
+            <>
+              <a
+                href={signinUrl}
+                className="inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                aria-label="Sign in with Slack"
+                data-testid="link-sign-in"
+              >
+                <SlackGlyph className="h-4 w-4" />
+                <span>Sign in with Slack</span>
+              </a>
+              <a
+                href={installed ? "slack://open" : authorizeUrl}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                data-testid="link-add-to-slack"
+              >
+                {!installed && <WhiteSlackLogo className="h-4 w-4" />}
+                {installed ? "Open in Slack" : "Add to Slack"}
+              </a>
+            </>
+          )}
         </div>
 
         <button

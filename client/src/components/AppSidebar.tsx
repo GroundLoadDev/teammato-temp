@@ -49,7 +49,7 @@ const navigationGroups = [
 export function AppSidebar() {
   const [location] = useLocation();
   
-  const { data: authData } = useQuery({
+  const { data: authData } = useQuery<{ user: { id: string; email: string; role: string; orgId: string } }>({
     queryKey: ['/api/auth/me'],
   });
 
