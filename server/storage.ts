@@ -625,6 +625,20 @@ export class PgStorage implements IStorage {
     return result.map(r => r.slackUserId);
   }
 
+  async hasUserSubmittedToTopic(topicId: string, slackUserId: string, orgId: string): Promise<boolean> {
+    const result = await db
+      .select({ id: feedbackItems.id })
+      .from(feedbackItems)
+      .where(and(
+        eq(feedbackItems.topicId, topicId),
+        eq(feedbackItems.slackUserId, slackUserId),
+        eq(feedbackItems.orgId, orgId)
+      ))
+      .limit(1);
+    
+    return result.length > 0;
+  }
+
   async updateFeedbackItemStatus(itemId: string, status: string, moderatorId: string, orgId: string): Promise<void> {
     // Update with org verification via join
     await db.update(feedbackItems)

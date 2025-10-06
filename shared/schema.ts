@@ -123,6 +123,7 @@ export const feedbackThreads = pgTable("feedback_threads", {
 export const feedbackItems = pgTable("feedback_items", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   threadId: uuid("thread_id").notNull().references(() => feedbackThreads.id, { onDelete: 'cascade' }),
+  topicId: uuid("topic_id").notNull().references(() => topics.id, { onDelete: 'cascade' }),
   orgId: uuid("org_id").notNull().references(() => orgs.id, { onDelete: 'cascade' }),
   slackUserId: text("slack_user_id").notNull(),
   content: text("content"),
@@ -144,6 +145,7 @@ export const feedbackItems = pgTable("feedback_items", {
   aadHash: bytea("aad_hash"),
 }, (table) => ({
   uniqueParticipation: unique().on(table.threadId, table.slackUserId),
+  uniqueTopicParticipation: unique().on(table.orgId, table.topicId, table.slackUserId),
 }));
 
 export const moderationAudit = pgTable("moderation_audit", {

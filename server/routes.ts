@@ -1787,7 +1787,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         });
       }
-      console.log(`[MODAL] Topic validated, proceeding with thread creation`);
+      console.log(`[MODAL] Topic validated, proceeding with anti-gamification checks`);
+
+      // Check if user is the topic creator (cannot submit to own topic)
+      if (topic.ownerId) {
+        const userRecord = await storage.getUserBySlackId(user.id, orgId);
+        if (userRecord && userRecord.id === topic.ownerId) {
+          console.log(`[MODAL] Blocked: User ${user.id} is the topic creator for topic ${topic.id}`);
+          return res.json({
+            response_action: 'errors',
+            errors: {
+              behavior_block: {
+                behavior_input: 'You created this topic and cannot submit feedback to it. This protects the integrity of anonymous feedback.',
+              },
+            },
+          });
+        }
+      }
+
+      // Check if user already submitted to this topic (across all threads)
+      const hasSubmitted = await storage.hasUserSubmittedToTopic(topic.id, user.id, orgId);
+      if (hasSubmitted) {
+        console.log(`[MODAL] Blocked: User ${user.id} already submitted to topic ${topic.id}`);
+        return res.json({
+          response_action: 'errors',
+          errors: {
+            behavior_block: {
+              behavior_input: "You've already submitted feedback to this topic. Multiple submissions are blocked to protect k-anonymity.",
+            },
+          },
+        });
+      }
+
+      console.log(`[MODAL] Anti-gamification checks passed, proceeding with thread creation`);
 
       // Find or create collecting thread
       let thread = await storage.getActiveCollectingThread(topic.id, orgId);
@@ -1824,6 +1856,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         await storage.createFeedbackItem({
           threadId: thread.id,
+          topicId: topic.id,
           orgId,
           slackUserId: user.id,
           content: null,
