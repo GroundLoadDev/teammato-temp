@@ -15,36 +15,62 @@ function requireAuth(req: Request, res: Response, next: Function) {
   next();
 }
 
-// Middleware to check if theming is enabled for org
-async function requireThemingEnabled(req: Request, res: Response, next: Function) {
-  if (!req.session.orgId) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  // Check org settings for enable_theming flag
+// Helper to check if org is on paid plan
+async function isPaidPlan(orgId: string): Promise<boolean> {
   const [org] = await db
     .select()
     .from(orgs)
-    .where(eq(orgs.id, req.session.orgId))
+    .where(eq(orgs.id, orgId))
     .limit(1);
 
-  if (!org) {
-    return res.status(404).json({ error: 'Organization not found' });
-  }
-
-  const settings = (org.settings ?? {}) as any;
-  if (!settings.enable_theming) {
-    return res.status(403).json({ 
-      error: 'Theming is not enabled for your organization',
-      message: 'Upgrade to a paid plan to access theming features' 
-    });
-  }
-
-  next();
+  if (!org) return false;
+  
+  // Consider 'active' billing status as paid plan
+  return org.billingStatus === 'active';
 }
 
+// Sample themes for preview (non-paid plans)
+const SAMPLE_THEMES = [
+  {
+    id: 'sample-1',
+    label: 'Work-Life Balance',
+    posts_count: 23,
+    top_terms: ['flexibility', 'remote', 'schedule', 'burnout', 'wellness'],
+    summary: 'Team members are requesting more flexible work arrangements and expressing concerns about workload balance.',
+    trend_delta: 5,
+    channels: ['#general', '#team-feedback'],
+    dept_hits: { Engineering: 12, Product: 6, Design: 5 },
+    k_threshold: 5,
+    isSample: true,
+  },
+  {
+    id: 'sample-2',
+    label: 'Communication & Clarity',
+    posts_count: 18,
+    top_terms: ['communication', 'updates', 'transparency', 'meetings', 'clarity'],
+    summary: 'Feedback highlights the need for clearer communication on project priorities and organizational updates.',
+    trend_delta: -2,
+    channels: ['#general', '#product-updates'],
+    dept_hits: { Product: 8, Engineering: 6, Marketing: 4 },
+    k_threshold: 5,
+    isSample: true,
+  },
+  {
+    id: 'sample-3',
+    label: 'Recognition & Growth',
+    posts_count: 15,
+    top_terms: ['recognition', 'career', 'growth', 'appreciation', 'development'],
+    summary: 'Team members are seeking more recognition for their contributions and clarity on career advancement paths.',
+    trend_delta: 3,
+    channels: ['#general', '#career-dev'],
+    dept_hits: { Engineering: 7, Design: 4, Product: 4 },
+    k_threshold: 5,
+    isSample: true,
+  },
+];
+
 // Generate themes for a period
-router.post('/generate', requireAuth, requireThemingEnabled, async (req: Request, res: Response) => {
+router.post('/generate', requireAuth, async (req: Request, res: Response) => {
   try {
     const schema = z.object({
       periodStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -57,6 +83,19 @@ router.post('/generate', requireAuth, requireThemingEnabled, async (req: Request
       return res.status(401).json({ error: 'No organization selected' });
     }
 
+    // Check if org is on paid plan
+    const paid = await isPaidPlan(req.session.orgId);
+
+    if (!paid) {
+      // Return sample themes for non-paid users with explanatory message
+      return res.json({ 
+        success: true, 
+        isSample: true,
+        message: 'Themes are only available for paid plans. Here are some sample themes based on what typical themes may look like.',
+        themes: SAMPLE_THEMES,
+      });
+    }
+
     // Get org's k-anonymity threshold
     const [org] = await db
       .select()
@@ -67,7 +106,7 @@ router.post('/generate', requireAuth, requireThemingEnabled, async (req: Request
     const settings = (org.settings ?? {}) as any;
     const kThreshold = settings.k_anonymity || 5;
 
-    // Trigger theme generation (async)
+    // Trigger theme generation (async) for paid users
     runTheming(req.session.orgId, periodStart, periodEnd, kThreshold)
       .catch(err => console.error('[THEMING] Error:', err));
 
@@ -82,12 +121,20 @@ router.post('/generate', requireAuth, requireThemingEnabled, async (req: Request
 });
 
 // Get themes for a period
-router.get('/', requireAuth, requireThemingEnabled, async (req: Request, res: Response) => {
+router.get('/', requireAuth, async (req: Request, res: Response) => {
   try {
     const { periodStart, periodEnd } = req.query;
 
     if (!req.session.orgId) {
       return res.status(401).json({ error: 'No organization selected' });
+    }
+
+    // Check if org is on paid plan
+    const paid = await isPaidPlan(req.session.orgId);
+
+    if (!paid) {
+      // Return sample themes for non-paid users
+      return res.json(SAMPLE_THEMES);
     }
 
     // Get org's k-anonymity threshold
@@ -144,12 +191,27 @@ router.get('/', requireAuth, requireThemingEnabled, async (req: Request, res: Re
 });
 
 // Get a single theme with posts (k-anonymity enforced)
-router.get('/:id', requireAuth, requireThemingEnabled, async (req: Request, res: Response) => {
+router.get('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
     if (!req.session.orgId) {
       return res.status(401).json({ error: 'No organization selected' });
+    }
+
+    // Check if org is on paid plan
+    const paid = await isPaidPlan(req.session.orgId);
+
+    if (!paid) {
+      // Return sample theme if ID matches
+      const sampleTheme = SAMPLE_THEMES.find(t => t.id === id);
+      if (sampleTheme) {
+        return res.json({
+          ...sampleTheme,
+          exemplar_quotes: undefined, // No quotes for sample themes
+        });
+      }
+      return res.status(404).json({ error: 'Theme not found' });
     }
 
     // Get org's k-anonymity threshold
