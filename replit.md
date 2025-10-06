@@ -8,6 +8,14 @@ I prefer iterative development and clear, concise explanations. Ask before makin
 
 ### Recent Changes (October 2025)
 
+#### Anti-Gamification System (Completed)
+- **Schema Enforcement**: Added NOT NULL `topicId` to `feedbackItems` with unique constraint on (orgId, topicId, slackUserId) to prevent duplicate submissions per topic
+- **Topic Creator Restriction**: Implemented validation logic to block topic creators from submitting feedback to their own topics (prevents identity revelation)
+- **Duplicate Submission Prevention**: Enforces one submission per user per topic across all thread instances (prevents gaming k-anonymity threshold)
+- **Database Integrity**: Changed ON DELETE behavior from SET NULL to CASCADE to eliminate NULL-bypass vulnerability in unique constraints
+- **Storage Methods**: Added `hasUserSubmittedToTopic()` and `isUserTopicCreator()` methods for validation checks
+- **User Feedback**: Clear error messages explain why submissions are blocked (creator restriction or duplicate submission)
+
 #### KSAFE-280: K-Safe Export Implementation (Completed)
 - **Database Views**: Created `v_threads` and `v_comments` views that calculate `renderState` field based on `participantCount` vs k-threshold
 - **Storage Methods**: Implemented k-safe storage methods (`getKSafeThreads()`, `getKSafeComments()`, `getKSafeCommentsByThread()`) that enforce k-anonymity at database query level
@@ -27,7 +35,7 @@ The frontend uses React, TypeScript, Vite, and Tailwind CSS, focusing on a clean
 - **Privacy Architecture**: K-anonymity (k=5 threshold), application-layer encryption (XChaCha20-Poly1305 AEAD with per-org DEKs), pseudonymity, PII/`@mention` content filtering, and daily-rotating submitter hashes.
 - **Slack Integration**: Utilizes Slack's OAuth v2, Slash Commands, and Events API for feedback submission (SBI model via modals), daily digests, and invitation workflows.
 - **Moderation Workflow**: Flag queue, bulk actions, and immutable audit trail for thread and item-level moderation.
-- **Topic Management**: Time-boxed feedback campaigns with a defined lifecycle, auto-lock cron jobs, "You said / We did" action loops, and user-suggested topics.
+- **Topic Management**: Time-boxed feedback campaigns with a defined lifecycle, auto-lock cron jobs, "You said / We did" action loops, and user-suggested topics. Anti-gamification safeguards prevent topic creators from self-submitting and enforce one submission per user per topic (via unique constraint on orgId, topicId, slackUserId) to protect k-anonymity integrity.
 - **Analytics & Export**: Privacy-preserving aggregated metrics with k-safe export capabilities. Database views (v_threads, v_comments) calculate renderState based on k-anonymity thresholds. Export endpoints (threads, comments, audit) enforce k-anonymity by only exporting data with renderState='visible' (participantCount >= k threshold).
 - **User Management**: Slack-native invitation system, role management, and user removal.
 - **Security**: Session regeneration, CSRF protection, and robust org-scoping.
