@@ -1,4 +1,4 @@
-import { Home, MessageSquare, Tag, Lightbulb, BarChart, Slack, FileText, Download, Clock, Users, Sparkles } from "lucide-react";
+import { Home, MessageSquare, Tag, Lightbulb, BarChart, Slack, FileText, Download, Clock, Users, Sparkles, History } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import logoImage from "@assets/galaxyai-image-1759612930294_1759613447444.png";
@@ -42,6 +42,7 @@ const navigationGroups = [
     items: [
       { href: "/admin/export", label: "Export", icon: Download },
       { href: "/admin/retention", label: "Retention", icon: Clock },
+      { href: "/admin/audit-log", label: "Audit Log", icon: History },
     ],
   },
 ];
