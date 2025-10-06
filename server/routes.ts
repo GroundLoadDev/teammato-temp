@@ -55,11 +55,11 @@ const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY, {
 const PRICE_PLANS = [
   { cap: 250, monthly: 99, annual: 999, monthlyLookup: 'cap_250_m', annualLookup: 'cap_250_a' },
   { cap: 500, monthly: 149, annual: 1490, monthlyLookup: 'cap_500_m', annualLookup: 'cap_500_a' },
-  { cap: 1000, monthly: 199, annual: 1990, monthlyLookup: 'cap_1k_m', annualLookup: 'cap_1k_a' },
-  { cap: 2500, monthly: 299, annual: 2990, monthlyLookup: 'cap_2_5k_m', annualLookup: 'cap_2_5k_a' },
-  { cap: 5000, monthly: 399, annual: 3990, monthlyLookup: 'cap_5k_m', annualLookup: 'cap_5k_a' },
-  { cap: 10000, monthly: 599, annual: 5990, monthlyLookup: 'cap_10k_m', annualLookup: 'cap_10k_a' },
-  { cap: 25000, monthly: 999, annual: 9990, monthlyLookup: 'cap_25k_m', annualLookup: 'cap_25k_a' },
+  { cap: 1000, monthly: 199, annual: 1990, monthlyLookup: 'cap_1000_m', annualLookup: 'cap_1000_a' },
+  { cap: 2500, monthly: 299, annual: 2990, monthlyLookup: 'cap_2500_m', annualLookup: 'cap_2500_a' },
+  { cap: 5000, monthly: 399, annual: 3990, monthlyLookup: 'cap_5000_m', annualLookup: 'cap_5000_a' },
+  { cap: 10000, monthly: 599, annual: 5990, monthlyLookup: 'cap_10000_m', annualLookup: 'cap_10000_a' },
+  { cap: 25000, monthly: 999, annual: 9990, monthlyLookup: 'cap_25000_m', annualLookup: 'cap_25000_a' },
 ];
 
 // Helper function to get ISO week number
