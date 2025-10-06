@@ -19,7 +19,7 @@ The frontend uses React, TypeScript, Vite, and Tailwind CSS, focusing on a clean
 - **Slack Integration**: Utilizes Slack's OAuth v2, Slash Commands, and Events API for feedback submission (SBI model via modals), daily digests, and invitation workflows.
 - **Moderation Workflow**: Flag queue, bulk actions, and immutable audit trail for thread and item-level moderation.
 - **Topic Management**: Time-boxed feedback campaigns with a defined lifecycle, auto-lock cron jobs, "You said / We did" action loops, and user-suggested topics.
-- **Analytics**: Privacy-preserving aggregated metrics with planned export capabilities.
+- **Analytics & Export**: Privacy-preserving aggregated metrics with k-safe export capabilities. Database views (v_threads, v_comments) calculate renderState based on k-anonymity thresholds. Export endpoints (threads, comments, audit) enforce k-anonymity by only exporting data with renderState='visible' (participantCount >= k threshold).
 - **User Management**: Slack-native invitation system, role management, and user removal.
 - **Security**: Session regeneration, CSRF protection, and robust org-scoping.
 - **Theming System**: CPU-based ML pipeline for zero-cost local processing of feedback embeddings (@xenova/transformers on ONNX runtime) using agglomerative hierarchical clustering, c-TF-IDF keywording, and template-based summarization. Access controlled by `enable_theming` flag and k-anonymity thresholds.
