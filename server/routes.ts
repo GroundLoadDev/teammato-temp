@@ -29,7 +29,10 @@ const BOT_SCOPES = [
   'commands',
   'chat:write',
   'team:read',
-  'users:read'
+  'users:read',
+  'usergroups:read',    // For user groups in Audience feature
+  'channels:read',      // For public channels in Audience feature
+  'groups:read'         // For private channels in Audience feature
 ].join(',');
 
 // User scopes (for getting installer email)
