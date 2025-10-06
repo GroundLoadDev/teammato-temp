@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { MessageSquare, Eye, EyeOff, Flag, Archive, CheckCircle2, FileText, History } from "lucide-react";
+import { MessageSquare, Eye, EyeOff, Flag, Archive, CheckCircle2, FileText, History, Shield, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import {
@@ -374,10 +375,36 @@ export default function FeedbackManagement() {
               )}
 
               {threadDetails.status !== 'ready' && (
-                <Card className="p-4 bg-muted">
-                  <p className="text-sm text-muted-foreground">
-                    <strong>K-anonymity Protection Active:</strong> This thread needs {threadDetails.kThreshold - threadDetails.participantCount} more participant(s) before feedback becomes visible.
-                  </p>
+                <Card className="p-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                          Privacy Protection Active
+                        </p>
+                        <p className="text-sm text-blue-800 dark:text-blue-200">
+                          {threadDetails.kThreshold - threadDetails.participantCount} more participant{threadDetails.kThreshold - threadDetails.participantCount !== 1 ? 's' : ''} needed to reveal feedback
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs text-blue-700 dark:text-blue-300">
+                        <div className="flex items-center gap-1">
+                          <Users className="w-3 h-3" />
+                          <span>{threadDetails.participantCount} of {threadDetails.kThreshold} participants</span>
+                        </div>
+                        <span>{Math.round((threadDetails.participantCount / threadDetails.kThreshold) * 100)}%</span>
+                      </div>
+                      <Progress 
+                        value={(threadDetails.participantCount / threadDetails.kThreshold) * 100} 
+                        className="h-2 bg-blue-200 dark:bg-blue-900"
+                      />
+                      <p className="text-xs text-blue-700 dark:text-blue-300">
+                        K-anonymity ensures individual contributors cannot be identified. Feedback will be visible once the threshold is met.
+                      </p>
+                    </div>
+                  </div>
                 </Card>
               )}
 
