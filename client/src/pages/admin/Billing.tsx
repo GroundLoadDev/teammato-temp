@@ -69,11 +69,8 @@ export default function Billing() {
 
   const checkoutMutation = useMutation({
     mutationFn: async (priceLookupKey: string) => {
-      const result = await apiRequest<{ url: string }>('/api/billing/checkout', {
-        method: 'POST',
-        body: JSON.stringify({ priceLookupKey }),
-      });
-      return result;
+      const result = await apiRequest('POST', '/api/billing/checkout', { priceLookupKey });
+      return result as { url: string };
     },
     onSuccess: (data) => {
       window.location.href = data.url;
@@ -89,11 +86,8 @@ export default function Billing() {
 
   const portalMutation = useMutation({
     mutationFn: async () => {
-      const result = await apiRequest<{ url: string }>('/api/billing/portal', {
-        method: 'POST',
-        body: JSON.stringify({}),
-      });
-      return result;
+      const result = await apiRequest('POST', '/api/billing/portal', {});
+      return result as { url: string };
     },
     onSuccess: (data) => {
       window.location.href = data.url;
@@ -200,14 +194,13 @@ export default function Billing() {
           <CreditCard className="h-4 w-4" />
           <AlertDescription>
             Payment required. Please update your payment method to continue service.
-            <Button 
-              variant="link" 
-              className="p-0 h-auto ml-2 text-destructive hover:text-destructive/80"
+            <button 
+              className="ml-2 text-destructive hover:text-destructive/80 underline font-medium"
               onClick={() => portalMutation.mutate()}
               data-testid="button-update-payment"
             >
               Update Payment
-            </Button>
+            </button>
           </AlertDescription>
         </Alert>
       )}
@@ -264,9 +257,9 @@ export default function Billing() {
             />
             <div className="mt-2 flex items-center justify-between">
               <Link href="/admin/audience">
-                <Button variant="link" className="p-0 h-auto text-xs" data-testid="link-audience-settings">
+                <button className="text-xs text-primary hover:underline" data-testid="link-audience-settings">
                   Based on Audience settings ({billing.audience.mode})
-                </Button>
+                </button>
               </Link>
               {billing.audience.lastSynced && (
                 <span className="text-xs text-muted-foreground">
