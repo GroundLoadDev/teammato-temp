@@ -5,6 +5,7 @@ import logoImage from "@assets/teammato_logo_transparent_1759614481870.png";
 type NavItem = { label: string; href: string };
 
 const NAV: NavItem[] = [
+  { label: "About", href: "/about" },
   { label: "How It Works", href: "/how-it-works" },
   { label: "Features", href: "/features" },
   { label: "Pricing", href: "/pricing" },

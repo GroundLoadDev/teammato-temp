@@ -1,0 +1,110 @@
+About Teammato — Page Outline & Copy
+1) Slim hero (poster, no clutter)
+
+Headline: We make it safe to tell the truth at work.
+One-line: Anonymous feedback in Slack, released only in aggregate, so leaders see themes—not people.
+
+Primary CTA: Add to Slack
+Secondary CTA (muted): Read how anonymity works
+
+Design: Centered poster card; seafoam signal strip only; one tomato micro-accent in the button icon.
+
+2) What we’re here to solve (macro context)
+
+Section title: Why Teammato exists
+Copy (2–3 lines): Modern teams are distributed, overloaded, and cautious. People won’t speak if it risks targeting or performative listening. Teammato reduces risk (anonymous by default), makes input clearer (behavior → impact), and keeps it in-flow (Slack), so feedback turns into action—consistently.
+
+Inline list (3 chips):
+
+Anonymous capture in Slack
+
+Clear, behavior-focused input
+
+Actionable roll-ups, not one-offs
+
+Design: Neutral rail with three chips. No badges, no big fills.
+
+3) How it actually works (short + specific)
+
+Section title: What happens under the hood
+Three beats (1 line each):
+
+Install in Slack and pick your channel.
+
+Teammates submit via modal; we never log message plaintext in logs.
+
+Results release only when a minimum cohort contributes (k-anonymity); leaders see aggregate themes and trends.
+
+Micro CTA (text link): See the full loop
+
+Design: Use your 4-step icons from the homepage; keep this version compact.
+
+4) What we ship (the product, not promises)
+
+Section title: What you get with Teammato
+Six bullets (one line each):
+
+Slack-native capture — open from App Home or /teammato.
+
+Anonymous by default — views and exports respect k-anonymity.
+
+SBI-guided clarity — Behavior & Impact required; fewer rants, more signal. (Design pattern we use across the site.)
+
+Weekly digests — scheduled summaries in Slack; “Send Sample Now” for kickoffs.
+
+K-safe analytics — daily aggregates; no plaintext message fields.
+
+Retention & legal hold — purge by policy; freeze for compliance; export without ciphertext fields.
+
+Design: Reuse your 2×3 Feature Grid tiles.
+
+5) Privacy is enforced in the product (not just in policy)
+
+Section title: How we protect people
+Fact pills (4):
+
+Encrypt per org (AEAD) at rest; TLS in transit.
+
+Don’t log IPs/UA in feedback tables; never log plaintext message text.
+
+Isolate by tenant (RLS) across all content.
+
+Control retention & legal hold; export without ciphertext.
+
+Tiny note (muted): We also auto-flag risky content (PII/harassment) before release.
+
+Design: Use the security fact strip component; pills wrap on tablet, horizontal snap on mobile.
+
+6) Built for low-touch ops (the model behind the product)
+
+Section title: Simple to buy, simple to run
+Copy (2 lines): Self-serve install, trial-first, and one product for everyone. We scale by seat bands—features stay the same, operations stay lean.
+
+Quick facts (chips):
+
+14-day full-feature trial; read-only after expiry until upgrade.
+
+Pro at $99/mo or $999/yr; Scale bands for larger workspaces.
+
+Email support; no custom SLAs or on-prem.
+
+Design: Neutral rail with three chips and a “View pricing” text CTA.
+
+7) CTAs (clean, centered)
+
+Primary: Add to Slack
+Secondary: View pricing · Read the Trust page
+
+Design: Use your final conversion button style; keep plenty of air above and below.
+
+Notes for your builder (so it feels on-brand)
+
+Seafoam is a signal, not a fill. Use it for strips/rails/chips only.
+
+One tomato micro-accent per viewport, max.
+
+Keep spacing tokens: hero→next 72px, major breaks 112px.
+
+No window chrome or fake screenshots on About—treat visuals like posters.
+
+Respect reduced-motion; animate only meters/chips with 80–120ms staggers.
