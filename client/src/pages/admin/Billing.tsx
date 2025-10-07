@@ -125,7 +125,7 @@ export default function Billing() {
   const portalMutation = useMutation({
     mutationFn: async () => {
       const result = await apiRequest('POST', '/api/billing/portal', {});
-      return result as { url: string };
+      return await result.json() as { url: string };
     },
     onSuccess: (data) => {
       window.location.href = data.url;
