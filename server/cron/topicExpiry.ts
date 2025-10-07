@@ -1,5 +1,6 @@
 import { storage } from '../storage';
 import { sendTopicOwnerReminder } from '../utils/slackMessaging';
+import { logTopicStatusChange } from '../utils/stateTransitionLogger';
 
 // Helper function to get ISO week number
 function getWeekNumber(date: Date): number {
@@ -25,6 +26,16 @@ export async function processExpiredTopics() {
         status: 'in_review',
         isActive: false,
       }, topic.orgId);
+      
+      // Log state transition
+      await logTopicStatusChange(
+        topic.id,
+        topic.orgId,
+        topic.status,
+        'in_review',
+        undefined, // System-initiated, no user
+        'Auto-locked due to expiry date reached'
+      );
       
       // Send reminder to topic owner if they have one
       if (topic.ownerId) {
@@ -75,6 +86,16 @@ export async function processExpiredInstances() {
         status: 'in_review',
         isActive: false,
       }, instance.orgId);
+      
+      // Log state transition
+      await logTopicStatusChange(
+        instance.id,
+        instance.orgId,
+        instance.status,
+        'in_review',
+        undefined, // System-initiated, no user
+        'Auto-closed due to instance expiry (rolling window)'
+      );
       
       // Create next instance if this was a general feedback instance
       if (instance.parentTopicId) {

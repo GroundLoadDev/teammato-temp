@@ -83,6 +83,7 @@ export const slackSettings = pgTable("slack_settings", {
 export const topics = pgTable("topics", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   orgId: uuid("org_id").notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+  workspaceId: text("workspace_id"), // For future multi-workspace support
   name: text("name").notNull(),
   slug: text("slug").notNull(),
   description: text("description"),
@@ -107,6 +108,7 @@ export const topics = pgTable("topics", {
 export const feedbackThreads = pgTable("feedback_threads", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   orgId: uuid("org_id").notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+  workspaceId: text("workspace_id"), // For future multi-workspace support
   topicId: uuid("topic_id").references(() => topics.id, { onDelete: 'set null' }),
   title: text("title").notNull(),
   status: text("status").notNull().default('collecting'),
@@ -126,6 +128,7 @@ export const feedbackItems = pgTable("feedback_items", {
   threadId: uuid("thread_id").notNull().references(() => feedbackThreads.id, { onDelete: 'cascade' }),
   topicId: uuid("topic_id").notNull().references(() => topics.id, { onDelete: 'cascade' }),
   orgId: uuid("org_id").notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+  workspaceId: text("workspace_id"), // For future multi-workspace support
   slackUserId: text("slack_user_id").notNull(),
   content: text("content"),
   behavior: text("behavior"),
@@ -218,6 +221,7 @@ export const postEmbeddings = pgTable("post_embeddings", {
 export const themes = pgTable("themes", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   orgId: uuid("org_id").notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+  workspaceId: text("workspace_id"), // For future multi-workspace support
   periodStart: date("period_start").notNull(),
   periodEnd: date("period_end").notNull(),
   label: text("label").notNull(),
@@ -264,6 +268,20 @@ export const analyticsEvents = pgTable("analytics_events", {
   eventType: text("event_type").notNull(),
   userId: uuid("user_id").references(() => users.id, { onDelete: 'set null' }),
   metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// State Transition Audit - tracks lifecycle changes for topics, instances, themes
+export const stateTransitionAudit = pgTable("state_transition_audit", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: uuid("org_id").notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+  targetType: text("target_type").notNull(), // 'topic', 'topic_instance', 'theme', etc.
+  targetId: uuid("target_id").notNull(),
+  actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: 'set null' }),
+  fromState: text("from_state"),
+  toState: text("to_state").notNull(),
+  reason: text("reason"),
+  metadata: jsonb("metadata"), // Additional context (e.g., auto-transition, manual, cron job)
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -347,6 +365,7 @@ export const insertOrgAudienceSchema = createInsertSchema(orgAudience).omit({ up
 export const insertOrgUsageSchema = createInsertSchema(orgUsage).omit({ lastSynced: true });
 export const insertWebhookEventSchema = createInsertSchema(webhookEvents).omit({ receivedAt: true });
 export const insertAnalyticsEventSchema = createInsertSchema(analyticsEvents).omit({ id: true, createdAt: true });
+export const insertStateTransitionAuditSchema = createInsertSchema(stateTransitionAudit).omit({ id: true, createdAt: true });
 
 // Types
 export type Org = typeof orgs.$inferSelect;
@@ -402,6 +421,9 @@ export type InsertWebhookEvent = z.infer<typeof insertWebhookEventSchema>;
 
 export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
 export type InsertAnalyticsEvent = z.infer<typeof insertAnalyticsEventSchema>;
+
+export type StateTransitionAudit = typeof stateTransitionAudit.$inferSelect;
+export type InsertStateTransitionAudit = z.infer<typeof insertStateTransitionAuditSchema>;
 
 // K-Anonymity View Types
 export type VThread = typeof vThreads.$inferSelect;

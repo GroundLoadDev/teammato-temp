@@ -20,7 +20,7 @@ const navigationGroups = [
   {
     label: "General",
     items: [
-      { href: "/admin/get-started", label: "Dashboard", icon: Home },
+      { href: "/admin/dashboard", label: "Dashboard", icon: Home },
       { href: "/admin/feedback", label: "Feedback", icon: MessageSquare },
       { href: "/admin/topics", label: "Topics", icon: Tag },
       { href: "/admin/topic-suggestions", label: "Suggestions", icon: Lightbulb },
@@ -64,7 +64,7 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="border-b px-6 py-4">
-        <Link href="/admin/get-started">
+        <Link href="/admin/dashboard">
           <div className="flex items-center gap-2 cursor-pointer">
             <div className="flex h-8 w-8 items-center justify-center rounded-md overflow-hidden">
               <img

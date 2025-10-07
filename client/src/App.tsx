@@ -29,6 +29,7 @@ import Auth from "@/pages/Auth";
 import CheckoutRedirect from "@/pages/CheckoutRedirect";
 
 // Admin pages
+import Dashboard from "@/pages/admin/Dashboard";
 import GetStarted from "@/pages/admin/GetStarted";
 import FeedbackManagement from "@/pages/admin/FeedbackManagement";
 import TopicManagement from "@/pages/admin/TopicManagement";
@@ -71,6 +72,8 @@ function Router() {
       <Route path="/billing/checkout-redirect" component={CheckoutRedirect} />
 
       {/* Admin pages */}
+      <Route path="/admin" component={Dashboard} />
+      <Route path="/admin/dashboard" component={Dashboard} />
       <Route path="/admin/get-started" component={GetStarted} />
       <Route path="/admin/feedback" component={FeedbackManagement} />
       <Route path="/admin/topics" component={TopicManagement} />

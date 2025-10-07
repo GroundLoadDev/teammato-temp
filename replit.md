@@ -8,6 +8,30 @@ I prefer iterative development and clear, concise explanations. Ask before makin
 
 ### Recent Changes (October 2025)
 
+#### Unified Admin Dashboard (Completed - October 7, 2025)
+- **Single-Page Architecture**: Implemented unified admin dashboard with tabbed interface (Overview, Topics, Suggestions, Feedback, Themes, Analytics, Settings) replacing scattered individual pages
+- **Global Filter System**: Created comprehensive filter bar with channel, time range (Last 7/30/90 days, All time), and status filters that apply across all tabs
+- **K-Safety Enforcement**: Integrated k-safety banner component that displays when current filters don't meet k-anonymity thresholds, preventing inadvertent data exposure
+- **Topics Tab Structure**: Built hierarchical tab system with sub-tabs (Active, Upcoming, Expired, Archived) for organized topic lifecycle management
+- **Feedback Tab**: Displays only k-safe threads (participantCount >= kThreshold) with visual indicators and counts
+- **Performance Indexes**: Added 8 database indexes for common admin queries:
+  - `idx_topics_org_status_created` (orgId, status, createdAt DESC)
+  - `idx_feedback_threads_topic_created` (topicId, createdAt DESC)
+  - `idx_feedback_threads_org_status` (orgId, status)
+  - `idx_feedback_items_thread_created` (threadId, createdAt DESC)
+  - `idx_topic_suggestions_org_status` (orgId, status)
+  - `idx_moderation_audit_target` (targetType, targetId, orgId)
+  - `idx_state_transition_target` (targetType, targetId, orgId)
+  - `idx_state_transition_created` (createdAt DESC)
+- **Schema Enhancements**:
+  - Added `workspace_id` (nullable) to topics, feedbackThreads, feedbackItems, themes for future multi-workspace support
+  - Created `state_transition_audit` table to track topic lifecycle changes with fields: targetType, targetId, fromState, toState, actorUserId, reason, metadata
+- **State Transition Logging**: Implemented automatic logging for:
+  - Manual topic status updates via admin dashboard (with user attribution)
+  - Auto-lock operations by cron jobs (system-initiated with descriptive reasons)
+  - Both regular topics and time-boxed instances
+- **Navigation Updates**: Enhanced AppSidebar with direct links to admin sections (Dashboard, Feedback, Topics, Suggestions, Analytics, Themes, Users, Slack, Billing, Audience, Export, Retention)
+
 #### Topic Suggestion Anti-Spam Guardrails (Completed - October 7, 2025)
 - **Slash Command Fix**: Fixed `/teammato suggest TopicName` which was incorrectly opening general feedback modal instead of creating topic suggestion
 - **Per-User Cooldown**: 24-hour rate limit between suggestions per user with clear "try again in Xh Ym" messaging

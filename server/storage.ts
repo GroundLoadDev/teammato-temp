@@ -3,7 +3,7 @@ import { db } from "./db";
 import { 
   orgs, users, slackTeams, slackSettings, topics,
   feedbackThreads, feedbackItems, moderationAudit, topicSuggestions, topicSuggestionSupports, invitations,
-  orgAudience, orgUsage, webhookEvents, analyticsEvents, vThreads, vComments,
+  orgAudience, orgUsage, webhookEvents, analyticsEvents, stateTransitionAudit, vThreads, vComments,
   type Org, type InsertOrg,
   type User, type InsertUser,
   type SlackTeam, type InsertSlackTeam,
@@ -18,6 +18,7 @@ import {
   type OrgUsage, type InsertOrgUsage,
   type WebhookEvent, type InsertWebhookEvent,
   type AnalyticsEvent, type InsertAnalyticsEvent,
+  type StateTransitionAudit, type InsertStateTransitionAudit,
   type VThread, type VComment
 } from "@shared/schema";
 
@@ -138,6 +139,10 @@ export interface IStorage {
   ): Promise<FeedbackItem | undefined>;
   createModerationAudit(audit: InsertModerationAudit): Promise<ModerationAudit>;
   getModerationAudit(targetType: string, targetId: string, orgId: string): Promise<ModerationAudit[]>;
+  
+  // State Transition Audit
+  createStateTransitionAudit(audit: InsertStateTransitionAudit): Promise<StateTransitionAudit>;
+  getStateTransitionAudit(targetType: string, targetId: string, orgId: string): Promise<StateTransitionAudit[]>;
   
   // Topic Suggestions
   createTopicSuggestion(suggestion: InsertTopicSuggestion): Promise<TopicSuggestion>;
@@ -914,6 +919,25 @@ export class PgStorage implements IStorage {
         eq(moderationAudit.orgId, orgId)
       ))
       .orderBy(sqlOperator`${moderationAudit.createdAt} DESC`);
+    
+    return result;
+  }
+  
+  // State Transition Audit
+  async createStateTransitionAudit(audit: InsertStateTransitionAudit): Promise<StateTransitionAudit> {
+    const result = await db.insert(stateTransitionAudit).values(audit).returning();
+    return result[0];
+  }
+  
+  async getStateTransitionAudit(targetType: string, targetId: string, orgId: string): Promise<StateTransitionAudit[]> {
+    const result = await db.select()
+      .from(stateTransitionAudit)
+      .where(and(
+        eq(stateTransitionAudit.targetType, targetType),
+        eq(stateTransitionAudit.targetId, targetId),
+        eq(stateTransitionAudit.orgId, orgId)
+      ))
+      .orderBy(sqlOperator`${stateTransitionAudit.createdAt} DESC`);
     
     return result;
   }

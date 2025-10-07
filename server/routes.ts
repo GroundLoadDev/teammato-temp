@@ -2506,6 +2506,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Topic not found' });
       }
       
+      // Log state transition if status changed
+      if (status !== undefined && status !== currentTopic.status) {
+        const { logTopicStatusChange } = await import('./utils/stateTransitionLogger');
+        await logTopicStatusChange(
+          topic.id,
+          orgId,
+          currentTopic.status,
+          status,
+          req.session.userId,
+          `Manual status update via admin dashboard`
+        );
+      }
+      
       // Auto-post action notes when status changed to 'actioned'
       if (status === 'actioned' && actionNotes && topic.slackChannelId) {
         const slackTeam = await storage.getSlackTeamByOrgId(orgId);
