@@ -128,15 +128,39 @@ const QAS: QA[] = [
     topics: ["roles", "product"],
   },
   {
+    id: "install",
+    q: "How do we install?",
+    a: "Click Add to Slack; after install, you'll start your 14-day trial.",
+    topics: ["getting-started"],
+  },
+  {
     id: "trial",
-    q: "Is there a free trial?",
-    a: "Yes - 14 days with full features. A card is required to start the trial, but you won't be charged until the trial ends.",
+    q: "Do we need a card?",
+    a: "Yes—added after install; no charge until trial ends.",
     topics: ["billing"],
   },
   {
     id: "seatcap",
     q: "How do seat caps work?",
     a: "We price by Slack workspace members. We warn at 90% of your cap, allow a 7-day grace window up to 110%, then pause new submissions until you upgrade.",
+    topics: ["billing"],
+  },
+  {
+    id: "security-privacy",
+    q: "Security & privacy?",
+    a: "K-anonymity protection, XChaCha20 encryption, no plaintext storage. See our Trust page for full details.",
+    topics: ["security", "privacy"],
+  },
+  {
+    id: "clutter-slack",
+    q: "Will this clutter Slack?",
+    a: "No—anonymous posts are lightweight; weekly digests summarize activity.",
+    topics: ["product", "getting-started"],
+  },
+  {
+    id: "what-counts-seats",
+    q: "What counts toward seats?",
+    a: "Slack workspace members; we'll warn at 90% and give a 7-day grace if you go over.",
     topics: ["billing"],
   },
   {

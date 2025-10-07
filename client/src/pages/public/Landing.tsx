@@ -31,27 +31,35 @@ import SlackPreviewAnimated from "@/components/SlackPreviewAnimated";
 const STEPS = [
   {
     id: 1,
-    title: "Install to Slack",
+    title: "Add to Slack",
     body:
-      "One click. Scopes: commands, chat:write. You're ready in minutes.",
+      "One click install. You're ready in minutes.",
     icon: Plug,
     meta: "60s setup",
   },
   {
     id: 2,
-    title: "Post anonymously",
+    title: "Start your 14-day trial (card required after install)",
+    body:
+      "Free today. You won't be charged until the trial ends.",
+    icon: MessageSquareText,
+    meta: "free trial",
+  },
+  {
+    id: 3,
+    title: "Post anonymously (Slack command)",
     body:
       "Anyone types /teammato in any channel. We handle the rest.",
-    icon: MessageSquareText,
+    icon: LineChart,
     meta: "works anywhere",
     command: "/teammato Your message…",
   },
   {
-    id: 3,
-    title: "Get weekly themes",
+    id: 4,
+    title: "Weekly digest & trends",
     body:
       "We group related posts and send a digest that drives action.",
-    icon: LineChart,
+    icon: BarChart3,
     meta: "auto digests",
   },
 ];
@@ -293,14 +301,11 @@ export default function Landing() {
           <div className="grid items-center gap-12 lg:grid-cols-2">
             {/* Left copy */}
             <div>
-              <p className="font-mono text-sm uppercase tracking-wide text-muted-foreground">
-                Slack-first feedback
-              </p>
-              <h1 className="mt-3 text-5xl font-semibold tracking-tight sm:text-6xl">
-                Make it safe to speak up—right in Slack.
+              <h1 className="text-5xl font-semibold tracking-tight sm:text-6xl">
+                Anonymous feedback your team actually uses — right in Slack.
               </h1>
               <p className="mt-5 max-w-xl text-lg text-muted-foreground">
-                Posts with Teammato are ciphertext at rest and anonymous by default (k=5).
+                Collect signals, protect anonymity with k-anonymity, and ship weekly digests that leaders act on.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -322,6 +327,10 @@ export default function Landing() {
               </div>
 
               <p className="mt-4 text-sm text-muted-foreground">
+                Start free for 14 days — card added after install. You won't be charged today.
+              </p>
+
+              <p className="mt-6 text-sm text-muted-foreground">
                 Scopes: <span className="font-mono">commands, chat:write</span>
               </p>
             </div>

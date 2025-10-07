@@ -122,10 +122,10 @@ export default function PostInstall() {
               <CreditCard className="w-8 h-8 text-primary" />
             </div>
             <h1 className="text-3xl font-semibold mb-2" data-testid="text-setup-title">
-              Complete Setup - Start Your 14-Day Trial
+              Start your 14-day free trial
             </h1>
             <p className="text-muted-foreground max-w-md mx-auto" data-testid="text-setup-subtitle">
-              Your Slack workspace is connected! To start using Teammato, complete your billing setup with a card on file.
+              Free today. Renews $99/mo on {new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString()} unless canceled.
             </p>
           </div>
 
@@ -169,13 +169,19 @@ export default function PostInstall() {
               ) : (
                 <>
                   <CreditCard className="w-4 h-4" />
-                  Start 14-Day Trial
+                  Start trial
                 </>
               )}
             </Button>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Secure checkout via Stripe
+            </p>
           </div>
 
           <div className="text-center">
+            <p className="text-xs text-muted-foreground mb-3">
+              We'll add your card now; you won't be charged until {new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString()}.
+            </p>
             <p className="text-sm text-muted-foreground">
               By continuing, you agree to our{' '}
               <Link href="/terms" className="underline hover:text-foreground">

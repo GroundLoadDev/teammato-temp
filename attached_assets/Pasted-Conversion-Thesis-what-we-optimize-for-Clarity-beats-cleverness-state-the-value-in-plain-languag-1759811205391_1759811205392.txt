@@ -1,0 +1,257 @@
+Conversion Thesis (what we optimize for)
+
+Clarity beats cleverness: state the value in plain language, early and often. Skimmable copy wins. 
+Nielsen Norman Group
++1
+
+Pricing pages must reduce effort & risk: obvious plan, obvious next step, and crisp FAQ near the call-to-action. 
+CXL
++1
+
+Microcopy that informs + influences + supports the action: explain “what happens next,” remove surprises (card-gated trial), and smooth the interaction. 
+Nielsen Norman Group
+
+Social proof where decisions happen: logos/testimonials near CTAs, not buried. 
+Baymard Institute
++1
+
+Slack-native flow preserved: “Add to Slack” remains the front door; we gate usage right after OAuth, which aligns with Slack’s install expectations. 
+Slack Developer Docs
++1
+
+Card-gated trial disclosure: reduces day-14 drop-off, but demands transparent messaging; trade-offs are well-documented. 
+Chargebee
+
+1) Homepage (Public)
+Hero
+
+Goal: clarity + expectation setting without killing momentum.
+
+Headline (plain value):
+“Anonymous feedback your team actually uses — right in Slack.”
+
+Subhead (outcome-driven):
+“Collect signals, protect anonymity with k-anonymity, and ship weekly digests that leaders act on.”
+
+Primary CTA: Add to Slack
+Helper line (microcopy): “Start free for 14 days — card added after install. You won’t be charged today.”
+(Short, skimmable, and sets the next step; this balances clarity with conversion.) 
+Nielsen Norman Group
++1
+
+Why: Users skim. A clear headline + specific helper text outperforms cleverness, and the helper line handles the “card gate” expectation without scaring off motivated buyers. 
+Nielsen Norman Group
++1
+
+Secondary trust row (above the fold or just below)
+
+Client logos or “built for Slack” style credibility markers.
+
+One short testimonial (“We finally get candid feedback without dogpiles.” — Manager, 200-person org).
+Place near the CTA, not at the footer. 
+Baymard Institute
++1
+
+“How it works” (4 steps, one line each)
+
+Add to Slack
+
+Start your 14-day trial (card required after install)
+
+Post anonymously (Slack command)
+
+Weekly digest & trends
+(Use verbs, keep to one line; clarity + path-to-value.) 
+Nielsen Norman Group
+
+Social proof block (mid-page)
+
+2–3 short quotes + lightweight metrics (“85% of teams ship their first digest within a week”). Put a mini-CTA under it: Add to Slack. 
+Baymard Institute
++1
+
+2) Pricing Page
+
+High-level goals: fewer choices, scannable benefits, and the answers to billing questions right next to the CTA. 
+CXL
++1
+
+Plan cards (keep simple)
+
+Pro — $99/mo (up to 250 Slack users)
+
+Scale bands (500 / 1k / 2.5k / 5k / 10k / 25k) with clear prices.
+
+Annual toggle shows “Save 2 months.”
+
+Under each price:
+“Free today. Renews $99/mo on {DATE} unless canceled.” (Dynamic date on app side.)
+“Card added after install.” (One short sentence; don’t bury it.) 
+Userpilot
+
+Feature list (identical across paid, seat cap differs)
+
+Anonymous posts & comments • Weekly digest • Moderation flags • Full analytics • Multi-channel • K-anonymity • Retention controls
+(Consistency reduces paralysis; map one persona per plan cap.) 
+eleken.co
+
+FAQ (inline, not separate page)
+
+Do I need a card to start? “Yes — after you connect Slack, you’ll add a card to begin your 14-day trial. You won’t be charged until {DATE}.”
+
+Can I pay now? “Yes — choose ‘Charge today’ to start billing immediately.”
+
+Can I cancel before billing? “Any time during the trial.”
+
+What if we exceed our seat cap? “You’ll get a 7-day grace period with clear upgrade prompts.”
+(Place FAQs directly beneath pricing to defuse anxiety and prevent pogo-sticking.) 
+Userpilot
+
+Social proof next to pricing
+
+Add 1–2 logos or a single short testimonial near the CTA area—credible, not noisy. 
+Baymard Institute
+
+3) Post-Install (the Gate)
+
+This page does the heavy lifting for conversion. Use microcopy that informs (what happens), influences (why act now), and supports (what exactly will be charged & when). 
+Nielsen Norman Group
+
+State A — No checkout yet
+
+Header: “Start your 14-day free trial”
+
+Line 1: “Free today. Renews $99/mo on {DATE} unless canceled.”
+
+Primary button: Start trial
+
+Secondary: Charge today (skip trial)
+
+Footnote: “We’ll add your card now; you won’t be charged until {DATE}.”
+
+State B — Trial active (card on file)
+
+Banner: “Trial ends {DATE}. You’ll be billed $99/mo unless canceled.”
+
+State C — Trial expired (no payment)
+
+Banner: “Your trial ended {DATE}. Upgrade to resume posting.”
+
+Button: Upgrade now
+
+(Use a simple, single-purpose layout—one primary action per screen. Buyers should never wonder “what happens next.”) 
+Nielsen Norman Group
+
+4) FAQ (Public)
+
+Place a trimmed FAQ on Pricing and a fuller version on the FAQ page.
+
+How do we install? “Click Add to Slack; after install, you’ll start your 14-day trial.” 
+Slack Developer Docs
+
+Do we need a card? “Yes—added after install; no charge until {DATE}.”
+
+Security & privacy? Short bullets with a link to Trust/Privacy. (Keep it concise—decision support.)
+
+Will this clutter Slack? “No—anonymous posts are lightweight; weekly digests summarize activity.”
+
+What counts toward seats? “Slack workspace members; we’ll warn at 90% and give a 7-day grace if you go over.”
+
+(Concise answers reduce friction at the moment of truth; long walls of text depress conversion.) 
+Userpilot
+
+5) In-App Banners (Admin)
+
+Before checkout (post-install): “Finish setting up your 14-day trial to unlock posting.” [Start trial]
+
+During trial: “Trial ends {DATE}. You’ll be billed $99/mo unless canceled.” [Manage billing]
+
+Seat cap 90%: “You’re nearing your 250-seat cap.” [See Scale plans]
+
+Expired / Past due: “Your account is read-only until billing is resolved.” [Fix payment]
+
+(Inform + support the action; do not hide billing language. This reduces surprises and improves trust.) 
+Nielsen Norman Group
+
+6) Slack-side Nudges (DMs)
+
+D3 / D7 / D12: “Start (or finish) trial setup to keep posting. Free until {DATE}; billing begins after.”
+
+Day 14 (if unpaid): “Your trial ended. Upgrade to resume posting.”
+
+Seat cap: “You’ve reached 90% of your seat cap. Upgrade to avoid interruptions.”
+
+(Minimal text, one link, one job. Clear microcopy supports the interaction and influences the next step.) 
+Nielsen Norman Group
+
+7) Visuals & layout guidance (quick wins)
+
+Keep CTA within first viewport with helper text; avoid burying it after long hero copy. 
+Perma Technologies
+
+Use relevant, non-generic imagery (screens showing Slack command + digest), placed close to the explanatory text. 
+Nielsen Norman Group
+
+On pricing, prefer 2–3 cards and a tidy feature list; avoid complex tables unless necessary. 
+CXL
+
+Add lightweight trust markers near checkout prompts (card logos, secure payment note). Don’t overdo badges, but a small reassurance near a pricing decision helps. 
+WiserNotify
+
+8) Where to change copy (summary checklist)
+
+Homepage
+
+Hero headline & subhead (clarity)
+
+CTA helper line (“Start free… card added after install”)
+
+“How it works” step #2 (trial + card)
+
+Social proof near hero and mid-page
+
+Pricing
+
+Under each plan price: renewal date line
+
+Remove any “no card required” lines
+
+Inline FAQ directly under cards
+
+Small trust note near CTA (“Secure checkout via Stripe”)
+
+Post-Install
+
+Three states (no checkout, trial, expired) with the exact lines above
+
+Single primary action per state
+
+FAQ page
+
+Short answers; mirror the Pricing FAQ
+
+Link to Trust/Privacy; keep it concise
+
+Admin banners & Slack DMs
+
+As listed in sections 5–6
+
+Why this will convert better (in brief)
+
+People skim; surfacing the exact next step and what happens with billing reduces hesitation and support escalations. 
+Nielsen Norman Group
++1
+
+Pricing clarity, minimal plans, and FAQ near CTAs are repeatedly shown to raise completion on SaaS pages. 
+CXL
++1
+
+Proximity of social proof to action (logos/testimonial near buttons) nudges commitment at the right moment. 
+Baymard Institute
+
+Keeping Add to Slack as the entry aligns with Slack’s install model and user expectations; gating usage post-install preserves marketplace flow. 
+Slack Developer Docs
++1
+
+Declaring the card gate succinctly (not loudly) meets disclosure best practice without tanking intent—buyers who proceed are better fits, a known effect of card-gated trials. 
+Chargebee

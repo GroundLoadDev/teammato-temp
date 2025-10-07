@@ -77,7 +77,7 @@ function PricingHero({
           Simple, self-serve pricing
         </h1>
         <p className="mx-auto mt-3 max-w-2xl text-muted-foreground" data-testid="text-pricing-subtitle">
-          Same product for everyone. Just pick your workspace size. Try everything free for 14 days.
+          Same product for everyone. Just pick your workspace size.
         </p>
 
         <div className="mt-6 inline-flex items-center gap-2 rounded-2xl border bg-background p-2 text-sm">
@@ -172,7 +172,7 @@ function SeatSizer({
               </a>
             </div>
             <p className="mt-3 text-xs text-muted-foreground" data-testid="text-trial-info">
-              Trial is 14 days. After that, your workspace becomes read-only until you upgrade.
+              14-day trial. Card added after install. You won't be charged until trial ends.
             </p>
             <div className="mt-4 space-y-1.5 text-xs text-muted-foreground" data-testid="section-trust-bullets">
               <div className="flex items-start gap-2">
@@ -236,6 +236,9 @@ function PlansChooser({ term }: { term: Term }) {
             {formatUSD(term === "annual" ? PRO.annual : PRO.monthly)}
             <span className="ml-1 text-sm font-normal text-muted-foreground">{scaleSuffix}</span>
           </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Free today. Card added after install.
+          </p>
           <ul className="mt-4 space-y-2 text-sm">
             <li className="flex items-center justify-between">
               <span>Max workspace users</span>
@@ -253,6 +256,7 @@ function PlansChooser({ term }: { term: Term }) {
           >
             Choose Pro
           </a>
+          <p className="mt-2 text-xs text-center text-muted-foreground">Secure checkout via Stripe</p>
           <div className="mt-4 pt-4 border-t space-y-1.5 text-xs text-muted-foreground" data-testid="section-trust-bullets-pro">
             <div className="flex items-start gap-1.5">
               <span className="text-emerald-600 shrink-0 text-xs">✓</span>
@@ -316,6 +320,9 @@ function PlansChooser({ term }: { term: Term }) {
               Max {active.cap.toLocaleString()} users
             </div>
           </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Free today. Card added after install.
+          </p>
 
           <ul className="mt-4 space-y-2 text-sm">
             <li className="text-muted-foreground">Anonymous posts & comments</li>
@@ -331,7 +338,7 @@ function PlansChooser({ term }: { term: Term }) {
           >
             Choose Scale
           </a>
-          <p className="mt-2 text-xs text-muted-foreground">Change size anytime in the Billing Portal.</p>
+          <p className="mt-2 text-xs text-center text-muted-foreground">Secure checkout via Stripe</p>
           <div className="mt-4 pt-4 border-t space-y-1.5 text-xs text-muted-foreground" data-testid="section-trust-bullets-scale">
             <div className="flex items-start gap-1.5">
               <span className="text-emerald-600 shrink-0 text-xs">✓</span>
@@ -433,12 +440,24 @@ function BillingExplainer() {
 function PricingFAQ() {
   const qas = [
     {
-      q: "Do higher plans include better support?",
-      a: "No. All plans include email support. The product is fully self-serve and identical across plans.",
+      q: "Do I need a card to start?",
+      a: "Yes — after you connect Slack, you'll add a card to begin your 14-day trial. You won't be charged until the trial ends.",
     },
     {
-      q: "Can we exceed our seat cap occasionally?",
-      a: "Yes. You'll have a short grace window, with clear prompts to upgrade if you remain over the cap.",
+      q: "Can I pay now?",
+      a: "Yes — choose 'Charge today' to start billing immediately and skip the trial.",
+    },
+    {
+      q: "Can I cancel before billing?",
+      a: "Any time during the trial. No questions asked.",
+    },
+    {
+      q: "What if we exceed our seat cap?",
+      a: "You'll get a 7-day grace period with clear upgrade prompts.",
+    },
+    {
+      q: "Do higher plans include better support?",
+      a: "No. All plans include email support. The product is fully self-serve and identical across plans.",
     },
     {
       q: "Do you offer discounts?",
