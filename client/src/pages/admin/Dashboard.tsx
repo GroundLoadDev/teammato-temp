@@ -1,812 +1,740 @@
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { GlobalFilterBar, FilterState } from "@/components/admin/GlobalFilterBar";
-import { KSafetyBanner } from "@/components/admin/KSafetyBanner";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
-  MessageSquare, 
-  Tag, 
-  Lightbulb, 
-  TrendingUp, 
-  Users, 
-  Clock,
-  CheckCircle2,
-  Archive,
-  Eye,
-  Calendar,
-  Hash
+  CheckCircle2, Circle, MessageSquare, FileText, Tag, CheckCheck, 
+  Slack, ArrowRight, Info, Download, History, AlertTriangle, Clock,
+  Send, ChevronRight, Copy, TrendingUp, Users, Sparkles, X
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Link } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface DashboardStats {
-  activeTopics: number;
-  upcomingTopics: number;
-  expiredTopics: number;
-  pendingSuggestions: number;
-  releasedThreadsThisWeek: number;
-  totalParticipants: number;
+  totalThreads: number;
+  totalFeedbackItems: number;
+  totalTopics: number;
+  readyThreads: number;
+  newThisWeek: number;
+  activeParticipants: number;
 }
 
-interface Topic {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  slackChannelId: string | null;
-  kThreshold: number;
-  isActive: boolean;
-  expiresAt: string | null;
-  windowDays: number;
-  status: string;
-  ownerId: string | null;
-  ownerEmail: string | null;
-  actionNotes: string | null;
-  createdAt: string;
-  parentTopicId: string | null;
-  isParent: boolean;
-  instanceIdentifier: string | null;
-  windowStart: string | null;
-  windowEnd: string | null;
+interface SlackStatus {
+  connected: boolean;
+  teamId?: string;
+  botUserId?: string;
 }
 
-interface CategorizedTopics {
-  created: Topic[];
-  instances: Topic[];
-  archived: Topic[];
+interface SlackSettings {
+  digestChannel: string | null;
+  digestEnabled: boolean;
+}
+
+interface BillingUsage {
+  detectedMembers: number;
+  seatCap: number;
+  plan: string;
+  trialDaysLeft: number | null;
+  usagePercent: number;
+  isOverCap: boolean;
+  isNearCap: boolean;
 }
 
 interface FeedbackThread {
   id: string;
   title: string;
+  topicName: string | null;
   status: string;
   participantCount: number;
   kThreshold: number;
-  moderationStatus: string;
   createdAt: string;
-  slackChannelId: string | null;
-}
-
-interface TopicSuggestion {
-  id: string;
-  title: string;
-  status: string;
-  createdAt: string;
-  supporterCount: number;
 }
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState("overview");
-  const [filters, setFilters] = useState<FilterState>({
-    channels: [],
-    timeRange: '30',
-    status: [],
-    search: '',
-  });
+  const { toast } = useToast();
+  const [copiedCommand, setCopiedCommand] = useState<string | null>(null);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [showMilestone, setShowMilestone] = useState<string | null>(null);
 
-  // Fetch data
-  const { data: stats } = useQuery<DashboardStats>({
+  const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ['/api/dashboard/stats'],
   });
 
-  const { data: categorizedTopics } = useQuery<CategorizedTopics>({
-    queryKey: ['/api/topics/categorized'],
+  const { data: slackStatus, isLoading: slackLoading } = useQuery<SlackStatus>({
+    queryKey: ['/api/dashboard/slack-status'],
   });
 
-  const { data: allThreads } = useQuery<FeedbackThread[]>({
-    queryKey: ['/api/feedback/threads'],
+  const { data: slackSettings, isLoading: settingsLoading } = useQuery<SlackSettings>({
+    queryKey: ['/api/slack-settings'],
   });
 
-  const { data: suggestions } = useQuery<TopicSuggestion[]>({
-    queryKey: ['/api/topic-suggestions'],
+  const { data: billingUsage, isLoading: billingLoading } = useQuery<BillingUsage>({
+    queryKey: ['/api/billing/usage'],
   });
 
-  // Extract unique channels from topics and threads
-  const availableChannels = useMemo(() => {
-    const channelMap = new Map<string, string>();
-    
-    categorizedTopics?.created.forEach(topic => {
-      if (topic.slackChannelId) {
-        channelMap.set(topic.slackChannelId, topic.slackChannelId);
+  const { data: recentThreads, isLoading: threadsLoading } = useQuery<FeedbackThread[]>({
+    queryKey: ['/api/dashboard/recent-threads'],
+  });
+
+  const sendDigestMutation = useMutation({
+    mutationFn: async () => apiRequest('POST', '/api/slack/digest-preview', {}),
+    onSuccess: () => {
+      toast({ title: "Sample digest sent!", description: "Check your configured Slack channel." });
+    },
+    onError: () => {
+      toast({ title: "Failed to send digest", variant: "destructive" });
+    },
+  });
+
+  const copyCommand = (cmd: string) => {
+    navigator.clipboard.writeText(cmd);
+    setCopiedCommand(cmd);
+    setTimeout(() => setCopiedCommand(null), 2000);
+  };
+
+  // First-run detection and milestone tracking
+  useEffect(() => {
+    if (!statsLoading && !slackLoading && stats && slackStatus) {
+      const hasSeenWelcome = localStorage.getItem('teammato_welcomed');
+      const lastFeedbackCount = parseInt(localStorage.getItem('teammato_last_feedback') || '0');
+      const hasReachedK = localStorage.getItem('teammato_k_reached');
+      
+      // Show welcome for first-time users
+      if (!hasSeenWelcome && slackStatus.connected && stats.totalFeedbackItems === 0) {
+        setShowWelcome(true);
       }
-    });
-    
-    categorizedTopics?.instances.forEach(topic => {
-      if (topic.slackChannelId) {
-        channelMap.set(topic.slackChannelId, topic.slackChannelId);
-      }
-    });
-
-    allThreads?.forEach(thread => {
-      if (thread.slackChannelId) {
-        channelMap.set(thread.slackChannelId, thread.slackChannelId);
-      }
-    });
-
-    return Array.from(channelMap.entries()).map(([id, name]) => ({
-      id,
-      name: name.replace('C', '#')
-    }));
-  }, [categorizedTopics, allThreads]);
-
-  // Filter topics based on active filters
-  const filteredTopics = useMemo(() => {
-    if (!categorizedTopics) return { active: [], upcoming: [], expired: [], archived: [] };
-
-    const allTopics = [...(categorizedTopics.created || []), ...(categorizedTopics.instances || [])];
-    const now = new Date();
-
-    const filterTopic = (topic: Topic) => {
-      // Search filter
-      if (filters.search && !topic.name.toLowerCase().includes(filters.search.toLowerCase())) {
-        return false;
-      }
-
-      // Channel filter
-      if (filters.channels.length > 0 && !filters.channels.includes(topic.slackChannelId || '')) {
-        return false;
-      }
-
-      // Status filter
-      if (filters.status.length > 0 && !filters.status.includes(topic.status)) {
-        return false;
-      }
-
-      // Time range filter
-      if (filters.timeRange === 'custom') {
-        if (filters.customStartDate && new Date(topic.createdAt) < new Date(filters.customStartDate)) {
-          return false;
-        }
-        if (filters.customEndDate && new Date(topic.createdAt) > new Date(filters.customEndDate)) {
-          return false;
-        }
-      } else if (filters.timeRange !== 'all') {
-        const timeRangeDays = parseInt(filters.timeRange);
-        if (!isNaN(timeRangeDays)) {
-          const cutoffDate = new Date(now.getTime() - timeRangeDays * 24 * 60 * 60 * 1000);
-          if (new Date(topic.createdAt) < cutoffDate) {
-            return false;
-          }
+      
+      // Milestone: First feedback received
+      if (stats.totalFeedbackItems > 0 && lastFeedbackCount === 0) {
+        const hasSeenFirstFeedback = sessionStorage.getItem('teammato_first_feedback_celebrated');
+        if (!hasSeenFirstFeedback) {
+          setShowMilestone('first_feedback');
+          sessionStorage.setItem('teammato_first_feedback_celebrated', 'true');
         }
       }
-
-      return true;
-    };
-
-    const active = allTopics.filter(t => 
-      t.isActive && 
-      t.status === 'collecting' && 
-      filterTopic(t)
-    );
-
-    const upcoming = allTopics.filter(t => 
-      t.isActive && 
-      t.status === 'collecting' && 
-      t.windowStart && 
-      new Date(t.windowStart) > now &&
-      filterTopic(t)
-    );
-
-    const expired = allTopics.filter(t => 
-      !t.isActive && 
-      (t.status === 'in_review' || t.status === 'action_decided') &&
-      filterTopic(t)
-    );
-
-    const archived = (categorizedTopics.archived || []).filter(filterTopic);
-
-    return { active, upcoming, expired, archived };
-  }, [categorizedTopics, filters]);
-
-  // Filter threads (k-safe only)
-  const kSafeThreads = useMemo(() => {
-    if (!allThreads) return [];
-
-    return allThreads.filter(thread => {
-      // K-safety check
-      if (thread.participantCount < thread.kThreshold) {
-        return false;
-      }
-
-      // Search filter
-      if (filters.search && !thread.title.toLowerCase().includes(filters.search.toLowerCase())) {
-        return false;
-      }
-
-      // Channel filter
-      if (filters.channels.length > 0 && !filters.channels.includes(thread.slackChannelId || '')) {
-        return false;
-      }
-
-      // Time range filter
-      if (filters.timeRange === 'custom') {
-        if (filters.customStartDate && new Date(thread.createdAt) < new Date(filters.customStartDate)) {
-          return false;
-        }
-        if (filters.customEndDate && new Date(thread.createdAt) > new Date(filters.customEndDate)) {
-          return false;
-        }
-      } else if (filters.timeRange !== 'all') {
-        const timeRangeDays = parseInt(filters.timeRange);
-        if (!isNaN(timeRangeDays)) {
-          const cutoffDate = new Date(Date.now() - timeRangeDays * 24 * 60 * 60 * 1000);
-          if (new Date(thread.createdAt) < cutoffDate) {
-            return false;
-          }
+      
+      // Milestone: K-anonymity threshold reached
+      if (stats.readyThreads > 0 && !hasReachedK) {
+        const hasSeenKReached = sessionStorage.getItem('teammato_k_celebrated');
+        if (!hasSeenKReached) {
+          setShowMilestone('k_reached');
+          sessionStorage.setItem('teammato_k_celebrated', 'true');
+          localStorage.setItem('teammato_k_reached', 'true');
         }
       }
-
-      return true;
-    });
-  }, [allThreads, filters]);
-
-  // Filter suggestions
-  const filteredSuggestions = useMemo(() => {
-    if (!suggestions) return { pending: [], approved: [], rejected: [] };
-
-    const filterSuggestion = (suggestion: TopicSuggestion) => {
-      if (filters.search && !suggestion.title.toLowerCase().includes(filters.search.toLowerCase())) {
-        return false;
-      }
-
-      // Status filter
-      if (filters.status.length > 0 && !filters.status.includes(suggestion.status)) {
-        return false;
-      }
-
-      // Time range filter
-      if (filters.timeRange === 'custom') {
-        if (filters.customStartDate && new Date(suggestion.createdAt) < new Date(filters.customStartDate)) {
-          return false;
-        }
-        if (filters.customEndDate && new Date(suggestion.createdAt) > new Date(filters.customEndDate)) {
-          return false;
-        }
-      } else if (filters.timeRange !== 'all') {
-        const timeRangeDays = parseInt(filters.timeRange);
-        if (!isNaN(timeRangeDays)) {
-          const cutoffDate = new Date(Date.now() - timeRangeDays * 24 * 60 * 60 * 1000);
-          if (new Date(suggestion.createdAt) < cutoffDate) {
-            return false;
-          }
-        }
-      }
-
-      return true;
-    };
-
-    return {
-      pending: suggestions.filter(s => s.status === 'pending' && filterSuggestion(s)),
-      approved: suggestions.filter(s => s.status === 'approved' && filterSuggestion(s)),
-      rejected: suggestions.filter(s => s.status === 'rejected' && filterSuggestion(s)),
-    };
-  }, [suggestions, filters]);
-
-  // Check if filters produce k-unsafe results
-  const showKSafetyBanner = useMemo(() => {
-    if (activeTab === 'feedback' && kSafeThreads.length === 0 && allThreads && allThreads.length > 0) {
-      // There are threads but none are k-safe
-      return true;
+      
+      localStorage.setItem('teammato_last_feedback', stats.totalFeedbackItems.toString());
     }
-    return false;
-  }, [activeTab, kSafeThreads, allThreads]);
+  }, [stats, statsLoading, slackStatus, slackLoading]);
+
+  const dismissWelcome = () => {
+    setShowWelcome(false);
+    localStorage.setItem('teammato_welcomed', 'true');
+  };
+
+  // Get plan display name
+  const getPlanName = (plan: string) => {
+    if (plan === 'trial') return 'Trial';
+    if (plan === 'pro_250') return 'Pro';
+    if (plan.startsWith('scale_')) return 'Scale';
+    return 'Trial';
+  };
+
+  // Get plan badge variant
+  const getPlanBadge = (plan: string, trialDaysLeft: number | null) => {
+    if (plan === 'trial') {
+      if (trialDaysLeft !== null && trialDaysLeft <= 3) {
+        return { variant: 'destructive' as const, text: `Trial: ${trialDaysLeft}d left` };
+      }
+      return { variant: 'secondary' as const, text: trialDaysLeft ? `Trial: ${trialDaysLeft}d left` : 'Trial' };
+    }
+    return { variant: 'default' as const, text: getPlanName(plan) };
+  };
 
   return (
-    <div className="flex flex-col h-full">
-      <GlobalFilterBar
-        filters={filters}
-        onFiltersChange={setFilters}
-        availableChannels={availableChannels}
-        availableStatuses={
-          activeTab === 'topics' 
-            ? [
-                { value: 'collecting', label: 'Collecting' },
-                { value: 'in_review', label: 'In Review' },
-                { value: 'action_decided', label: 'Action Decided' },
-                { value: 'archived', label: 'Archived' },
-              ]
-            : activeTab === 'suggestions'
-            ? [
-                { value: 'pending', label: 'Pending' },
-                { value: 'approved', label: 'Approved' },
-                { value: 'rejected', label: 'Rejected' },
-              ]
-            : []
-        }
-        showStatusFilter={activeTab === 'topics' || activeTab === 'suggestions'}
-      />
-
-      <div className="flex-1 overflow-auto">
-        <div className="p-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList data-testid="admin-tabs">
-              <TabsTrigger value="overview" data-testid="tab-overview">
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Overview
-              </TabsTrigger>
-              <TabsTrigger value="topics" data-testid="tab-topics">
-                <Tag className="h-4 w-4 mr-2" />
-                Topics
-              </TabsTrigger>
-              <TabsTrigger value="suggestions" data-testid="tab-suggestions">
-                <Lightbulb className="h-4 w-4 mr-2" />
-                Suggestions
-              </TabsTrigger>
-              <TabsTrigger value="feedback" data-testid="tab-feedback">
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Feedback
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Overview Tab */}
-            <TabsContent value="overview" className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-semibold mb-4" data-testid="text-overview-title">Overview</h2>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  <Card className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Active Topics</p>
-                        <p className="text-3xl font-bold mt-2" data-testid="text-active-topics-count">
-                          {filteredTopics.active.length}
-                        </p>
-                      </div>
-                      <Tag className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                  </Card>
-
-                  <Card className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Pending Suggestions</p>
-                        <p className="text-3xl font-bold mt-2" data-testid="text-pending-suggestions-count">
-                          {filteredSuggestions.pending.length}
-                        </p>
-                      </div>
-                      <Lightbulb className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                  </Card>
-
-                  <Card className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Released Threads</p>
-                        <p className="text-3xl font-bold mt-2" data-testid="text-released-threads-count">
-                          {kSafeThreads.length}
-                        </p>
-                      </div>
-                      <MessageSquare className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                  </Card>
-
-                  <Card className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Upcoming Topics</p>
-                        <p className="text-3xl font-bold mt-2" data-testid="text-upcoming-topics-count">
-                          {filteredTopics.upcoming.length}
-                        </p>
-                      </div>
-                      <Clock className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                  </Card>
-
-                  <Card className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">In Review</p>
-                        <p className="text-3xl font-bold mt-2" data-testid="text-expired-topics-count">
-                          {filteredTopics.expired.length}
-                        </p>
-                      </div>
-                      <Eye className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                  </Card>
-
-                  <Card className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Archived</p>
-                        <p className="text-3xl font-bold mt-2" data-testid="text-archived-topics-count">
-                          {filteredTopics.archived.length}
-                        </p>
-                      </div>
-                      <Archive className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                  </Card>
-                </div>
+    <div className="p-8 space-y-6">
+      {/* Top Ribbon - Plan Status & Usage */}
+      {!billingLoading && billingUsage && (
+        <div className="rounded-2xl border bg-gradient-to-r from-emerald-50 to-background dark:from-emerald-950/20 p-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-4">
+              <Badge {...getPlanBadge(billingUsage.plan, billingUsage.trialDaysLeft)} data-testid="badge-plan-status">
+                {getPlanBadge(billingUsage.plan, billingUsage.trialDaysLeft).text}
+              </Badge>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Workspace members:</span>
+                <span className="font-semibold" data-testid="text-member-count">
+                  {billingUsage.detectedMembers} / {billingUsage.seatCap}
+                </span>
+                {billingUsage.isOverCap && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <AlertTriangle className="w-4 h-4 text-destructive" />
+                      </TooltipTrigger>
+                      <TooltipContent>Over capacity - upgrade needed</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </div>
-
-              <div className="grid gap-6 md:grid-cols-2">
-                <Card className="p-6">
-                  <h3 className="font-semibold mb-4">Quick Actions</h3>
-                  <div className="space-y-2">
-                    <Button 
-                      variant="outline" 
-                      className="w-full justify-start"
-                      onClick={() => setActiveTab('topics')}
-                      data-testid="button-goto-topics"
-                    >
-                      <Tag className="h-4 w-4 mr-2" />
-                      Manage Topics
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="w-full justify-start"
-                      onClick={() => setActiveTab('suggestions')}
-                      data-testid="button-goto-suggestions"
-                    >
-                      <Lightbulb className="h-4 w-4 mr-2" />
-                      Review Suggestions
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="w-full justify-start"
-                      onClick={() => setActiveTab('feedback')}
-                      data-testid="button-goto-feedback"
-                    >
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      View Feedback
-                    </Button>
-                  </div>
-                </Card>
-
-                <Card className="p-6">
-                  <h3 className="font-semibold mb-4">Recent Activity</h3>
-                  <div className="space-y-3 text-sm text-muted-foreground">
-                    {filteredTopics.active.length > 0 && (
-                      <p data-testid="text-activity-active">
-                        {filteredTopics.active.length} active {filteredTopics.active.length === 1 ? 'topic' : 'topics'} collecting feedback
-                      </p>
-                    )}
-                    {filteredSuggestions.pending.length > 0 && (
-                      <p data-testid="text-activity-pending">
-                        {filteredSuggestions.pending.length} pending {filteredSuggestions.pending.length === 1 ? 'suggestion' : 'suggestions'} awaiting review
-                      </p>
-                    )}
-                    {kSafeThreads.length > 0 && (
-                      <p data-testid="text-activity-threads">
-                        {kSafeThreads.length} {kSafeThreads.length === 1 ? 'thread' : 'threads'} released (k-safe)
-                      </p>
-                    )}
-                    {filteredTopics.active.length === 0 && 
-                     filteredSuggestions.pending.length === 0 && 
-                     kSafeThreads.length === 0 && (
-                      <p className="text-muted-foreground">No recent activity</p>
-                    )}
-                  </div>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* Topics Tab */}
-            <TabsContent value="topics" className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-semibold" data-testid="text-topics-title">Topics</h2>
-                <Button onClick={() => window.location.href = '/admin/topics'} data-testid="button-manage-topics">
-                  Manage Topics
-                </Button>
-              </div>
-
-              <Tabs defaultValue="active" className="space-y-4">
-                <TabsList>
-                  <TabsTrigger value="active" data-testid="tab-topics-active">
-                    Active
-                    <Badge variant="secondary" className="ml-2">{filteredTopics.active.length}</Badge>
-                  </TabsTrigger>
-                  <TabsTrigger value="upcoming" data-testid="tab-topics-upcoming">
-                    Upcoming
-                    <Badge variant="secondary" className="ml-2">{filteredTopics.upcoming.length}</Badge>
-                  </TabsTrigger>
-                  <TabsTrigger value="expired" data-testid="tab-topics-expired">
-                    In Review
-                    <Badge variant="secondary" className="ml-2">{filteredTopics.expired.length}</Badge>
-                  </TabsTrigger>
-                  <TabsTrigger value="archived" data-testid="tab-topics-archived">
-                    Archived
-                    <Badge variant="secondary" className="ml-2">{filteredTopics.archived.length}</Badge>
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="active">
-                  {filteredTopics.active.length === 0 ? (
-                    <Card className="p-8 text-center">
-                      <Tag className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground" data-testid="text-no-active-topics">
-                        No active topics found. Create a topic to start collecting feedback.
-                      </p>
-                    </Card>
-                  ) : (
-                    <div className="grid gap-4">
-                      {filteredTopics.active.map(topic => (
-                        <Card key={topic.id} className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-semibold" data-testid={`text-topic-name-${topic.id}`}>
-                                  {topic.name}
-                                </h3>
-                                <Badge variant="outline" data-testid={`badge-topic-status-${topic.id}`}>
-                                  {topic.status}
-                                </Badge>
-                                {topic.slackChannelId && (
-                                  <Badge variant="secondary" data-testid={`badge-topic-channel-${topic.id}`}>
-                                    <Hash className="h-3 w-3 mr-1" />
-                                    {topic.slackChannelId}
-                                  </Badge>
-                                )}
-                              </div>
-                              {topic.description && (
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  {topic.description}
-                                </p>
-                              )}
-                              <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                                <span>k-threshold: {topic.kThreshold}</span>
-                                {topic.expiresAt && (
-                                  <span className="flex items-center gap-1">
-                                    <Calendar className="h-3 w-3" />
-                                    Expires {new Date(topic.expiresAt).toLocaleDateString()}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="upcoming">
-                  {filteredTopics.upcoming.length === 0 ? (
-                    <Card className="p-8 text-center">
-                      <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground" data-testid="text-no-upcoming-topics">
-                        No upcoming topics scheduled.
-                      </p>
-                    </Card>
-                  ) : (
-                    <div className="grid gap-4">
-                      {filteredTopics.upcoming.map(topic => (
-                        <Card key={topic.id} className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-semibold">{topic.name}</h3>
-                                <Badge variant="outline">Upcoming</Badge>
-                              </div>
-                              {topic.windowStart && (
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  Starts {new Date(topic.windowStart).toLocaleDateString()}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="expired">
-                  {filteredTopics.expired.length === 0 ? (
-                    <Card className="p-8 text-center">
-                      <Eye className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground" data-testid="text-no-expired-topics">
-                        No topics in review.
-                      </p>
-                    </Card>
-                  ) : (
-                    <div className="grid gap-4">
-                      {filteredTopics.expired.map(topic => (
-                        <Card key={topic.id} className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-semibold">{topic.name}</h3>
-                                <Badge variant="outline">{topic.status}</Badge>
-                              </div>
-                            </div>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="archived">
-                  {filteredTopics.archived.length === 0 ? (
-                    <Card className="p-8 text-center">
-                      <Archive className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground" data-testid="text-no-archived-topics">
-                        No archived topics.
-                      </p>
-                    </Card>
-                  ) : (
-                    <div className="grid gap-4">
-                      {filteredTopics.archived.map(topic => (
-                        <Card key={topic.id} className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-semibold">{topic.name}</h3>
-                                <Badge variant="outline">Archived</Badge>
-                              </div>
-                            </div>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
-            </TabsContent>
-
-            {/* Suggestions Tab */}
-            <TabsContent value="suggestions" className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-semibold" data-testid="text-suggestions-title">Topic Suggestions</h2>
-                <Button onClick={() => window.location.href = '/admin/topic-suggestions'} data-testid="button-manage-suggestions">
-                  Manage Suggestions
-                </Button>
-              </div>
-
-              <Tabs defaultValue="pending" className="space-y-4">
-                <TabsList>
-                  <TabsTrigger value="pending" data-testid="tab-suggestions-pending">
-                    Pending
-                    <Badge variant="secondary" className="ml-2">{filteredSuggestions.pending.length}</Badge>
-                  </TabsTrigger>
-                  <TabsTrigger value="approved" data-testid="tab-suggestions-approved">
-                    Approved
-                    <Badge variant="secondary" className="ml-2">{filteredSuggestions.approved.length}</Badge>
-                  </TabsTrigger>
-                  <TabsTrigger value="rejected" data-testid="tab-suggestions-rejected">
-                    Rejected
-                    <Badge variant="secondary" className="ml-2">{filteredSuggestions.rejected.length}</Badge>
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="pending">
-                  {filteredSuggestions.pending.length === 0 ? (
-                    <Card className="p-8 text-center">
-                      <Lightbulb className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground" data-testid="text-no-pending-suggestions">
-                        No pending suggestions.
-                      </p>
-                    </Card>
-                  ) : (
-                    <div className="grid gap-4">
-                      {filteredSuggestions.pending.map(suggestion => (
-                        <Card key={suggestion.id} className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h3 className="font-semibold" data-testid={`text-suggestion-title-${suggestion.id}`}>
-                                {suggestion.title}
-                              </h3>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {suggestion.supporterCount} {suggestion.supporterCount === 1 ? 'supporter' : 'supporters'}
-                              </p>
-                            </div>
-                            <Badge variant="outline">Pending</Badge>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="approved">
-                  {filteredSuggestions.approved.length === 0 ? (
-                    <Card className="p-8 text-center">
-                      <CheckCircle2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground" data-testid="text-no-approved-suggestions">
-                        No approved suggestions.
-                      </p>
-                    </Card>
-                  ) : (
-                    <div className="grid gap-4">
-                      {filteredSuggestions.approved.map(suggestion => (
-                        <Card key={suggestion.id} className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h3 className="font-semibold">{suggestion.title}</h3>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {suggestion.supporterCount} {suggestion.supporterCount === 1 ? 'supporter' : 'supporters'}
-                              </p>
-                            </div>
-                            <Badge variant="outline">Approved</Badge>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="rejected">
-                  {filteredSuggestions.rejected.length === 0 ? (
-                    <Card className="p-8 text-center">
-                      <p className="text-muted-foreground" data-testid="text-no-rejected-suggestions">
-                        No rejected suggestions.
-                      </p>
-                    </Card>
-                  ) : (
-                    <div className="grid gap-4">
-                      {filteredSuggestions.rejected.map(suggestion => (
-                        <Card key={suggestion.id} className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h3 className="font-semibold">{suggestion.title}</h3>
-                            </div>
-                            <Badge variant="outline">Rejected</Badge>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
-            </TabsContent>
-
-            {/* Feedback Tab */}
-            <TabsContent value="feedback" className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-semibold" data-testid="text-feedback-title">Feedback Threads</h2>
-                <Button onClick={() => window.location.href = '/admin/feedback'} data-testid="button-manage-feedback">
-                  Manage Feedback
-                </Button>
-              </div>
-
-              {showKSafetyBanner && (
-                <KSafetyBanner 
-                  kThreshold={5}
-                  message="No threads meet the k-anonymity threshold with your current filters. Try broader filters or wait for more participants."
+              <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className={`h-full ${billingUsage.isOverCap ? 'bg-destructive' : billingUsage.isNearCap ? 'bg-yellow-500' : 'bg-emerald-600'}`}
+                  style={{ width: `${Math.min(billingUsage.usagePercent, 100)}%` }}
+                  data-testid="meter-usage"
                 />
-              )}
+              </div>
+            </div>
+            {billingUsage.plan === 'trial' && (
+              <Link href="/admin/billing">
+                <Button size="sm" data-testid="button-upgrade">
+                  Upgrade Plan
+                </Button>
+              </Link>
+            )}
+          </div>
+          {billingUsage.isOverCap && (
+            <div className="mt-3 text-sm text-destructive flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              You've exceeded your seat limit. Upgrade to continue.
+            </div>
+          )}
+          {billingUsage.isNearCap && !billingUsage.isOverCap && (
+            <div className="mt-3 text-sm text-yellow-700 dark:text-yellow-500 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              Approaching seat limit. Consider upgrading soon.
+            </div>
+          )}
+        </div>
+      )}
 
-              {kSafeThreads.length === 0 && !showKSafetyBanner ? (
-                <Card className="p-8 text-center">
-                  <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground" data-testid="text-no-feedback-threads">
-                    No released feedback threads found.
-                  </p>
-                </Card>
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-semibold mb-2" data-testid="text-get-started-title">Dashboard</h1>
+        <p className="text-muted-foreground" data-testid="text-get-started-subtitle">
+          Overview of your anonymous feedback platform
+        </p>
+      </div>
+
+      {/* Quick Actions Strip */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Link href="/admin/export">
+          <Button variant="outline" size="sm" className="gap-2" data-testid="button-export">
+            <Download className="w-4 h-4" />
+            Export Data
+          </Button>
+        </Link>
+        <Button variant="outline" size="sm" className="gap-2" data-testid="button-audit">
+          <History className="w-4 h-4" />
+          View Audit Log
+        </Button>
+        <Link href="/admin/retention">
+          <Button variant="outline" size="sm" className="gap-2" data-testid="button-retention">
+            <Clock className="w-4 h-4" />
+            Retention: 365d
+          </Button>
+        </Link>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Link href="/admin/feedback">
+          <Card className="hover-elevate cursor-pointer" data-testid="card-stat-threads">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Threads</CardTitle>
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold" data-testid="text-total-threads">
+                {statsLoading ? '...' : stats?.totalThreads || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">Feedback discussions</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Card data-testid="card-stat-items">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Feedback Items</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" data-testid="text-total-items">
+              {statsLoading ? '...' : stats?.totalFeedbackItems || 0}
+            </div>
+            {!statsLoading && stats?.totalFeedbackItems === 0 ? (
+              <p className="text-xs text-muted-foreground">Invite team to submit feedback via Slack</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Individual submissions</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Link href="/admin/topics">
+          <Card className="hover-elevate cursor-pointer" data-testid="card-stat-topics">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Topics</CardTitle>
+              <Tag className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold" data-testid="text-total-topics">
+                {statsLoading ? '...' : stats?.totalTopics || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">Feedback categories</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/admin/feedback">
+          <Card className="hover-elevate cursor-pointer" data-testid="card-stat-ready">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                Ready Threads
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-3.5 h-3.5 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="font-semibold mb-1">K-anonymity threshold: k=5</p>
+                      <p className="text-xs">Threads with fewer than 5 participants are hidden until the threshold is met. This protects anonymity.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </CardTitle>
+              <CheckCheck className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold" data-testid="text-ready-threads">
+                {statsLoading ? '...' : stats?.readyThreads || 0}
+              </div>
+              {!statsLoading && stats?.readyThreads === 0 ? (
+                <p className="text-xs text-muted-foreground">Need 5+ participants to unlock</p>
               ) : (
-                <div className="grid gap-4">
-                  {kSafeThreads.map(thread => (
-                    <Card key={thread.id} className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold" data-testid={`text-thread-title-${thread.id}`}>
-                              {thread.title}
-                            </h3>
-                            <Badge variant="secondary">
-                              <Users className="h-3 w-3 mr-1" />
-                              {thread.participantCount} participants
-                            </Badge>
-                            {thread.slackChannelId && (
-                              <Badge variant="outline">
-                                <Hash className="h-3 w-3 mr-1" />
-                                {thread.slackChannelId}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Released {new Date(thread.createdAt).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
+                <p className="text-xs text-muted-foreground">Met k-anonymity threshold</p>
               )}
-            </TabsContent>
-          </Tabs>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Card data-testid="card-stat-new-week">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">New This Week</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" data-testid="text-new-week">
+              {statsLoading ? '...' : stats?.newThisWeek || 0}
+            </div>
+            {!statsLoading && stats?.newThisWeek === 0 ? (
+              <p className="text-xs text-muted-foreground">Share Slack commands to activate</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Items in last 7 days</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-stat-participants">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Participants</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" data-testid="text-participants">
+              {statsLoading ? '...' : stats?.activeParticipants || 0}
+            </div>
+            {!statsLoading && stats?.activeParticipants === 0 ? (
+              <p className="text-xs text-muted-foreground">Waiting for first contributors</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">K-safe unique contributors</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Digest Status Card */}
+      {!settingsLoading && slackSettings && (
+        <Card data-testid="card-digest-status">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Send className="w-5 h-5" />
+              Daily Digest
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {slackSettings.digestChannel ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">Channel:</span>
+                  <code className="px-2 py-1 rounded bg-muted text-xs">{slackSettings.digestChannel}</code>
+                  <Badge variant={slackSettings.digestEnabled ? 'default' : 'secondary'}>
+                    {slackSettings.digestEnabled ? 'Enabled' : 'Disabled'}
+                  </Badge>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => sendDigestMutation.mutate()}
+                    disabled={sendDigestMutation.isPending}
+                    data-testid="button-send-sample"
+                  >
+                    {sendDigestMutation.isPending ? 'Sending...' : 'Send sample now'}
+                  </Button>
+                  <Link href="/admin/slack-settings">
+                    <Button size="sm" variant="ghost">Configure</Button>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-sm text-muted-foreground mb-3">No digest channel configured</p>
+                <Link href="/admin/slack-settings">
+                  <Button size="sm" data-testid="button-setup-digest">
+                    Setup digest <ArrowRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Stateful Post-Install Checklist */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Getting Started</h2>
+        <div className="max-w-3xl space-y-3">
+          {/* Step 1: Slack Connected */}
+          <Card className={slackStatus?.connected ? 'border-emerald-200 dark:border-emerald-900' : ''}>
+            <CardContent className="p-4 flex items-center gap-4">
+              {slackStatus?.connected ? (
+                <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" data-testid="icon-step-1-done" />
+              ) : (
+                <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
+              )}
+              <div className="flex-1">
+                <h3 className="font-semibold">Slack connected</h3>
+                <p className="text-sm text-muted-foreground">
+                  {slackStatus?.connected ? 'Your workspace is linked' : 'Connect your Slack workspace'}
+                </p>
+              </div>
+              {slackStatus?.connected ? (
+                <Link href="/admin/slack-settings">
+                  <Button size="sm" variant="ghost">Settings</Button>
+                </Link>
+              ) : (
+                <Button size="sm">Connect</Button>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Step 2: Pick digest channel */}
+          <Card className={slackSettings?.digestChannel ? 'border-emerald-200 dark:border-emerald-900' : ''}>
+            <CardContent className="p-4 flex items-center gap-4">
+              {slackSettings?.digestChannel ? (
+                <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" data-testid="icon-step-2-done" />
+              ) : (
+                <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
+              )}
+              <div className="flex-1">
+                <h3 className="font-semibold flex items-center gap-2">
+                  Pick digest channel
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-3.5 h-3.5 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p className="text-xs">Daily digests summarize new feedback and send to your chosen channel, keeping everyone informed without spamming.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {slackSettings?.digestChannel ? `Configured: ${slackSettings.digestChannel}` : 'Set where daily digests are sent'}
+                </p>
+              </div>
+              <Link href="/admin/slack-settings">
+                <Button size="sm" variant={slackSettings?.digestChannel ? 'ghost' : 'default'}>
+                  {slackSettings?.digestChannel ? 'Change' : 'Setup'}
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* Step 3: Seed topics */}
+          <Card className={(stats?.totalTopics || 0) > 0 ? 'border-emerald-200 dark:border-emerald-900' : ''}>
+            <CardContent className="p-4 flex items-center gap-4">
+              {(stats?.totalTopics || 0) > 0 ? (
+                <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" data-testid="icon-step-3-done" />
+              ) : (
+                <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
+              )}
+              <div className="flex-1">
+                <h3 className="font-semibold">Seed topics (1-3)</h3>
+                <p className="text-sm text-muted-foreground">
+                  {(stats?.totalTopics || 0) > 0 ? `${stats?.totalTopics} topics created` : 'Create feedback categories to organize responses'}
+                </p>
+              </div>
+              <Link href="/admin/topics">
+                <Button size="sm" variant={(stats?.totalTopics || 0) > 0 ? 'ghost' : 'default'}>
+                  {(stats?.totalTopics || 0) > 0 ? 'Manage' : 'Create topics'}
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* Step 4: Submit test */}
+          <Card className={(stats?.totalFeedbackItems || 0) > 0 ? 'border-emerald-200 dark:border-emerald-900' : ''}>
+            <CardContent className="p-4 flex items-center gap-4">
+              {(stats?.totalFeedbackItems || 0) > 0 ? (
+                <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" data-testid="icon-step-4-done" />
+              ) : (
+                <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
+              )}
+              <div className="flex-1">
+                <h3 className="font-semibold">Submit a test via /teammato</h3>
+                <p className="text-sm text-muted-foreground">
+                  {(stats?.totalFeedbackItems || 0) > 0 ? 'Test submitted successfully' : 'Try the feedback flow in Slack'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Step 5: Schedule digest */}
+          <Card className={slackSettings?.digestEnabled ? 'border-emerald-200 dark:border-emerald-900' : ''}>
+            <CardContent className="p-4 flex items-center gap-4">
+              {slackSettings?.digestEnabled ? (
+                <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" data-testid="icon-step-5-done" />
+              ) : (
+                <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
+              )}
+              <div className="flex-1">
+                <h3 className="font-semibold">Schedule digest</h3>
+                <p className="text-sm text-muted-foreground">
+                  {slackSettings?.digestEnabled ? 'Daily digest enabled' : 'Enable automated daily summaries'}
+                </p>
+              </div>
+              <Link href="/admin/slack-settings">
+                <Button size="sm" variant={slackSettings?.digestEnabled ? 'ghost' : 'default'}>
+                  {slackSettings?.digestEnabled ? 'Configure' : 'Enable'}
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* Step 6: Invite moderator */}
+          <Card>
+            <CardContent className="p-4 flex items-center gap-4">
+              <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="font-semibold">Invite a moderator</h3>
+                <p className="text-sm text-muted-foreground">Add team members to help review feedback</p>
+              </div>
+              <Link href="/admin/users">
+                <Button size="sm" variant="default">Invite</Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* Step 7: Review analytics */}
+          <Card>
+            <CardContent className="p-4 flex items-center gap-4">
+              <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="font-semibold">Review analytics</h3>
+                <p className="text-sm text-muted-foreground">Explore privacy-preserving insights</p>
+              </div>
+              <Link href="/admin/analytics">
+                <Button size="sm" variant="default">View analytics</Button>
+              </Link>
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      {/* Inline Slack Tips */}
+      <Card data-testid="card-slack-tips">
+        <CardHeader>
+          <CardTitle className="text-lg">How to use Teammato in Slack</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="p-3 rounded-lg bg-muted">
+              <p className="text-sm text-muted-foreground mb-2">Submit feedback</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 px-2 py-1.5 rounded bg-background text-xs font-mono">/teammato Your feedback here</code>
+                <Button 
+                  size="sm" 
+                  variant="ghost"
+                  onClick={() => copyCommand('/teammato Your feedback here')}
+                  data-testid="button-copy-command-1"
+                >
+                  {copiedCommand === '/teammato Your feedback here' ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+            <div className="p-3 rounded-lg bg-muted">
+              <p className="text-sm text-muted-foreground mb-2">Get help</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 px-2 py-1.5 rounded bg-background text-xs font-mono">/teammato help</code>
+                <Button 
+                  size="sm" 
+                  variant="ghost"
+                  onClick={() => copyCommand('/teammato help')}
+                  data-testid="button-copy-command-2"
+                >
+                  {copiedCommand === '/teammato help' ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recent Activity */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Recent Feedback</h2>
+        {threadsLoading ? (
+          <p className="text-muted-foreground">Loading...</p>
+        ) : !recentThreads || recentThreads.length === 0 ? (
+          <Card className="p-8 text-center" data-testid="card-no-activity">
+            <MessageSquare className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <p className="font-medium mb-2">No feedback yet</p>
+            <p className="text-sm text-muted-foreground mb-4">
+              Try submitting your first feedback using <code className="px-1.5 py-0.5 rounded bg-muted text-xs">/teammato</code> in Slack
+            </p>
+            <Link href="/admin/topics">
+              <Button size="sm" variant="outline">Create your first topic</Button>
+            </Link>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {recentThreads.map((thread) => (
+              <Card key={thread.id} className="p-4 hover-elevate" data-testid={`card-thread-${thread.id}`}>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <h3 className="font-medium" data-testid={`text-thread-topic-${thread.id}`}>
+                        {thread.topicName || 'General'}
+                      </h3>
+                      {thread.topicName && (
+                        <Badge variant="outline" className="text-xs">{thread.topicName}</Badge>
+                      )}
+                      {thread.participantCount >= thread.kThreshold ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      ) : (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Circle className="w-4 h-4 text-muted-foreground" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Below k-threshold ({thread.participantCount}/{thread.kThreshold})
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {thread.participantCount} participant{thread.participantCount !== 1 ? 's' : ''}
+                      {' • '}
+                      {new Date(thread.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <Link href="/admin/feedback">
+                    <Button variant="outline" size="sm" data-testid={`button-view-${thread.id}`}>
+                      View <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Welcome Modal for First-Time Users */}
+      <Dialog open={showWelcome} onOpenChange={setShowWelcome}>
+        <DialogContent className="sm:max-w-md" data-testid="dialog-welcome">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-emerald-600" />
+              Welcome to Teammato!
+            </DialogTitle>
+            <DialogDescription className="pt-4 space-y-3">
+              <p>Your anonymous feedback platform is ready. Here's how to get started:</p>
+              <ul className="list-disc pl-5 space-y-2 text-sm">
+                <li>Create 1-3 topics to organize feedback</li>
+                <li>Configure your digest channel</li>
+                <li>Try submitting feedback using <code className="px-1 py-0.5 rounded bg-muted">/teammato</code></li>
+                <li>Invite team members as moderators</li>
+              </ul>
+              <p className="text-xs text-muted-foreground pt-2">
+                Tip: Feedback is hidden until 5+ unique participants contribute to maintain anonymity.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 justify-end pt-4">
+            <Button variant="outline" onClick={dismissWelcome}>Got it</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Milestone Modals */}
+      <Dialog open={showMilestone === 'first_feedback'} onOpenChange={(open) => !open && setShowMilestone(null)}>
+        <DialogContent className="sm:max-w-md" data-testid="dialog-first-feedback">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-emerald-600" />
+              First Feedback Received!
+            </DialogTitle>
+            <DialogDescription className="pt-4">
+              <p>Congratulations! Your team has started sharing feedback anonymously.</p>
+              <p className="text-xs text-muted-foreground mt-3">
+                Remember: Feedback remains hidden until 5+ unique contributors participate in a thread.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 justify-end pt-4">
+            <Button onClick={() => setShowMilestone(null)}>Continue</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showMilestone === 'k_reached'} onOpenChange={(open) => !open && setShowMilestone(null)}>
+        <DialogContent className="sm:max-w-md" data-testid="dialog-k-reached">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-emerald-600" />
+              K-Anonymity Threshold Reached!
+            </DialogTitle>
+            <DialogDescription className="pt-4">
+              <p>Your first feedback thread has met the k=5 threshold and is now visible!</p>
+              <p className="text-xs text-muted-foreground mt-3">
+                This milestone means your team is actively participating in anonymous feedback.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 justify-end pt-4">
+            <Link href="/admin/feedback">
+              <Button>View Feedback</Button>
+            </Link>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
