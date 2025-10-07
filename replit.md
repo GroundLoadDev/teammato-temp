@@ -8,6 +8,14 @@ I prefer iterative development and clear, concise explanations. Ask before makin
 
 ### Recent Changes (October 2025)
 
+#### Stripe Checkout Bug Fix (Completed - October 7, 2025)
+- **Critical Production Bug**: Fixed "Skip trial" checkout flow that was completely broken for all customers
+- **Root Cause**: System was sending `trial_end: 'now'` (string) to Stripe instead of Unix timestamp integer, causing Stripe to reject requests with "Invalid integer: now" error
+- **User Impact**: Customers saw misleading "Session expired" error when attempting to skip trial and subscribe immediately
+- **Fix**: Changed lines 606 and 620 in `server/routes.ts` to use `Math.floor(Date.now() / 1000)` instead of string `'now'`
+- **Validation**: Removed unsafe `as any` type assertion - now properly typed as `number | undefined` matching Stripe's API requirements
+- **Scope**: Affects all "Skip trial" flows and previously-trialed organizations attempting to re-subscribe
+
 #### Anti-Gamification System (Completed)
 - **Schema Enforcement**: Added NOT NULL `topicId` to `feedbackItems` with unique constraint on (orgId, topicId, slackUserId) to prevent duplicate submissions per topic
 - **Topic Creator Restriction**: Implemented validation logic to block topic creators from submitting feedback to their own topics (prevents identity revelation)
