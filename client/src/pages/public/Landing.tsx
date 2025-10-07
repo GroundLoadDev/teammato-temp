@@ -39,14 +39,6 @@ const STEPS = [
   },
   {
     id: 2,
-    title: "Start your 14-day trial (card required after install)",
-    body:
-      "Free today. You won't be charged until the trial ends.",
-    icon: MessageSquareText,
-    meta: "free trial",
-  },
-  {
-    id: 3,
     title: "Post anonymously (Slack command)",
     body:
       "Anyone types /teammato in any channel. We handle the rest.",
@@ -55,7 +47,7 @@ const STEPS = [
     command: "/teammato Your message…",
   },
   {
-    id: 4,
+    id: 3,
     title: "Weekly digest & trends",
     body:
       "We group related posts and send a digest that drives action.",
