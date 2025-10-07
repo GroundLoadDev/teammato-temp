@@ -1479,11 +1479,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const validStatuses = ['trialing', 'active'];
-      if (!org.billingStatus || !validStatuses.includes(org.billingStatus)) {
+      // Get usage data for seat cap checking
+      const usage = await storage.getOrgUsage(orgId);
+      const orgWithUsage = { ...org, eligibleCount: usage?.eligibleCount || 0 };
+      
+      // Check write access using comprehensive billing state logic
+      const writeCheck = canWrite(orgWithUsage);
+      if (!writeCheck.allowed) {
+        const baseUrl = process.env.REPLIT_DOMAINS 
+          ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` 
+          : 'http://localhost:5000';
+        const billingUrl = `${baseUrl}/admin/billing`;
+        
         return res.json({
           response_type: 'ephemeral',
-          text: '🔒 *Subscription Required*\n\nYour team\'s Teammato subscription needs to be set up before you can submit feedback.\n\nPlease ask your workspace owner or admin to visit the billing page to complete setup.',
+          text: `🔒 *Teammato isn't fully set up*\n\n${writeCheck.reason}\n\n<${billingUrl}|Complete setup →>`,
         });
       }
 
