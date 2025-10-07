@@ -461,11 +461,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         line_items: [{ price: priceId, quantity: 1 }],
         allow_promotion_codes: true,
         payment_method_collection: 'always',
-        payment_method_options: {
-          card: {
-            setup_future_usage: 'off_session',
-          },
-        },
         subscription_data: {
           trial_end: trialEnd as any,
           trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },

@@ -1,0 +1,153 @@
+A) States (source of truth)
+State (org.billingStatus)	Admin access	Slack /teammato	Automations (digests)	Notes
+installed_no_checkout (installed, no Stripe sub)	View-only (billing banner; settings locked)	Blocked (ephemeral: start trial link)	Off	Post-install “Start trial” gate
+trialing (Stripe sub exists; trial_end in future)	Full	Allowed	On	Show “Trial ends {DATE}. Auto-bill $99 unless canceled.”
+active (paid & current)	Full	Allowed	On	Normal
+trial_expired_unpaid (no active sub; trial_end past)	View-only (upgrade banner)	Blocked	Off	Read-only until upgrade
+past_due (payment failed; Stripe dunning)	View-only (fix payment banner)	Blocked	Off	Restore on invoice.paid
+over_cap_grace (100–110%, within 7d)	Full + warning	Allowed	On	Show grace end {DATE}
+over_cap_blocked (>110% or grace expired)	View-only (upgrade required)	Blocked	Off	Reads OK, writes blocked
+canceled (sub canceled)	View-only (re-subscribe CTA)	Blocked	Off	History visible
+B) Owner actions × outcomes (routing + behavior)
+
+Legend:
+• Route = where we send them
+• Stripe = Checkout/Portal params
+• UI = what the user sees
+• Result = expected state transition
+
+Owner action	From state	Route	Stripe	UI / Messaging	Result
+Add to Slack (CTA)	any	Slack OAuth	—	Standard install consent	If new: create org → installed_no_checkout; if reinstall: re-link same org (no new sub)
+Start free trial (post-install gate)	installed_no_checkout	Checkout	mode: 'subscription', payment_method_collection:'always', subscription_data.trial_end: now+14d, save_default_payment_method:'on_subscription'	“Free today, renews $99 on {DATE}.”	→ trialing
+Start free trial	trialing	NO Checkout	—	Toast: “Trial already active. Ends {DATE}. Manage billing →”	stay trialing
+Start free trial	active	NO Checkout	—	Toast: “Subscription active. Manage billing →”	stay active
+Start free trial	trial_expired_unpaid | past_due | canceled	Checkout	Same as new trial, but: if trialEnd already consumed, set trial_end:'now' (charge now)	“Start subscription”	→ active on checkout.session.completed
+Charge today (skip trial)	installed_no_checkout | trialing	Checkout	subscription_data.trial_end:'now'	“Pay now; next renewal in 1 month.”	→ active immediately
+Manage billing (from Admin)	any w/ stripeCustomerId	Portal	standard portal	“Update card, invoices, cancel”	state changes via webhooks
+Upgrade plan (Admin → Billing)	trialing | active	Checkout	switch price (new cap); rely on proration	“Upgrades apply immediately.”	cap updates via webhook
+Upgrade plan (Pricing page, public)	trialing | active	Checkout (deep link with orgId)	switch price	Avoid re-install! See rule R1 below	same as above
+Upgrade plan (from blocked state over-cap)	over_cap_grace | over_cap_blocked	Checkout	switch price	“You’re over your cap. Upgrade to continue.”	→ back to trialing/active with higher cap
+Downgrade plan	trialing | active	Portal or Admin flow	—	If eligibleCount > newCap: block with reason; else allow at next period	future cap changes via webhook
+Cancel trial	trialing	Portal or in-app	set cancel_at_period_end:true or cancel sub	“Trial will end on {DATE}. You won’t be charged.”	On end: → trial_expired_unpaid
+Cancel subscription	active	Portal	cancel_at_period_end:true (recommended)	Show end date; remain active until then	On end: → canceled
+Fix payment	past_due	Portal	update PM; retry	“Payment method updated; we’ll retry shortly.”	→ active on invoice.paid
+Retry posting (Slack) while blocked	any blocked state	—	—	Ephemeral reason + deep link to Admin Billing	No change unless they complete Checkout
+Reinstall app	any	OAuth	—	“Already connected; opening Admin.”	Stay linked; do not create new org/sub
+C) Guardrails & routing rules (make it deterministic)
+
+R1 – Never start OAuth for upgrades.
+
+If user is logged in (has org), all Upgrade buttons (Pricing & Admin) route to Checkout with orgId context.
+
+If anonymous: show login/install choice (but default to Add to Slack → then post-install gate → Checkout).
+
+R2 – One trial per org.
+
+If org.trialEnd exists in the past, clicking “Start free trial” does not create another trial; use trial_end:'now' (pay now).
+
+UI copy: “Trial already used. Start subscription to continue.”
+
+R3 – Price objects must have no trial_period_days.
+
+Control trial solely with subscription_data.trial_end to avoid double-trial.
+
+R4 – Deep links over generic pages.
+
+Buttons should carry a deep link with org context: /admin/billing?action=<upgrade|fix_payment|start_trial>&price=<lookup>
+
+Pricing page CTAs use the same deep links; never re-run “Add to Slack” for existing orgs.
+
+R5 – Admin is never fully blocked.
+
+Read-only access always allowed to view Analytics, Settings, and Billing, with persistent banners for next step.
+
+R6 – Seat cap logic runs after billing gate.
+
+Order for writes: auth → billing gate → seat cap → action.
+
+R7 – Webhook idempotency.
+
+Dedup event.id in a table before processing.
+
+D) Resolving the specific confusions you raised
+1) “User has already had free trial.”
+
+Action: Presses “Start free trial”
+
+Behavior: Detect trialEnd < now → route to Checkout with trial_end:'now'.
+
+Copy: “Your trial was already used. Start your subscription today.”
+
+Result: Immediate invoice; → active.
+
+2) “User has Teammato installed and presses Start free trial.”
+
+If state = installed_no_checkout: valid → start card-gated trial (14d).
+
+If trialing: no-op → show “Trial already active. Ends {DATE}. Manage billing →”.
+
+If active: no-op → “Already subscribed. Manage billing →”.
+
+If trial_expired_unpaid / past_due / canceled: treat as Start subscription (charge now).
+
+3) “Paying user clicks Upgrade from /pricing (not /admin/billing) and system tries to re-install.”
+
+Fix: Pricing page must check session/org. If logged in and org exists → bypass OAuth and deep-link to Checkout with price param.
+
+If not logged in: prompt to log in or Add to Slack, then bounce to post-install and continue to Checkout (preserve desired price in query string).
+
+E) Minimal pseudo-middleware (write endpoints)
+// writeGuard(req, org)
+if (!org) return 401;
+const now = Date.now();
+
+switch (org.billingStatus) {
+  case 'trialing':
+    if (org.trialEnd && now > org.trialEnd.getTime()) return block('trial_expired');
+    break;
+  case 'active':
+    break;
+  case 'past_due':
+  case 'trial_expired_unpaid':
+  case 'canceled':
+  case 'installed_no_checkout':
+    return block('billing_required'); // includes deep link
+}
+
+// Seat cap check (after billing)
+const pct = org.eligibleCount / org.seatCap * 100;
+if (pct > 110 || (now > org.graceEndsAt && pct > 100)) return block('over_cap_blocked');
+
+F) UI microcopy snippets (owner-facing)
+
+Installed, no checkout (Admin banner):
+“Start your 14-day free trial to unlock posting. Free today; renews $99/mo on {DATE} unless canceled.” [Start trial]
+
+Trialing:
+“Trial ends {DATE}. We’ll bill $99/mo unless canceled.” [Manage billing] [Charge today]
+
+Trial expired / Past due:
+“Your workspace is read-only until billing is resolved.” [Fix payment] / [Start subscription]
+
+Over cap (grace):
+“You’re over your seat cap. Grace ends {DATE}.” [See Scale plans]
+
+Over cap (blocked):
+“Posting is paused until you upgrade your plan.” [Upgrade now]
+
+Slash command (blocked):
+“Teammato isn’t fully set up for this workspace. Finish setup: {billing_deeplink}”
+
+G) Extra edge cases to cover
+
+Multiple admins click Subscribe: lock per-org during Checkout creation; first completion wins; others see “Billing managed by {email}.”
+
+Reinstalling: detect slack_team_id; re-link existing org/sub; route to Admin (don’t create duplicates).
+
+Switch monthly ↔ annual: via Checkout; anchor at period end or immediate proration (default is fine).
+
+Coupons: allowed; display “Applied at checkout” line; no change to state logic.
+
+VAT / tax region: if enabled, show “Tax calculated at checkout.” (No impact on gating.)
+
+Portal cancellations: set cancel_at_period_end; keep active until current_period_end, then → canceled.
