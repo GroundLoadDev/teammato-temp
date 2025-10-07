@@ -1614,7 +1614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         return res.json({
           response_type: 'ephemeral',
-          text: `📋 *Available Topics*\n\n${topicList}\n\n💡 *How to submit:*\n\`/teammato <topic-slug>\` to open the feedback form\n\nExample: \`/teammato product-feedback\``,
+          text: `📋 *Available Topics*\n\n${topicList}\n\n💡 *How to submit:*\n\`/teammato <topic-slug>\` - Opens feedback form for that topic\n\`/teammato <message>\` - Opens general feedback\n\nExamples:\n• \`/teammato testing\` (opens Testing topic)\n• \`/teammato My general feedback\` (general feedback with prefill)`,
         });
       }
 
@@ -1724,7 +1724,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Parse topic slug and optional prefill text
       const parts = text.split(/\s+/);
-      const topicSlug = parts[0];
+      const topicSlug = parts[0].toLowerCase();
       const prefillText = parts.slice(1).join(' ');
 
       // Try to find topic by slug first
