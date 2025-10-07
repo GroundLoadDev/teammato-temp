@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
@@ -114,9 +115,25 @@ function SeatSizer({
 }) {
   const price = term === "annual" ? recommended.annual : recommended.monthly;
 
+  // R1: Check auth state to avoid re-OAuth for logged-in users
+  const { data: authData } = useQuery<{ user: { id: string; email: string; role: string } }>({
+    queryKey: ['/api/auth/me'],
+    retry: false,
+  });
+  
+  const isLoggedIn = !!authData?.user;
+
   const handleStartTrial = () => {
-    // Redirect to Slack OAuth with plan parameter
-    window.location.href = `/api/slack/install?plan=${recommended.key}`;
+    if (isLoggedIn) {
+      // R4: Deep link to billing with plan selection
+      const priceLookupKey = term === 'annual' 
+        ? `cap_${recommended.cap}_a` 
+        : `cap_${recommended.cap}_m`;
+      window.location.href = `/admin/billing?action=start_trial&price=${priceLookupKey}`;
+    } else {
+      // Not logged in - go through OAuth
+      window.location.href = `/api/slack/install?plan=${recommended.key}`;
+    }
   };
 
   return (

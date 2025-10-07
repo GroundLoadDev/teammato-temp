@@ -98,23 +98,89 @@ function requireRole(...roles: string[]) {
   };
 }
 
-// Billing gate middleware - blocks usage until subscription exists
+// Billing state helper - determines if org can write
+function canWrite(org: any): { allowed: boolean; reason?: string; state?: string } {
+  const now = Date.now();
+  const billingStatus = org.billingStatus || 'installed_no_checkout';
+  
+  // Check trial expiration for trialing status
+  if (billingStatus === 'trialing' && org.trialEnd) {
+    if (now > org.trialEnd.getTime()) {
+      return { 
+        allowed: false, 
+        reason: 'Trial expired. Please upgrade to continue.',
+        state: 'trial_expired_unpaid'
+      };
+    }
+  }
+  
+  // Check seat cap with grace period
+  const usage = org.eligibleCount || 0;
+  const cap = org.seatCap || 250;
+  const percentUsed = (usage / cap) * 100;
+  
+  if (percentUsed > 110) {
+    return { 
+      allowed: false, 
+      reason: 'Over seat capacity limit. Please upgrade your plan.',
+      state: 'over_cap_blocked'
+    };
+  }
+  
+  if (percentUsed > 100 && org.graceEndsAt && now > org.graceEndsAt.getTime()) {
+    return { 
+      allowed: false, 
+      reason: 'Grace period expired. Please upgrade your plan.',
+      state: 'over_cap_blocked'
+    };
+  }
+  
+  // Allow writes for active statuses
+  const writeAllowedStatuses = ['trialing', 'active', 'over_cap_grace'];
+  if (writeAllowedStatuses.includes(billingStatus)) {
+    return { allowed: true };
+  }
+  
+  // Block writes for other statuses
+  const statusMessages: Record<string, string> = {
+    'installed_no_checkout': 'Please start your free trial to use Teammato.',
+    'trial_expired_unpaid': 'Trial expired. Please upgrade to continue.',
+    'past_due': 'Payment failed. Please update your payment method.',
+    'canceled': 'Subscription canceled. Please re-subscribe to continue.',
+    'unpaid': 'Subscription unpaid. Please update your payment method.',
+    'incomplete': 'Payment incomplete. Please complete checkout.',
+    'paused': 'Subscription paused. Please contact support.',
+  };
+  
+  return { 
+    allowed: false, 
+    reason: statusMessages[billingStatus] || 'Subscription required.',
+    state: billingStatus
+  };
+}
+
+// Middleware - require active subscription for writes
 async function requireActiveSubscription(req: Request, res: Response, next: NextFunction) {
   if (!req.session.orgId) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  // Get org with usage data
   const org = await storage.getOrg(req.session.orgId);
   if (!org) {
     return res.status(404).json({ error: 'Organization not found' });
   }
-
-  const validStatuses = ['trialing', 'active'];
-  if (!org.billingStatus || !validStatuses.includes(org.billingStatus)) {
+  
+  // Get usage data
+  const usage = await storage.getOrgUsage(req.session.orgId);
+  const orgWithUsage = { ...org, eligibleCount: usage?.eligibleCount || 0 };
+  
+  const writeCheck = canWrite(orgWithUsage);
+  if (!writeCheck.allowed) {
     return res.status(403).json({ 
-      error: 'Subscription required',
-      message: 'Please complete billing setup to use Teammato',
-      billingStatus: org.billingStatus,
+      error: 'Write access restricted',
+      message: writeCheck.reason,
+      billingStatus: writeCheck.state || org.billingStatus,
       requiresSetup: true,
     });
   }
@@ -444,14 +510,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate trial_end based on org state
       let trialEnd: number | 'now' | undefined;
       
-      if (chargeToday) {
+      // R2: One trial per org - if trial already used, charge now
+      const hasUsedTrial = org.trialEnd && org.trialEnd.getTime() < Date.now();
+      
+      if (chargeToday || hasUsedTrial) {
         trialEnd = 'now';
       } else if (org.trialEnd && org.billingStatus === 'trialing') {
+        // Keep existing trial period
         trialEnd = Math.floor(org.trialEnd.getTime() / 1000);
-      } else if (!org.stripeSubscriptionId) {
+      } else if (!org.stripeSubscriptionId && !hasUsedTrial) {
+        // New trial - 14 days
         const trialEndDate = new Date();
         trialEndDate.setDate(trialEndDate.getDate() + 14);
         trialEnd = Math.floor(trialEndDate.getTime() / 1000);
+      } else {
+        // Default to charge now
+        trialEnd = 'now';
       }
 
       // Create checkout session
@@ -2395,6 +2469,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const newOrg = await storage.createOrg({
           name: team.name,
           verifiedDomains: [],
+          billingStatus: 'installed_no_checkout',
         });
         
         orgId = newOrg.id;
