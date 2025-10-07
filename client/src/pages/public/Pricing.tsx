@@ -405,7 +405,7 @@ function BillingExplainer() {
         {[
           {
             title: "Start 14-day trial",
-            desc: "Full features, no card required. Configure your digest and post in Slack.",
+            desc: "Full features, card required. You won't be charged until the trial ends.",
           },
           {
             title: "Upgrade in Checkout",

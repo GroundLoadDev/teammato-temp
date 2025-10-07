@@ -130,7 +130,7 @@ const QAS: QA[] = [
   {
     id: "trial",
     q: "Is there a free trial?",
-    a: "Yes - 14 days with full features. After the trial ends, your workspace becomes read-only until you upgrade.",
+    a: "Yes - 14 days with full features. A card is required to start the trial, but you won't be charged until the trial ends.",
     topics: ["billing"],
   },
   {
