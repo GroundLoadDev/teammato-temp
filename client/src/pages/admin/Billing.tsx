@@ -79,9 +79,21 @@ export default function Billing() {
       return result as { url: string };
     },
     onSuccess: (data) => {
-      window.location.href = data.url;
+      console.log('[Checkout] Stripe URL received:', data.url);
+      if (!data.url) {
+        console.error('[Checkout] No URL in response:', data);
+        toast({
+          title: "Checkout error",
+          description: "No checkout URL received. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      console.log('[Checkout] Redirecting to Stripe...');
+      window.location.assign(data.url);
     },
     onError: (error: any) => {
+      console.error('[Checkout] Mutation error:', error);
       const errorMessage = error?.message || '';
       
       let title = "Checkout failed";
@@ -405,7 +417,8 @@ export default function Billing() {
                       data-testid={`button-select-${plan.cap}`}
                     >
                       {!isOwner && <Lock className="w-4 h-4 mr-2" />}
-                      {plan.cap > billing.seatCap ? 'Upgrade' : 'Switch Plan'}
+                      {isTrialing && plan.cap === billing.seatCap ? 'Subscribe' : 
+                       plan.cap > billing.seatCap ? 'Upgrade' : 'Switch Plan'}
                     </Button>
                   )}
                 </CardContent>
