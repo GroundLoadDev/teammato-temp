@@ -23,6 +23,17 @@ I prefer iterative development and clear, concise explanations. Ask before makin
 - **Content Updates**: Enhanced Trust & Security, FAQ, Compliance, and Features pages to reflect robust database-level k-safe export architecture
 - **How It Works Page Redesign**: Expanded human/tech toggle from hero section to ALL sections (StorySteps, FlowRail, PrivacyPoster, UnderTheHood, NotWhatWeDo) with comprehensive technical details about k-safe exports in both modes
 
+#### Card-Gated Trial Migration (Completed - October 2025)
+- **OAuth-to-Checkout Flow**: Migrated from 14-day no-card trial to card-required trial with mandatory Stripe Checkout at installation
+- **Plan Selection**: Slack OAuth accepts `plan` query parameter (e.g., ?plan=pro_250) and stores in OAuth state for post-callback retrieval
+- **Checkout Redirect**: Created `/billing/checkout-redirect` page that validates plan against whitelist (pro_250, scale_500/1000/2500/5000/10000/25000), converts to Stripe price lookup key, and redirects to Stripe Checkout
+- **Subscription Gating**: Applied `requireActiveSubscription` middleware to 15+ admin routes (analytics, export, feedback/moderation, topics, Slack settings) to block access without active trial/paid subscription
+- **Billing Access**: Billing endpoints intentionally left ungated to allow users to complete subscription setup
+- **Pricing Page Update**: All "Start free trial" buttons now redirect through Slack OAuth with plan parameter instead of direct API calls
+- **Header/CTA Updates**: Updated all "Add to Slack" buttons (homepage, header) to include default plan parameter (pro_250)
+- **State Management**: OAuth state structure changed from timestamp to object: `{timestamp, plan?}` for plan persistence through OAuth flow
+- **Security**: Plan validation against VALID_PLANS allowlist prevents tampering, 500ms delay ensures session establishment before checkout API call
+
 ### System Architecture
 
 #### UI/UX Decisions
