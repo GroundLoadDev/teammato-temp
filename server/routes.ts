@@ -362,7 +362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Organization not found' });
       }
 
-      const { priceLookupKey } = req.body;
+      const { priceLookupKey, chargeToday } = req.body;
       if (!priceLookupKey) {
         return res.status(400).json({ error: 'priceLookupKey required' });
       }
@@ -397,18 +397,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const successUrl = `${baseUrl}/admin/billing?success=1`;
       const cancelUrl = `${baseUrl}/admin/billing?canceled=1`;
 
+      // Calculate trial_end based on org state
+      let trialEnd: number | 'now' | undefined;
+      
+      if (chargeToday) {
+        trialEnd = 'now';
+      } else if (org.trialEnd && org.billingStatus === 'trialing') {
+        trialEnd = Math.floor(org.trialEnd.getTime() / 1000);
+      } else if (!org.stripeSubscriptionId) {
+        const trialEndDate = new Date();
+        trialEndDate.setDate(trialEndDate.getDate() + 14);
+        trialEnd = Math.floor(trialEndDate.getTime() / 1000);
+      }
+
       // Create checkout session
       const session = await stripe.checkout.sessions.create({
         mode: 'subscription',
         customer: customerId,
         line_items: [{ price: priceId, quantity: 1 }],
         allow_promotion_codes: true,
+        payment_method_collection: 'always',
         subscription_data: {
-          trial_period_days: org.billingStatus === 'trialing' ? 14 : undefined,
+          trial_end: trialEnd,
+          payment_settings: { save_default_payment_method: 'on_subscription' },
+          trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },
           metadata: { org_id: orgId },
         },
         success_url: successUrl,
         cancel_url: cancelUrl,
+      });
+
+      // Track checkout event
+      await storage.trackEvent({
+        orgId,
+        eventType: 'trial_checkout_opened',
+        userId: req.session.userId || null,
+        metadata: { priceLookupKey, chargeToday: !!chargeToday },
       });
 
       res.json({ url: session.url });
