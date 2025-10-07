@@ -1,0 +1,206 @@
+/admin redesign — investigation questions for Replit
+1) Current data model & storage
+
+What are the exact schemas for topics, topic_instances (if any), suggestions, feedback/items, themes, analytics snapshots? Please paste DDLs.
+
+Which fields denote workspace, channel, time window, status/state, visibility, soft-delete?
+
+Do we track created_at, updated_at, closed_at/expired_at, archived_at, deleted_at across all entities?
+
+Do we have foreign keys from feedback → topic_instance (not just topic)? If not, what’s the plan to backfill?
+
+Are there partitioning or sharding strategies in use (by org_id/workspace_id, by month)?
+
+2) State model (lifecycles)
+
+For each entity (topic, suggestion, feedback/item, theme), what are the allowed states and transitions today?
+
+Topics: draft → scheduled → active → expired → archived → deleted?
+
+Suggestions: pending → approved → merged → rejected → deleted?
+
+Feedback: received → withheld (k not met) → released (k met) → redacted → purged?
+
+Themes: draft (ML) → human_reviewed → published → archived?
+
+Do we persist state transition logs (who/when/reason)? If yes, where? If no, can we add an *_events table?
+
+Is “deleted” a soft delete (visibility=false) or hard delete? What’s the retention policy per state?
+
+3) Multi-dimension scoping (scale customers)
+
+Can we persist workspace_id and (if available) channel_id on:
+
+topics, topic_instances, feedback/items, themes, suggestions?
+
+Do we store user_group/team_id or mapping (e.g., dept, org unit) for aggregation only, not for display?
+
+Is there a notion of topic_instance (time-boxed run of a topic) versus parent topic? If not, can we introduce:
+
+topic_instances(id, topic_id, workspace_id, channel_id, start_at, end_at, status)?
+
+Are we comfortable generating themes by (workspace/channel/group/time) as long as k-threshold per slice is met? If so, confirm the minimum slice size (k), and what to do when a slice fails (hide, merge “other”, or defer).
+
+4) Anonymity & k-safety rules
+
+Confirm our global k (default 5?) and whether it’s org-configurable. Minimum allowed k?
+
+When filtering by channel, workspace, user group, or time, do we enforce k per slice or k per entire instance? (Recommend per slice.)
+
+What’s our behavior when a slice drops below k (e.g., date range changed)?
+
+Hide slice; show “insufficient data (k not met)” placeholder; never show N.
+
+How do we prevent triangulation across overlapping slices (e.g., channel A last 7d vs. last 30d)?
+
+Do we require sticky ranges and no free-form narrowing below safe thresholds?
+
+Do we need epsilon caps (max # distinct filters active) to reduce re-identification risk?
+
+Are themes generated only from released items (k met) or also from withheld items in aggregate? (Recommend released only.)
+
+5) Indexing & query performance
+
+What indexed fields exist today on items/feedback? (org_id, topic_id, created_at, status?)
+
+We will query by (org_id, workspace_id, channel_id, state, created_at) and paginate quickly. Can we add composite indexes like:
+
+items: (org_id, topic_instance_id, created_at DESC)
+
+topics: (org_id, status, updated_at DESC)
+
+suggestions: (org_id, status, created_at DESC)
+
+themes: (org_id, topic_instance_id, created_at DESC)
+
+Expected cardinalities: largest customers’ daily items volume? peak writes/sec? target P95 for list queries?
+
+Do we have nightly rollups (materialized views) for counts by state and k-safe metrics? If not, can we create materialized views or cached aggregates?
+
+6) API & events
+
+What admin endpoints exist today (list, filter, change state)? Please document payloads.
+
+Do we emit domain events (TopicApproved, TopicExpired, KThresholdReached, ThemePublished, SuggestionMerged)? If not, should we add an event bus (even SNS-ish) to drive UI refreshes & digests?
+
+Is there a background scheduler (cron) for expirations, digests, retention purges? Where are jobs recorded (job table / logs)?
+
+7) UI architecture (sections, filters, navigation)
+
+We propose top-level tabs: Active, Upcoming, Expired, Archived, Suggestions, Themes, Analytics.
+
+Any objection to separating Expired (ended, viewable) from Archived (cold storage/hidden by default)?
+
+Required filters across tabs:
+
+Time: last 7 / 30 / 90 / custom (bounded to month).
+
+Scope: workspace, channel (if stored), topic_instance.
+
+State: active/expired/archived, pending/approved/merged/rejected (suggestions).
+
+Safety: “k-safe only” (default on; cannot be turned off).
+
+Do we have designs for Saved filters per admin? Can we add admin_views(id, org_id, user_id, filter_json, name)?
+
+8) RBAC & tenancy
+
+What are the admin roles today (owner, admin, analyst)? Which roles can:
+
+approve/merge/reject suggestions, schedule/expire topics, publish actions, export, purge?
+
+Can admins see scoped views (only channels they own) vs. global org view? If yes, what’s the mapping table?
+
+Are audit trails required for viewing/exporting anonymized data (who accessed which slice)?
+
+9) Themes generation & review
+
+How are themes created today (manual, heuristic, ML)? Where persisted (themes table?) What fields?
+
+Do we support per-slice theme sets (e.g., Themes for #eng vs. #design within the same instance) or only global themes?
+
+Should “global” themes be composed from per-slice themes, or generated independently?
+
+What’s the human-in-the-loop step (approve/edit themes) before publish? Need states (draft → reviewed → published → archived)?
+
+Do we need dedupe/merge for similar themes across slices?
+
+10) Retention, purging & legal hold
+
+Current defaults: 365d retention? Legal hold flag? What exactly gets purged vs. retained?
+
+Does purging remove ciphertext and derived data (themes/analytics) or only raw items? (Recommend purge derived if the slice can re-identify.)
+
+What’s uninstall behavior (soft disable vs. purge timer)?
+
+11) Search & discovery
+
+Do we need full-text search over themes and topic titles (not raw feedback)? If yes, can we create a safe search index limited to released content?
+
+Do we need tagging of topics/themes for faster retrieval (e.g., “retros”, “onboarding”)?
+
+12) Rate limits & anti-abuse (admin context)
+
+Are there limits on admin actions (e.g., publishing actions, exports)?
+
+For suggestions, we’ll have per-user cooldown + dedupe (already planned). Confirm we can surface supporter counts.
+
+13) Migrations & backfill
+
+If we introduce topic_instances, can we backfill historical items to synthetic instances:
+
+e.g., by week buckets or by their topic’s previous schedule windows?
+
+Any data older than retention window that must be migrated/archived?
+
+14) Observability
+
+What metrics/logs exist: list query latency, error rates, job runtimes, k-threshold gate hits/misses?
+
+Can we log anonymity rule violations prevented (slices that would drop below k) for tuning?
+
+15) Acceptance criteria (so we know we’re done)
+
+Admin can toggle between Active / Upcoming / Expired / Archived topics with workspace/channel filters and sub-1s P95 responses on 50k-item orgs.
+
+Suggestions queue supports approve/merge/reject; dedupe merges supporters; cooldown enforced.
+
+Feedback lists show released only by default; withheld items never displayed; slices below k are hidden with a clear “insufficient data” label.
+
+Themes can be viewed by slice (workspace/channel/group/time) with k-safety per slice; global themes are also available.
+
+Exports respect retention/legal hold and never include plaintext.
+
+All state transitions are audited with who/when/reason.
+
+Bonus: proposed state machines (for Replit to confirm)
+
+Topic
+
+draft → scheduled → active → expired → archived → deleted
+
+events: Scheduled, Activated, Expired, Archived, Deleted
+
+Topic Instance (per timetable)
+
+scheduled → active → waiting_for_k → released → archived
+
+events: InstanceStarted, ThresholdReached, SummaryReleased, InstanceArchived
+
+Suggestion
+
+pending → approved | merged | rejected → archived
+
+events: SuggestionSubmitted, Merged, Approved, Rejected, Notified
+
+Feedback/Item
+
+received → withheld (k<) → released (k≥) → redacted/purged
+
+events: ItemReceived, ItemReleased, ItemRedacted, Purged
+
+Theme
+
+draft → reviewed → published → archived
+
+events: ThemeDrafted, ThemePublished, ThemeArchived

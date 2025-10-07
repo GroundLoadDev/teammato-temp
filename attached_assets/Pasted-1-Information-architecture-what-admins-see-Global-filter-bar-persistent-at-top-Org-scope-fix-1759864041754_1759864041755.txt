@@ -1,0 +1,355 @@
+1) Information architecture (what admins see)
+Global filter bar (persistent at top)
+
+Org scope: (fixed by login)
+
+Workspace (optional): dropdown if you track multiple workspaces
+
+Channel: multi-select (chips), populated from topics/threads you know
+
+Time: Last 7 / 30 / 90 / Custom (bounded to a month)
+
+Status: varies by tab (see below)
+
+k-safety: locked On (tooltip: “Only k-safe data is shown”)
+
+Search: topic name / theme label (released content only)
+
+If any active filter yields a slice where k < threshold, hide results and show a neutral banner:
+“Not enough data to protect anonymity (k-threshold not met). Try a broader filter.”
+
+Tabs
+
+Overview (rolled-up counts & quick links)
+
+Cards: Active topics, Upcoming, Expired, Suggestions (pending), Released summaries this week.
+
+Topics (with sub-tabs)
+
+Active · Upcoming · Expired · Archived
+
+Table columns: Topic, Instance (dates), Channel, Status, k-threshold, Participants, Owner, Actions
+
+Suggestions
+
+Pending · Approved · Merged · Rejected
+
+Columns: Title, Supporters, Age, Status, Actions (Approve / Merge / Reject)
+
+Feedback (released only)
+
+View by Topic instance; list threads that are k-safe (participantCount ≥ k). No raw items view.
+
+Columns: Thread title, Channel, Participants, Released (date), Open summary
+
+Themes
+
+Global and By slice (Workspace / Channel / Group) with time filter.
+
+Table/List: Theme label, Posts count, Trend Δ, Slice, Open summary
+
+Analytics
+
+k-safe trends/participation, completion rates by slice, digests sent.
+
+Settings
+
+k-threshold, retention/legal hold, suggestion guardrails, roles, exports.
+
+2) Data model upgrades (minimal but decisive)
+2.1 Introduce topic_instances (stop overloading topics)
+
+Create a real table:
+
+topic_instances (
+  id uuid pk,
+  org_id uuid not null,
+  topic_id uuid not null,
+  workspace_id uuid null,
+  slack_channel_id text null,
+  window_start timestamptz not null,
+  window_end   timestamptz not null,
+  status text check (status in ('scheduled','active','waiting_for_k','released','expired','archived')) not null,
+  k_threshold int not null default 5,
+  participant_count int not null default 0,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+)
+
+
+Migrate existing “instance-like” topics rows to: parent topic (definition) + instances (time-boxed runs).
+
+feedback_threads and feedback_items should reference topic_instance_id (nullable during backfill, then NOT NULL).
+
+2.2 Persist slice dimensions everywhere
+
+Add workspace_id (nullable) to topics, feedback_threads, feedback_items, themes.
+
+Ensure slack_channel_id is on instances and threads.
+
+Add user_group_id only for aggregation (never shown), if you already map org audiences.
+
+2.3 Themes per slice
+
+Change themes:
+
+themes (
+  id uuid pk,
+  org_id uuid not null,
+  topic_instance_id uuid not null,
+  slice_type text check (slice_type in ('global','workspace','channel','group')) not null,
+  slice_ref text null, -- workspace_id or channel_id or group_id
+  period_start date not null,
+  period_end date not null,
+  label text not null,
+  summary text null,
+  posts_count int not null,
+  top_terms text[] null,
+  trend_delta int null,
+  created_at timestamptz default now()
+)
+
+
+Generate global + selected slice themes only when the slice population is k-safe.
+
+2.4 Suggestion support table (to merge dupes cleanly)
+
+You already dedupe; add supporters:
+
+topic_suggestion_supports (
+  id uuid pk,
+  suggestion_id uuid not null,
+  user_id text not null,
+  created_at timestamptz default now(),
+  unique (suggestion_id, user_id)
+)
+
+2.5 State transition audit (not just moderation)
+
+New table for topic/instance lifecycle:
+
+state_transition_audit (
+  id uuid pk,
+  org_id uuid not null,
+  target_type text check (target_type in ('topic','topic_instance','theme')) not null,
+  target_id uuid not null,
+  actor_user_id text null,
+  from_state text,
+  to_state text not null,
+  reason text null,
+  created_at timestamptz default now()
+)
+
+3) k-safety & anti-triangulation (product rules)
+
+Enforce k per slice (topic_instance × workspace/channel/group × time).
+
+When filters produce k < threshold: hide list and show banner (no partial counts).
+
+Prevent triangulation:
+
+Limit to one dimension at a time (e.g., channel OR group, not both), or
+
+Require minimum slice overlap count before enabling the next filter.
+
+Sticky ranges: time windows anchored to instance period or presets (7/30/90). No arbitrary day-by-day sliders.
+
+Themes & analytics compute from released (visible) content only.
+
+Exports: restrict to released & k-safe slices; log who/when/which filters.
+
+UI copy (banner):
+
+Not enough data to protect anonymity (k-threshold not met). Try a broader filter.
+
+4) Indexes & materialized views (hit P95 < 1s)
+4.1 Indexes
+
+topics(org_id, status, updated_at desc)
+
+topic_instances(org_id, status, window_start desc)
+
+feedback_threads(org_id, topic_instance_id, created_at desc)
+
+feedback_items(org_id, topic_instance_id, created_at desc)
+
+themes(org_id, topic_instance_id, slice_type, slice_ref, created_at desc)
+
+topic_suggestions(org_id, status, created_at desc)
+
+4.2 Materialized/cached aggregates
+
+Nightly or on event:
+
+mv_admin_counts(org_id) → {active_topics, upcoming, expired, pending_suggestions, released_summaries_week}
+
+mv_k_safe_participation(org_id, topic_instance_id, slice_type, slice_ref, period) → participants, items, k_met_at
+
+Invalidate on events (below).
+
+5) Events & jobs (make the UI feel alive)
+
+Add a light event bus (even DB-backed queue is fine) and emit:
+
+TopicApproved, TopicInstanceStarted, TopicInstanceExpired
+
+KThresholdReached, SummaryReleased
+
+SuggestionMerged, SuggestionApproved, SuggestionRejected
+
+ThemeGenerated(slice)
+
+RetentionPurged
+
+Consumers:
+
+Recompute mv_admin_counts and participation MVs.
+
+Trigger weekly digests; notify suggestors.
+
+Update instance status → waiting_for_k → released.
+
+6) Themes pipeline (per slice)
+
+Load released items for the (instance × slice).
+
+Decrypt in memory, embed (MiniLM is fine), cluster, extract terms, write themes rows per slice.
+
+Only run for slices with posts_count ≥ k.
+
+Add optional human review later: draft → published.
+
+7) RBAC & scoped visibility
+
+Roles:
+
+Owner: billing, org settings, retention/legal hold.
+
+Admin: topics, instances, suggestions, themes, analytics, exports.
+
+Moderator: resolve flags only.
+
+Viewer: cannot access /admin.
+
+Optional scoped admin: admin can be limited to specific channels (store mapping admin_channel_scopes). Filter server-side.
+
+Audit:
+
+Log every export and state transition in state_transition_audit.
+
+8) UI specifics (labels, empty states, actions)
+Topics (Active/Upcoming/Expired/Archived)
+
+Row actions: End now, Extend window, Open summary, Archive, Export slice
+
+Empty state (Active):
+
+No active topics. Start one to collect feedback this week.
+
+Suggestions (Pending/Approved/Merged/Rejected)
+
+Row actions: Approve, Merge, Reject
+
+Merge flow: select target; supporters are moved; notify supporters.
+
+Feedback (Released)
+
+Table shows threads only (k-safe); clicking opens the Aggregate summary poster.
+
+Empty state:
+
+No released summaries for your filters. Broaden filters or check Upcoming topics.
+
+Themes
+
+Toggle Global / By slice (workspace/channel/group).
+
+Row: Theme label, Posts, Trend, Slice; click → theme details.
+
+If filter produces k < threshold: show banner (not partial list).
+
+Analytics
+
+Cards: Participation over time, k-threshold attainment time, posts by slice (only released).
+
+Default time: Last 30 days.
+
+9) Migration plan (backfill without breaking)
+
+Create topic_instances and new columns (workspace_id on required tables).
+
+Backfill instances for historical topics:
+
+If topic had windowStart/windowEnd, create one instance.
+
+If “General feedback weekly,” create instances per week using instanceIdentifier.
+
+Update feedback_threads & feedback_items with topic_instance_id by date containment.
+
+Flip reads in admin to instance-aware queries.
+
+Regenerate themes for recent periods (last 90 days) to include topic_instance_id and slice dims.
+
+Ship new tabs/filters with k-safety enforcement and placeholders.
+
+Deprecate parentTopicId/instanceIdentifier paths once stable.
+
+10) Performance & observability
+
+Add metrics:
+
+P50/P95 list latency per tab; DB query durations; job runtimes; event queue lag; k-gate hits/misses.
+
+Log anonymity blocks: filter combos rejected due to k (to tune defaults).
+
+Health checks for nightly jobs; alert on stale MVs.
+
+11) Copy you can paste (so no one improvises)
+
+k-safety banner:
+
+Not enough data to protect anonymity (k-threshold not met). Try a broader filter.
+
+Topics sub-tabs: Active · Upcoming · Expired · Archived
+
+Suggestions statuses: Pending · Approved · Merged · Rejected
+
+Themes toggle: Global · By slice
+
+Filter labels: Workspace · Channel · Time · Status · Search
+
+Tooltips:
+
+k-safety: “Only slices with at least k unique contributors are shown.”
+
+Export: “Exports include anonymized, released data only.”
+
+12) Build phases (small, safe steps)
+
+Phase 1 (schema + IA)
+
+Add topic_instances, slice columns, indexes; basic tabs: Topics (Active/Upcoming/Expired/Archived), Suggestions, Feedback (released), Themes (global), Analytics.
+
+Backfill instances for last 90 days.
+
+Enforce k-safety per slice in queries; add banner.
+
+MVs for counts; Overview shows counts.
+
+Phase 2 (slices + themes + filters)
+
+Channel/workspace filters wired; Themes per slice; Analytics with slice charts.
+
+Event bus + recompute on events.
+
+Suggestion merge w/ supporters.
+
+Phase 3 (polish + audit)
+
+State transition audit, exports logging, scoped admins, retention purge job.
+
+Human-in-the-loop (optional): theme review before publish.
+
+Search over released themes/topics.
+
+This gives you a clean, navigable /admin that scales for big orgs, enforces k-safety in every view, and doesn’t leak raw content.
