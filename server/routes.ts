@@ -367,6 +367,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'priceLookupKey required' });
       }
 
+      // Extract seat cap from lookup key for validation
+      const capMatch = priceLookupKey.match(/cap_(\d+)_/);
+      const newSeatCap = capMatch ? parseInt(capMatch[1], 10) : null;
+      
+      // Validate downgrade against current usage
+      if (newSeatCap && newSeatCap < (org.seatCap || 250)) {
+        const usage = await storage.getOrgUsage(orgId);
+        const eligibleCount = usage?.eligibleCount || 0;
+        
+        if (eligibleCount > newSeatCap) {
+          return res.status(400).json({ 
+            error: 'Cannot downgrade below current usage',
+            message: `You currently have ${eligibleCount} eligible members, but the plan you selected supports only ${newSeatCap}. Please reduce your audience size or select a higher tier.`,
+            eligibleCount,
+            newSeatCap,
+          });
+        }
+      }
+
       // Get or create Stripe customer
       let customerId = org.stripeCustomerId;
       if (!customerId) {
