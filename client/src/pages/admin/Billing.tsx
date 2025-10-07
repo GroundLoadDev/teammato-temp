@@ -67,12 +67,25 @@ export default function Billing() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    
+    // Handle success callback from Stripe
     if (params.get('success') === '1') {
       setShowSuccessBanner(true);
       refetch();
       window.history.replaceState({}, '', '/admin/billing');
+      return;
     }
-  }, [refetch]);
+    
+    // R4: Handle deep link actions
+    const action = params.get('action');
+    const price = params.get('price');
+    
+    if (action === 'start_trial' && price && isOwner) {
+      // Auto-trigger checkout with specified price
+      checkoutMutation.mutate({ priceLookupKey: price });
+      window.history.replaceState({}, '', '/admin/billing');
+    }
+  }, [refetch, isOwner]);
 
   const checkoutMutation = useMutation({
     mutationFn: async ({ priceLookupKey, chargeToday }: { priceLookupKey: string; chargeToday?: boolean }) => {
