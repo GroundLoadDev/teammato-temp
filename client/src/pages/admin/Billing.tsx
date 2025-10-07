@@ -76,7 +76,7 @@ export default function Billing() {
   const checkoutMutation = useMutation({
     mutationFn: async (priceLookupKey: string) => {
       const result = await apiRequest('POST', '/api/billing/checkout', { priceLookupKey });
-      return result as { url: string };
+      return await result.json() as { url: string };
     },
     onSuccess: (data) => {
       console.log('[Checkout] Stripe URL received:', data.url);
