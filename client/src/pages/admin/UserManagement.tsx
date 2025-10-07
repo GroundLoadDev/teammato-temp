@@ -70,7 +70,7 @@ export default function UserManagement() {
 
   const inviteMutation = useMutation({
     mutationFn: async (data: { slackHandle: string; role: string }) =>
-      apiRequest('/api/invitations', 'POST', data),
+      apiRequest('POST', '/api/invitations', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
       setInviteModalOpen(false);
@@ -92,7 +92,7 @@ export default function UserManagement() {
 
   const changeRoleMutation = useMutation({
     mutationFn: async (data: { userId: string; role: string }) =>
-      apiRequest(`/api/users/${data.userId}/role`, 'PATCH', { role: data.role }),
+      apiRequest('PATCH', `/api/users/${data.userId}/role`, { role: data.role }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
       setChangeRoleModalOpen(false);
@@ -113,7 +113,7 @@ export default function UserManagement() {
 
   const deleteMutation = useMutation({
     mutationFn: async (userId: string) =>
-      apiRequest(`/api/users/${userId}`, 'DELETE'),
+      apiRequest('DELETE', `/api/users/${userId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
       toast({
