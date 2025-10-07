@@ -141,11 +141,11 @@ export interface IStorage {
   
   // Topic Suggestions
   createTopicSuggestion(suggestion: InsertTopicSuggestion): Promise<TopicSuggestion>;
-  getTopicSuggestions(orgId: string, status?: string): Promise<TopicSuggestion[]>;
+  getTopicSuggestions(orgId: string, status?: string): Promise<Array<TopicSuggestion & { supporterCount: number }>>;
   updateTopicSuggestionStatus(id: string, status: string, orgId: string): Promise<TopicSuggestion | undefined>;
   findSimilarSuggestions(orgId: string, normalizedTitle: string): Promise<TopicSuggestion[]>;
   addSuggestionSupport(suggestionId: string, userId: string): Promise<void>;
-  getSuggestionSupportCount(suggestionId: string): Promise<number>;
+  getSuggestionSupporterCount(suggestionId: string): Promise<number>;
   getPendingSuggestionCount(orgId: string): Promise<number>;
   
   // Audience
@@ -924,10 +924,29 @@ export class PgStorage implements IStorage {
     return result[0];
   }
   
-  async getTopicSuggestions(orgId: string, status?: string): Promise<TopicSuggestion[]> {
+  async getTopicSuggestions(orgId: string, status?: string): Promise<Array<TopicSuggestion & { supporterCount: number }>> {
+    const baseQuery = db
+      .select({
+        id: topicSuggestions.id,
+        orgId: topicSuggestions.orgId,
+        suggestedBy: topicSuggestions.suggestedBy,
+        title: topicSuggestions.title,
+        normalizedTitle: topicSuggestions.normalizedTitle,
+        status: topicSuggestions.status,
+        statusReason: topicSuggestions.statusReason,
+        duplicateOfId: topicSuggestions.duplicateOfId,
+        createdAt: topicSuggestions.createdAt,
+        supporterCount: sqlOperator<number>`COALESCE(COUNT(${topicSuggestionSupports.id})::int, 0)`,
+      })
+      .from(topicSuggestions)
+      .leftJoin(
+        topicSuggestionSupports,
+        eq(topicSuggestions.id, topicSuggestionSupports.suggestionId)
+      )
+      .groupBy(topicSuggestions.id);
+
     if (status) {
-      const result = await db.select()
-        .from(topicSuggestions)
+      const result = await baseQuery
         .where(and(
           eq(topicSuggestions.orgId, orgId),
           eq(topicSuggestions.status, status)
@@ -935,8 +954,7 @@ export class PgStorage implements IStorage {
         .orderBy(sqlOperator`${topicSuggestions.createdAt} DESC`);
       return result;
     } else {
-      const result = await db.select()
-        .from(topicSuggestions)
+      const result = await baseQuery
         .where(eq(topicSuggestions.orgId, orgId))
         .orderBy(sqlOperator`${topicSuggestions.createdAt} DESC`);
       return result;
@@ -973,7 +991,7 @@ export class PgStorage implements IStorage {
       .onConflictDoNothing();
   }
   
-  async getSuggestionSupportCount(suggestionId: string): Promise<number> {
+  async getSuggestionSupporterCount(suggestionId: string): Promise<number> {
     const result = await db.select({ count: sqlOperator<number>`COUNT(*)::int` })
       .from(topicSuggestionSupports)
       .where(eq(topicSuggestionSupports.suggestionId, suggestionId));

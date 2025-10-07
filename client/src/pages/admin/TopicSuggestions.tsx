@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Check, X, Lightbulb, MessageSquare, Command } from "lucide-react";
+import { Check, X, Lightbulb, MessageSquare, Command, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ interface TopicSuggestion {
   status: string;
   suggestedBy: string;
   suggesterEmail: string | null;
+  supporterCount: number;
   createdAt: string;
 }
 
@@ -162,9 +163,17 @@ export default function TopicSuggestions() {
                             Suggested by: {suggestion.suggesterEmail}
                           </p>
                         )}
-                        <p className="text-xs text-muted-foreground mt-1" data-testid={`text-date-${suggestion.id}`}>
-                          {new Date(suggestion.createdAt).toLocaleDateString()}
-                        </p>
+                        <div className="flex items-center gap-3 mt-1">
+                          <p className="text-xs text-muted-foreground" data-testid={`text-date-${suggestion.id}`}>
+                            {new Date(suggestion.createdAt).toLocaleDateString()}
+                          </p>
+                          {suggestion.supporterCount > 0 && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground" data-testid={`text-supporters-${suggestion.id}`}>
+                              <Users className="w-3 h-3" />
+                              <span>{suggestion.supporterCount} {suggestion.supporterCount === 1 ? 'supporter' : 'supporters'}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <Badge variant="secondary" data-testid={`badge-status-${suggestion.id}`}>
                         Pending
@@ -219,9 +228,17 @@ export default function TopicSuggestions() {
                             Suggested by: {suggestion.suggesterEmail}
                           </p>
                         )}
-                        <p className="text-xs text-muted-foreground mt-1" data-testid={`text-date-${suggestion.id}`}>
-                          {new Date(suggestion.createdAt).toLocaleDateString()}
-                        </p>
+                        <div className="flex items-center gap-3 mt-1">
+                          <p className="text-xs text-muted-foreground" data-testid={`text-date-${suggestion.id}`}>
+                            {new Date(suggestion.createdAt).toLocaleDateString()}
+                          </p>
+                          {suggestion.supporterCount > 0 && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground" data-testid={`text-supporters-${suggestion.id}`}>
+                              <Users className="w-3 h-3" />
+                              <span>{suggestion.supporterCount} {suggestion.supporterCount === 1 ? 'supporter' : 'supporters'}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <Badge 
                         variant={suggestion.status === 'approved' ? 'default' : 'secondary'} 

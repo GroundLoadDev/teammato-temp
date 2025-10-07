@@ -984,7 +984,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const suggestions = await storage.getTopicSuggestions(orgId, status);
       
-      // Enhance with suggester information
+      // Enhance with suggester information (supporterCount already included from storage)
       const enhanced = await Promise.all(
         suggestions.map(async (suggestion) => {
           let suggesterEmail = null;
@@ -992,6 +992,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const suggester = await storage.getUser(suggestion.suggestedBy);
             suggesterEmail = suggester?.email || null;
           }
+          
           return {
             ...suggestion,
             suggesterEmail,
