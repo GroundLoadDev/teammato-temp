@@ -53,6 +53,7 @@ export default function Billing() {
   const [selectedPlan, setSelectedPlan] = useState<number | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
+  const [chargeToday, setChargeToday] = useState(false);
 
   const { data: authData } = useQuery<{ user: { id: string; email: string; role: string } }>({
     queryKey: ['/api/auth/me'],
@@ -74,8 +75,8 @@ export default function Billing() {
   }, [refetch]);
 
   const checkoutMutation = useMutation({
-    mutationFn: async (priceLookupKey: string) => {
-      const result = await apiRequest('POST', '/api/billing/checkout', { priceLookupKey });
+    mutationFn: async ({ priceLookupKey, chargeToday }: { priceLookupKey: string; chargeToday?: boolean }) => {
+      const result = await apiRequest('POST', '/api/billing/checkout', { priceLookupKey, chargeToday });
       return await result.json() as { url: string };
     },
     onSuccess: (data) => {
@@ -188,7 +189,7 @@ export default function Billing() {
     if (!plan) return;
     
     const lookupKey = billingPeriod === 'monthly' ? plan.monthlyLookup : plan.annualLookup;
-    checkoutMutation.mutate(lookupKey);
+    checkoutMutation.mutate({ priceLookupKey: lookupKey, chargeToday });
   };
 
   const selectedPlanData = selectedPlan ? billing.prices.find(p => p.cap === selectedPlan) : null;
@@ -526,6 +527,23 @@ export default function Billing() {
                 <p>• Unlimited feedback topics</p>
                 <p>• Full k-anonymity protection</p>
               </div>
+
+              {isTrialing && (
+                <div className="flex items-start gap-3 p-3 border rounded-md bg-muted/50">
+                  <input
+                    type="checkbox"
+                    id="charge-today"
+                    checked={chargeToday}
+                    onChange={(e) => setChargeToday(e.target.checked)}
+                    className="mt-1"
+                    data-testid="checkbox-charge-today"
+                  />
+                  <label htmlFor="charge-today" className="text-sm cursor-pointer">
+                    <div className="font-medium">Skip trial and start subscription today</div>
+                    <div className="text-muted-foreground">You'll be charged immediately instead of at trial end</div>
+                  </label>
+                </div>
+              )}
               
               <div className="pt-4 mt-4 border-t space-y-1.5 text-xs text-muted-foreground" data-testid="section-trust-bullets-upgrade">
                 <p className="font-medium text-foreground mb-2">Privacy Guarantees:</p>
