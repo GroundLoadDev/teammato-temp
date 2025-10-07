@@ -239,6 +239,21 @@ export const orgUsage = pgTable("org_usage", {
   lastSynced: timestamp("last_synced").notNull().defaultNow(),
 });
 
+export const webhookEvents = pgTable("webhook_events", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(),
+  receivedAt: timestamp("received_at").notNull().defaultNow(),
+});
+
+export const analyticsEvents = pgTable("analytics_events", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  orgId: uuid("org_id").notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+  eventType: text("event_type").notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: 'set null' }),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // K-Anonymity Views
 // These views enforce k-anonymity by filtering threads/comments based on participant count
 export const vThreads = pgView("v_threads", {
@@ -317,6 +332,8 @@ export const insertThemeSchema = createInsertSchema(themes).omit({ id: true, cre
 export const insertThemePostSchema = createInsertSchema(themePosts);
 export const insertOrgAudienceSchema = createInsertSchema(orgAudience).omit({ updatedAt: true });
 export const insertOrgUsageSchema = createInsertSchema(orgUsage).omit({ lastSynced: true });
+export const insertWebhookEventSchema = createInsertSchema(webhookEvents).omit({ receivedAt: true });
+export const insertAnalyticsEventSchema = createInsertSchema(analyticsEvents).omit({ id: true, createdAt: true });
 
 // Types
 export type Org = typeof orgs.$inferSelect;
@@ -366,6 +383,12 @@ export type InsertOrgAudience = z.infer<typeof insertOrgAudienceSchema>;
 
 export type OrgUsage = typeof orgUsage.$inferSelect;
 export type InsertOrgUsage = z.infer<typeof insertOrgUsageSchema>;
+
+export type WebhookEvent = typeof webhookEvents.$inferSelect;
+export type InsertWebhookEvent = z.infer<typeof insertWebhookEventSchema>;
+
+export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
+export type InsertAnalyticsEvent = z.infer<typeof insertAnalyticsEventSchema>;
 
 // K-Anonymity View Types
 export type VThread = typeof vThreads.$inferSelect;

@@ -3,7 +3,7 @@ import { db } from "./db";
 import { 
   orgs, users, slackTeams, slackSettings, topics,
   feedbackThreads, feedbackItems, moderationAudit, topicSuggestions, invitations,
-  orgAudience, orgUsage, vThreads, vComments,
+  orgAudience, orgUsage, webhookEvents, analyticsEvents, vThreads, vComments,
   type Org, type InsertOrg,
   type User, type InsertUser,
   type SlackTeam, type InsertSlackTeam,
@@ -16,6 +16,8 @@ import {
   type Invitation, type InsertInvitation,
   type OrgAudience, type InsertOrgAudience,
   type OrgUsage, type InsertOrgUsage,
+  type WebhookEvent, type InsertWebhookEvent,
+  type AnalyticsEvent, type InsertAnalyticsEvent,
   type VThread, type VComment
 } from "@shared/schema";
 
@@ -148,6 +150,14 @@ export interface IStorage {
   // Usage
   getOrgUsage(orgId: string): Promise<OrgUsage | undefined>;
   upsertOrgUsage(usage: InsertOrgUsage): Promise<OrgUsage>;
+  
+  // Webhooks
+  isWebhookEventProcessed(eventId: string): Promise<boolean>;
+  recordWebhookEvent(event: InsertWebhookEvent): Promise<void>;
+  
+  // Analytics
+  trackEvent(event: InsertAnalyticsEvent): Promise<void>;
+  getEvents(orgId: string, eventType?: string): Promise<AnalyticsEvent[]>;
 }
 
 export class PgStorage implements IStorage {
@@ -969,6 +979,41 @@ export class PgStorage implements IStorage {
       })
       .returning();
     return result[0];
+  }
+  
+  // Webhooks
+  async isWebhookEventProcessed(eventId: string): Promise<boolean> {
+    const result = await db.select()
+      .from(webhookEvents)
+      .where(eq(webhookEvents.id, eventId))
+      .limit(1);
+    return result.length > 0;
+  }
+  
+  async recordWebhookEvent(event: InsertWebhookEvent): Promise<void> {
+    await db.insert(webhookEvents).values(event);
+  }
+  
+  // Analytics
+  async trackEvent(event: InsertAnalyticsEvent): Promise<void> {
+    await db.insert(analyticsEvents).values(event);
+  }
+  
+  async getEvents(orgId: string, eventType?: string): Promise<AnalyticsEvent[]> {
+    if (eventType) {
+      return await db.select()
+        .from(analyticsEvents)
+        .where(and(
+          eq(analyticsEvents.orgId, orgId),
+          eq(analyticsEvents.eventType, eventType)
+        ))
+        .orderBy(desc(analyticsEvents.createdAt));
+    } else {
+      return await db.select()
+        .from(analyticsEvents)
+        .where(eq(analyticsEvents.orgId, orgId))
+        .orderBy(desc(analyticsEvents.createdAt));
+    }
   }
 }
 

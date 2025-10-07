@@ -1,0 +1,347 @@
+TO: Replit (Programming LLM)
+
+Goal: Ship a clean, card-gated 14-day trial and seat-band billing. Eliminate the double-trial bug, capture a payment method up-front, honor the original trial end when subscribing mid-trial, and add the “Charge today (skip trial)” path. Harden webhooks (idempotency), enforce downgrades/caps, instrument key events, and align copy.
+
+Baseline from your audit:
+
+Double-trial root cause at server/routes.ts:406–409 (trial_period_days being sent when billingStatus==='trialing').
+
+No payment method enforcement in Checkout.
+
+No post-install billing gate.
+
+No idempotency in webhooks, no downgrade validation, no reinstall detection, no metrics, copy says “no card required”.
+
+Implement the following.
+
+1) Stripe: create sessions correctly (card-gated trial)
+
+Files: server/routes.ts (Checkout creation), server/webhooks/stripe.ts (sync), server/storage/* (updates)
+
+1.1 Remove trial_period_days usage
+
+Delete logic that passes subscription_data.trial_period_days anywhere.
+
+Use trial_end only.
+
+When starting a trial at post-install: trial_end = now + 14d (unix ts).
+
+When user is already trialing and subscribes mid-trial: trial_end = org.trialEnd (unix ts) to honor remaining time.
+
+For “Charge today”: trial_end = 'now'.
+
+1.2 Force card collection & save PM
+
+When creating Checkout Sessions:
+
+const session = await stripe.checkout.sessions.create({
+  mode: 'subscription',
+  customer: customerId,               // create if missing
+  line_items: [{ price: priceId, quantity: 1 }],
+  allow_promotion_codes: true,
+  payment_method_collection: 'always',
+  subscription_data: {
+    trial_end: desiredTrialEndUnixOrNow,   // see 1.1
+    payment_settings: { save_default_payment_method: 'on_subscription' },
+    metadata: { org_id: orgId }
+  },
+  success_url, cancel_url
+});
+
+
+Optional safety: trial_settings: { end_behavior: { missing_payment_method: 'cancel' } }.
+
+1.3 Persist Stripe values reliably
+
+On checkout.session.completed / customer.subscription.*:
+
+Persist stripeCustomerId, stripeSubscriptionId, stripePriceId, currentPeriodEnd (from sub.current_period_end), trialEnd (from sub.trial_end), billingPeriod (price.recurring.interval), priceAmount (cents), and billingStatus (trialing | active).
+
+If trial_end exists, do NOT recalculate trial in app. Treat Stripe as source of truth.
+
+Acceptance:
+
+Opening Checkout during an existing trial shows “Free until {org.trialEnd}, then $X/mo”, not a fresh 14-day extension.
+
+“Charge today” invoices immediately and sets next renewal to now + interval.
+
+2) Post-install billing gate (card-gated)
+
+Files: client/src/pages/PostInstall.tsx, client/src/pages/admin/*, server/routes.ts
+
+2.1 Replace success-only post-install with a gate
+
+After OAuth, route to PostInstall:
+
+If no subscription or subscription trialing without PM? (Stripe session not completed) → show Start 14-day free trial button (opens Checkout).
+
+If billingStatus='trialing' with Stripe sub id on file → show trial info, date, and “Charge today” secondary CTA.
+
+If billingStatus='active' → proceed to Admin.
+
+2.2 Hard gate usage until Checkout completed
+
+For all write endpoints (feedback submission, etc.) check:
+
+Stripe sub exists and (billingStatus='trialing' or active') and org not expired.
+
+If missing: 403 + “Start your 14-day trial” deep-link to Checkout.
+
+Keep your separate seat-cap enforcement middleware; just add this billing gate before it.
+
+Acceptance:
+
+Fresh install cannot post until Checkout completes.
+
+If user abandons Checkout, Admin shows persistent banner + Slack DM nudges.
+
+3) “Charge today (skip trial)” path
+
+Files: client/src/pages/PostInstall.tsx, server/routes.ts
+
+Add a secondary button that calls a server endpoint to create Checkout with trial_end: 'now'.
+
+Copy: “Charge today (skip remaining trial). We’ll bill now; next renewal one month from today.”
+
+Acceptance:
+
+Immediate invoice; next renewal anchored to creation date.
+
+4) Webhook hardening & idempotency
+
+Files: server/webhooks/stripe.ts, server/storage/*, DB migration
+
+4.1 Idempotency store
+
+Create table webhook_events(id text primary key, received_at timestamptz default now()).
+
+In webhook handler, upfront check: if event.id exists → 200 OK (no-op); else insert then process.
+
+Keep signature verification.
+
+4.2 State transitions
+
+invoice.payment_failed → billingStatus='past_due'; send DM/email; set read-only until recovered.
+
+invoice.paid (after past_due) → billingStatus='active'.
+
+customer.subscription.deleted → billingStatus='canceled'; clear subscription id; set read-only.
+
+Acceptance:
+
+Webhooks are idempotent (safe to retry).
+
+Past-due flips read-only; recovery flips to active.
+
+5) Plan changes, proration, downgrades
+
+Files: server/routes.ts (upgrade/downgrade actions), client/src/pages/admin/Billing.tsx
+
+5.1 Upgrades
+
+Use Checkout for upgrades (new price). Rely on Stripe proration default.
+
+Webhook updates seatCap by mapping from price lookup key.
+
+5.2 Downgrades (validation)
+
+Block downgrades if orgUsage.eligibleCount > newSeatCap.
+
+UI shows current eligibleCount / seatCap and explains why downgrade disabled.
+
+Acceptance:
+
+Cannot downgrade below current eligible count.
+
+Upgrades prorate; caps update via webhook.
+
+6) Reinstall detection & multi-admin safety
+
+Files: OAuth handler, server/routes.ts, DB
+
+On OAuth, check if slack_team_id already linked to an org. If so, reattach instead of creating a new org/customer.
+
+Prevent duplicate Checkout by locking on orgId during session creation (simple mutex or “pending checkout” flag with ttl).
+
+Set payer as the first successful Checkout; show “Billing is managed by <email>” for other admins.
+
+Acceptance:
+
+Reinstall relinks; no duplicate subs.
+
+Two admins clicking Subscribe cannot create two subs.
+
+7) Seat counting & enforcement (keep, polish)
+
+Files: server/cron/audienceSync.ts, server/utils/slack-audience.ts, server/middleware/seatCap.ts, client/src/pages/admin/Billing.tsx
+
+Keep nightly sync; also refresh on Admin Billing view.
+
+Add UI progress meter and upgrade CTA at ≥90%.
+
+Keep 7-day grace to 110%; block new posts afterward; reads allowed.
+
+Acceptance: Same behavior as audit, with visible meter and clear CTAs.
+
+8) Metrics & telemetry (min bar)
+
+Files: server event emitter + lightweight table or your analytics sink
+
+Emit events (orgId, ts, actor):
+
+oauth_completed
+
+trial_checkout_opened
+
+trial_checkout_completed
+
+first_post_created
+
+trial_nudge_d3/d7/d12/d14 (see §10)
+
+trial_canceled
+
+first_charge_succeeded
+
+seat_cap_warning_shown
+
+over_cap_blocked
+
+Acceptance: Events recorded; basic query shows counts over time.
+
+9) Customer Portal usage
+
+Files: server/routes.ts, client/src/pages/admin/Billing.tsx
+
+Keep Portal for update card / view invoices / cancel.
+
+Prefer Checkout for plan changes (explicit price selection).
+
+Add “Cancel trial” and “Cancel subscription” buttons that deep-link into Portal.
+
+Acceptance: Users can self-serve card updates, invoices, cancel.
+
+10) Trial nudges & expiry handling
+
+Files: cron or scheduled job, Slack DM utility, email utility
+
+When billingStatus='trialing':
+
+Send D3, D7, D12 Slack DMs to installer + billing email (if set) with Checkout deep-link.
+
+On day 14 unpaid: set read-only, show Admin banner + Slack DM with link.
+
+Use 24-hour quiet hours per recipient.
+
+Acceptance: Nudges fire; expiry flips read-only.
+
+11) Copy fixes (align expectations)
+
+Files:
+client/src/pages/public/Pricing.tsx (L80, L164, L175, L408),
+client/src/pages/public/FAQ.tsx (L133),
+client/src/pages/PostInstall.tsx (new gate)
+
+Replace “Full features, no card required” → “Start free for 14 days — card required after install.”
+
+Post-install page: “Free today. Renews at $99/mo on {date} unless canceled.”
+
+FAQ: “Do I need a card?” → Yes; connect Slack, then add a card to begin your trial. You won’t be charged until {date}.
+
+Add “Charge today (skip trial)” explanations where relevant.
+
+Acceptance: No public surface promises “no card required”.
+
+12) Stripe Dashboard tasks (manual)
+
+Remove trial_period_days from all Price objects (if set). We’ll control trials via trial_end.
+
+Verify lookup keys exist:
+
+cap_250_m/_a, cap_500_m/_a, cap_1000_m/_a, cap_2500_m/_a, cap_5000_m/_a, cap_10000_m/_a, cap_25000_m/_a
+
+Ensure tax behavior, currency, promotion codes as desired (codes already allowed in code).
+
+Optional: add 10k/25k annual prices (10× monthly).
+
+Acceptance: Price JSONs show no trial_period_days.
+
+13) Security & reliability
+
+Rate-limit Checkout creation by org to avoid session spam.
+
+Validate org_id metadata on subscription maps to the same org.
+
+Log all Stripe errors with request ids; surface admin-only troubleshooting panel for the last webhook events.
+
+14) Test matrix (run & attach logs)
+
+Fresh install → Start trial (card required)
+
+Checkout shows “Free until {+14d}”.
+
+DB: billingStatus='trialing', trialEnd≈+14d, stripe* fields set.
+
+Mid-trial subscribe
+
+Open Checkout on day 7; shows remaining 7 days (no new 14-day).
+
+First invoice scheduled at original trialEnd.
+
+Charge today
+
+Trial ends immediately; invoice now; renewal at +1 interval.
+
+Trial expires unpaid
+
+Read-only enforced; Checkout deep-link restores access on payment.
+
+Seat cap
+
+Hit 90% → warning; >100% → grace set; >110% or grace expired → block writes.
+
+Upgrade band mid-cycle
+
+Proration applied; seatCap updated by webhook.
+
+Downgrade below eligibleCount
+
+UI blocks with explanation.
+
+Invoice failure
+
+past_due set; read-only; recovery flips back to active.
+
+Reinstall
+
+Existing org/customer relinked; no duplicate subs.
+
+Webhook idempotency
+
+Replay events; verify no duplicate state changes.
+
+FROM: Replit (what to return)
+
+Diffs or code snippets for each file touched.
+
+Final Checkout payload(s) (JSON) for: start trial, mid-trial subscribe, charge today, upgrade.
+
+Stripe subscription objects (redacted) showing correct trial_end, current_period_end.
+
+DB before/after snapshots of org fields on key transitions.
+
+Screenshot(s) of updated copy.
+
+Confirmation that all Price objects have no trial_period_days.
+
+Test matrix results (pass/fail + log excerpts).
+
+Any follow-ups needed from Stripe Dashboard configuration.
+
+Notes & non-goals
+
+We are not introducing metered billing or custom SLAs.
+
+Keep Customer Portal only for card/invoices/cancel; plan changes via Checkout.
+
+Multi-workspace remains per-workspace subscription
