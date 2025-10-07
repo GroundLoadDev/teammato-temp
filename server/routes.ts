@@ -98,20 +98,25 @@ function requireRole(...roles: string[]) {
   };
 }
 
-// Billing state helper - determines if org can write
-function canWrite(org: any): { allowed: boolean; reason?: string; state?: string } {
+// Billing state helper - determines if org can write AND persists state transitions
+async function checkAndTransitionBillingState(org: any): Promise<{ allowed: boolean; reason?: string; state?: string }> {
   const now = Date.now();
   const billingStatus = org.billingStatus || 'installed_no_checkout';
+  let newState: string | null = null;
   
-  // Check trial expiration for trialing status
-  if (billingStatus === 'trialing' && org.trialEnd) {
-    if (now > org.trialEnd.getTime()) {
-      return { 
-        allowed: false, 
-        reason: 'Trial expired. Please upgrade to continue.',
-        state: 'trial_expired_unpaid'
-      };
+  // Check trial expiration FIRST - regardless of current status
+  // If no active subscription and trial ended, transition to trial_expired_unpaid
+  if (!org.stripeSubscriptionId && org.trialEnd && now > org.trialEnd.getTime()) {
+    // Don't transition if already in trial_expired_unpaid
+    if (billingStatus !== 'trial_expired_unpaid') {
+      newState = 'trial_expired_unpaid';
+      await storage.updateOrg(org.id, { billingStatus: newState });
     }
+    return { 
+      allowed: false, 
+      reason: 'Trial expired. Please upgrade to continue.',
+      state: 'trial_expired_unpaid'
+    };
   }
   
   // Check seat cap with grace period
@@ -120,6 +125,13 @@ function canWrite(org: any): { allowed: boolean; reason?: string; state?: string
   const percentUsed = (usage / cap) * 100;
   
   if (percentUsed > 110) {
+    // Block immediately if over 110%
+    if (billingStatus !== 'over_cap_blocked') {
+      await storage.updateOrg(org.id, { 
+        billingStatus: 'over_cap_blocked',
+        graceEndsAt: null // Clear grace period
+      });
+    }
     return { 
       allowed: false, 
       reason: 'Over seat capacity limit. Please upgrade your plan.',
@@ -127,12 +139,88 @@ function canWrite(org: any): { allowed: boolean; reason?: string; state?: string
     };
   }
   
-  if (percentUsed > 100 && org.graceEndsAt && now > org.graceEndsAt.getTime()) {
-    return { 
-      allowed: false, 
-      reason: 'Grace period expired. Please upgrade your plan.',
-      state: 'over_cap_blocked'
-    };
+  if (percentUsed > 100) {
+    // If already blocked, stay blocked (requires subscription to clear)
+    if (billingStatus === 'over_cap_blocked') {
+      // Only clear block if they now have an active subscription
+      if (org.stripeSubscriptionId) {
+        // Has subscription - start new grace period
+        const graceEnd = new Date(now + 7 * 24 * 60 * 60 * 1000);
+        await storage.updateOrg(org.id, { 
+          billingStatus: 'over_cap_grace',
+          graceEndsAt: graceEnd 
+        });
+        return { allowed: true };
+      }
+      
+      // No subscription yet - stay blocked
+      return { 
+        allowed: false, 
+        reason: 'Over seat capacity limit. Please upgrade your plan.',
+        state: 'over_cap_blocked'
+      };
+    }
+    
+    // Start or maintain grace period
+    if (billingStatus !== 'over_cap_grace' || !org.graceEndsAt) {
+      // Start new grace period
+      const graceEnd = new Date(now + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+      await storage.updateOrg(org.id, { 
+        billingStatus: 'over_cap_grace',
+        graceEndsAt: graceEnd 
+      });
+    }
+    
+    // Check if grace period expired
+    if (org.graceEndsAt && now > org.graceEndsAt.getTime()) {
+      await storage.updateOrg(org.id, { billingStatus: 'over_cap_blocked' });
+      return { 
+        allowed: false, 
+        reason: 'Grace period expired. Please upgrade your plan.',
+        state: 'over_cap_blocked'
+      };
+    }
+    
+    // Still in grace period
+    return { allowed: true };
+  }
+  
+  // If under capacity and was in grace/blocked, clear it
+  if (billingStatus === 'over_cap_grace' || billingStatus === 'over_cap_blocked') {
+    // Blocked orgs need a subscription to clear the block
+    if (billingStatus === 'over_cap_blocked' && !org.stripeSubscriptionId) {
+      return {
+        allowed: false,
+        reason: 'Please complete your subscription to resume access.',
+        state: 'over_cap_blocked'
+      };
+    }
+    
+    // Determine correct restored state
+    let restoredStatus: string;
+    if (org.stripeSubscriptionId) {
+      restoredStatus = 'active';
+    } else if (org.trialEnd && now > org.trialEnd.getTime()) {
+      restoredStatus = 'trial_expired_unpaid';
+    } else {
+      restoredStatus = 'trialing';
+    }
+    
+    await storage.updateOrg(org.id, { 
+      billingStatus: restoredStatus,
+      graceEndsAt: null 
+    });
+    
+    // If restored to trial_expired_unpaid, block writes
+    if (restoredStatus === 'trial_expired_unpaid') {
+      return {
+        allowed: false,
+        reason: 'Trial expired. Please upgrade to continue.',
+        state: restoredStatus
+      };
+    }
+    
+    return { allowed: true };
   }
   
   // Allow writes for active statuses
@@ -175,7 +263,8 @@ async function requireActiveSubscription(req: Request, res: Response, next: Next
   const usage = await storage.getOrgUsage(req.session.orgId);
   const orgWithUsage = { ...org, eligibleCount: usage?.eligibleCount || 0 };
   
-  const writeCheck = canWrite(orgWithUsage);
+  // Check and transition billing state (persists changes)
+  const writeCheck = await checkAndTransitionBillingState(orgWithUsage);
   if (!writeCheck.allowed) {
     return res.status(403).json({ 
       error: 'Write access restricted',
@@ -1483,8 +1572,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const usage = await storage.getOrgUsage(orgId);
       const orgWithUsage = { ...org, eligibleCount: usage?.eligibleCount || 0 };
       
-      // Check write access using comprehensive billing state logic
-      const writeCheck = canWrite(orgWithUsage);
+      // Check and transition billing state (persists changes)
+      const writeCheck = await checkAndTransitionBillingState(orgWithUsage);
       if (!writeCheck.allowed) {
         const baseUrl = process.env.REPLIT_DOMAINS 
           ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` 
