@@ -155,22 +155,13 @@ function SeatSizer({
                 <span className="ml-1 text-sm font-normal text-muted-foreground">/{term === "annual" ? "yr" : "mo"}</span>
               </div>
             </div>
-            <div className="mt-4 flex gap-2">
-              <a
-                href={`/api/billing/checkout?plan=${recommended.key}&term=${term}`}
-                className="inline-flex flex-1 items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-                data-testid="button-start-trial"
-              >
-                Start free trial
-              </a>
-              <a
-                href="/api/billing/portal"
-                className="inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm hover:bg-muted"
-                data-testid="button-manage-billing"
-              >
-                Manage billing
-              </a>
-            </div>
+            <a
+              href={`/api/billing/checkout?plan=${recommended.key}&term=${term}`}
+              className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+              data-testid="button-start-trial"
+            >
+              Start free trial
+            </a>
             <p className="mt-3 text-xs text-muted-foreground" data-testid="text-trial-info">
               14-day trial. Card added after install. You won't be charged until trial ends.
             </p>
