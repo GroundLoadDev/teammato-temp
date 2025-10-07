@@ -112,8 +112,13 @@ export default function PostInstall() {
   }
 
   const hasActiveSubscription = org?.billingStatus === 'trialing' || org?.billingStatus === 'active';
+  const isGrace = org?.billingStatus === 'grace_period';
+  const isPastDue = org?.billingStatus === 'past_due';
+  const isCanceled = org?.billingStatus === 'canceled';
+  
+  const needsSubscription = !org?.billingStatus || org.billingStatus === 'incomplete';
 
-  if (!hasActiveSubscription) {
+  if (needsSubscription) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
         <div className="max-w-2xl w-full">
@@ -192,6 +197,61 @@ export default function PostInstall() {
                 Privacy Policy
               </Link>
             </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Special handling for problematic subscription states
+  if (isPastDue) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="max-w-2xl w-full text-center">
+          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CreditCard className="w-8 h-8 text-destructive" />
+          </div>
+          <h1 className="text-3xl font-semibold mb-2" data-testid="text-past-due-title">
+            Payment Required
+          </h1>
+          <p className="text-muted-foreground mb-6" data-testid="text-past-due-subtitle">
+            Your subscription payment failed. Please update your payment method to restore access.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Button asChild variant="default" size="lg" data-testid="button-update-payment">
+              <Link href="/admin/billing">Update Payment Method</Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" data-testid="button-go-to-dashboard">
+              <Link href="/admin">Go to Dashboard</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isGrace || isCanceled) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="max-w-2xl w-full text-center">
+          <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Check className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
+          </div>
+          <h1 className="text-3xl font-semibold mb-2" data-testid="text-subscription-status-title">
+            {isGrace ? 'Subscription in Grace Period' : 'Subscription Canceled'}
+          </h1>
+          <p className="text-muted-foreground mb-6" data-testid="text-subscription-status-subtitle">
+            {isGrace 
+              ? 'You have exceeded your seat cap. Please upgrade or adjust your audience to restore full access.'
+              : 'Your subscription has been canceled. Reactivate to continue using Teammato.'}
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Button asChild variant="default" size="lg" data-testid="button-manage-billing">
+              <Link href="/admin/billing">Manage Billing</Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" data-testid="button-go-to-dashboard">
+              <Link href="/admin">Go to Dashboard</Link>
+            </Button>
           </div>
         </div>
       </div>
