@@ -35,6 +35,7 @@ export interface IStorage {
   getUserBySlackId(slackUserId: string, orgId: string): Promise<User | undefined>;
   getOrgUsers(orgId: string): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(userId: string, updates: Partial<InsertUser>): Promise<User | undefined>;
   updateUserRole(userId: string, role: string, orgId: string): Promise<User | undefined>;
   deleteUser(userId: string, orgId: string): Promise<void>;
   
@@ -230,6 +231,14 @@ export class PgStorage implements IStorage {
     return await db.select().from(users)
       .where(eq(users.orgId, orgId))
       .orderBy(desc(users.createdAt));
+  }
+  
+  async updateUser(userId: string, updates: Partial<InsertUser>): Promise<User | undefined> {
+    const result = await db.update(users)
+      .set(updates)
+      .where(eq(users.id, userId))
+      .returning();
+    return result[0];
   }
 
   async updateUserRole(userId: string, role: string, orgId: string): Promise<User | undefined> {

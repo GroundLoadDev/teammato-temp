@@ -1617,7 +1617,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Handle 'suggest' command
+      // Handle 'suggest' command with anti-spam guardrails
       if (text === 'suggest' || text.startsWith('suggest ')) {
         const topicName = text === 'suggest' ? '' : text.slice(8).trim();
         
@@ -1654,17 +1654,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        // Create topic suggestion
+        // Guardrail 1: Check 24-hour cooldown
+        if (userRecord.lastSuggestionAt) {
+          const timeSinceLastSuggestion = Date.now() - userRecord.lastSuggestionAt.getTime();
+          const cooldownPeriod = 24 * 60 * 60 * 1000; // 24 hours in ms
+          
+          if (timeSinceLastSuggestion < cooldownPeriod) {
+            const remainingMs = cooldownPeriod - timeSinceLastSuggestion;
+            const remainingHours = Math.ceil(remainingMs / (60 * 60 * 1000));
+            const remainingMinutes = Math.ceil((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
+            
+            return res.json({
+              response_type: 'ephemeral',
+              text: `⏳ You can suggest one topic every 24 hours.\n\nTry again in ${remainingHours}h ${remainingMinutes}m.`,
+            });
+          }
+        }
+        
+        // Guardrail 2: Check org-wide pending limit (50)
+        const pendingCount = await storage.getPendingSuggestionCount(orgId);
+        if (pendingCount >= 50) {
+          return res.json({
+            response_type: 'ephemeral',
+            text: '📥 The suggestion queue is full right now. Please try again later or ask an admin.',
+          });
+        }
+        
+        // Normalize title for similarity detection
+        const normalizedTitle = topicName
+          .toLowerCase()
+          .trim()
+          .replace(/[^\w\s]/g, '') // Remove punctuation
+          .replace(/\s+/g, ' '); // Collapse spaces
+        
+        // Guardrail 3: Check for similar/duplicate suggestions
+        const similarSuggestions = await storage.findSimilarSuggestions(orgId, normalizedTitle);
+        
+        if (similarSuggestions.length > 0) {
+          const existing = similarSuggestions[0];
+          // Add support to existing suggestion instead of creating duplicate
+          await storage.addSuggestionSupport(existing.id, userRecord.id);
+          
+          return res.json({
+            response_type: 'ephemeral',
+            text: `🔁 Looks similar to an existing suggestion: "${existing.title}".\n\nWe've added your support to that suggestion instead.\n\n_Heads-up: Your name is attached to topic suggestions (feedback remains anonymous)._`,
+          });
+        }
+        
+        // Create new suggestion
         await storage.createTopicSuggestion({
           orgId,
           suggestedBy: userRecord.id,
           title: topicName,
+          normalizedTitle,
           status: 'pending',
+        });
+        
+        // Update user's last suggestion timestamp
+        await storage.updateUser(userRecord.id, {
+          lastSuggestionAt: new Date(),
         });
         
         return res.json({
           response_type: 'ephemeral',
-          text: `✅ *Topic suggestion submitted!*\n\n"${topicName}"\n\nYour admin will review and approve new topics. You'll be notified once it's available.`,
+          text: `✅ *Suggestion submitted:* "${topicName}"\n\n_Heads-up: Your name is attached to topic suggestions (feedback remains anonymous)._\n\nWe'll notify you if it's approved.`,
         });
       }
 
