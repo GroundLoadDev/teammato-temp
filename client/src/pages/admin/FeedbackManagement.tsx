@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { MessageSquare, Eye, EyeOff, Flag, Archive, CheckCircle2, FileText, History, Shield, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import AdminFilterBar from "@/components/admin/AdminFilterBar";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
@@ -70,6 +71,13 @@ export default function FeedbackManagement() {
   const [selectedModerationStatus, setSelectedModerationStatus] = useState<string>('');
   const [moderationReason, setModerationReason] = useState('');
   const [adminNotes, setAdminNotes] = useState('');
+  
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [timeRange, setTimeRange] = useState('all');
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState('date-desc');
+  
   const { toast } = useToast();
 
   const { data: threads, isLoading: threadsLoading } = useQuery<FeedbackThread[]>({
@@ -181,6 +189,58 @@ export default function FeedbackManagement() {
     moderateItemMutation.mutate({ itemId, moderationStatus });
   };
 
+  // Filter and sort threads
+  const filteredAndSortedThreads = useMemo(() => {
+    if (!threads) return [];
+
+    let filtered = threads.filter(thread => {
+      // Search filter
+      if (searchQuery && !thread.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+
+      // Status filter
+      if (selectedStatuses.length > 0 && !selectedStatuses.includes(thread.moderationStatus)) {
+        return false;
+      }
+
+      // Time range filter
+      if (timeRange !== 'all') {
+        const days = parseInt(timeRange);
+        const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+        if (new Date(thread.createdAt) < cutoff) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    // Sort
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'date-desc':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'date-asc':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'participants-desc':
+          return b.participantCount - a.participantCount;
+        case 'participants-asc':
+          return a.participantCount - b.participantCount;
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [threads, searchQuery, selectedStatuses, timeRange, sortBy]);
+
+  const handleStatusToggle = (status: string) => {
+    setSelectedStatuses(prev =>
+      prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]
+    );
+  };
+
   const getModerationStatusVariant = (status: string) => {
     switch (status) {
       case 'approved': return 'default';
@@ -214,6 +274,35 @@ export default function FeedbackManagement() {
         </p>
       </div>
 
+      {!threadsLoading && threads && threads.length > 0 && (
+        <AdminFilterBar
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+          timeRange={timeRange}
+          onTimeRangeChange={setTimeRange}
+          selectedStatuses={selectedStatuses}
+          onStatusToggle={handleStatusToggle}
+          statusOptions={[
+            { value: 'approved', label: 'Approved' },
+            { value: 'auto_approved', label: 'Auto Approved' },
+            { value: 'pending_review', label: 'Pending Review' },
+            { value: 'flagged', label: 'Flagged' },
+            { value: 'hidden', label: 'Hidden' },
+            { value: 'archived', label: 'Archived' },
+          ]}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
+          sortOptions={[
+            { value: 'date-desc', label: 'Newest first' },
+            { value: 'date-asc', label: 'Oldest first' },
+            { value: 'participants-desc', label: 'Most participants' },
+            { value: 'participants-asc', label: 'Least participants' },
+          ]}
+          resultCount={filteredAndSortedThreads.length}
+          totalCount={threads.length}
+        />
+      )}
+
       {threadsLoading ? (
         <p className="text-muted-foreground">Loading threads...</p>
       ) : !threads || threads.length === 0 ? (
@@ -224,9 +313,17 @@ export default function FeedbackManagement() {
             Feedback threads will appear here once users submit via Slack
           </p>
         </Card>
+      ) : filteredAndSortedThreads.length === 0 && threads && threads.length > 0 ? (
+        <Card className="p-8 text-center">
+          <MessageSquare className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground mb-2">No threads match your filters</p>
+          <p className="text-sm text-muted-foreground">
+            Try adjusting your search or filter criteria
+          </p>
+        </Card>
       ) : (
         <div className="grid gap-4">
-          {threads.map((thread) => (
+          {filteredAndSortedThreads.map((thread) => (
             <Card 
               key={thread.id} 
               className="p-4 hover-elevate cursor-pointer" 

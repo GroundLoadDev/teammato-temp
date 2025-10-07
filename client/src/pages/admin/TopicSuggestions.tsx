@@ -1,8 +1,11 @@
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Check, X, Lightbulb, MessageSquare, Command, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import AdminFilterBar from "@/components/admin/AdminFilterBar";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 
@@ -18,6 +21,11 @@ interface TopicSuggestion {
 
 export default function TopicSuggestions() {
   const { toast } = useToast();
+  
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [timeRange, setTimeRange] = useState('all');
+  const [sortBy, setSortBy] = useState('date-desc');
 
   const { data: suggestions, isLoading } = useQuery<TopicSuggestion[]>({
     queryKey: ['/api/topic-suggestions'],
@@ -59,8 +67,50 @@ export default function TopicSuggestions() {
     }
   };
 
-  const pendingSuggestions = suggestions?.filter(s => s.status === 'pending') || [];
-  const reviewedSuggestions = suggestions?.filter(s => s.status !== 'pending') || [];
+  // Filter and sort suggestions
+  const filteredAndSortedSuggestions = useMemo(() => {
+    if (!suggestions) return [];
+
+    let filtered = suggestions.filter(suggestion => {
+      // Search filter
+      if (searchQuery && !suggestion.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+
+      // Time range filter
+      if (timeRange !== 'all') {
+        const days = parseInt(timeRange);
+        const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+        if (new Date(suggestion.createdAt) < cutoff) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    // Sort
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'date-desc':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'date-asc':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'supporters-desc':
+          return b.supporterCount - a.supporterCount;
+        case 'supporters-asc':
+          return a.supporterCount - b.supporterCount;
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [suggestions, searchQuery, timeRange, sortBy]);
+
+  const pendingSuggestions = filteredAndSortedSuggestions.filter(s => s.status === 'pending');
+  const approvedSuggestions = filteredAndSortedSuggestions.filter(s => s.status === 'approved');
+  const rejectedSuggestions = filteredAndSortedSuggestions.filter(s => s.status === 'rejected');
 
   return (
     <div className="p-8 space-y-6">
@@ -74,6 +124,28 @@ export default function TopicSuggestions() {
           </p>
         </div>
       </div>
+
+      {!isLoading && suggestions && suggestions.length > 0 && (
+        <AdminFilterBar
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+          timeRange={timeRange}
+          onTimeRangeChange={setTimeRange}
+          selectedStatuses={[]}
+          onStatusToggle={() => {}}
+          showStatusFilter={false}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
+          sortOptions={[
+            { value: 'date-desc', label: 'Newest first' },
+            { value: 'date-asc', label: 'Oldest first' },
+            { value: 'supporters-desc', label: 'Most supporters' },
+            { value: 'supporters-asc', label: 'Least supporters' },
+          ]}
+          resultCount={filteredAndSortedSuggestions.length}
+          totalCount={suggestions.length}
+        />
+      )}
 
       {isLoading ? (
         <p className="text-muted-foreground">Loading suggestions...</p>
@@ -142,14 +214,35 @@ export default function TopicSuggestions() {
             </CardContent>
           </Card>
         </div>
+      ) : filteredAndSortedSuggestions.length === 0 && suggestions.length > 0 ? (
+        <Card className="p-8 text-center">
+          <Lightbulb className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground mb-2">No suggestions match your filters</p>
+          <p className="text-sm text-muted-foreground">
+            Try adjusting your search or filter criteria
+          </p>
+        </Card>
       ) : (
-        <div className="space-y-8">
-          {/* Pending Suggestions */}
-          {pendingSuggestions.length > 0 && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4" data-testid="text-pending-heading">
-                Pending Suggestions ({pendingSuggestions.length})
-              </h2>
+        <Tabs defaultValue="pending" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="pending" data-testid="tab-pending">
+              Pending ({pendingSuggestions.length})
+            </TabsTrigger>
+            <TabsTrigger value="approved" data-testid="tab-approved">
+              Approved ({approvedSuggestions.length})
+            </TabsTrigger>
+            <TabsTrigger value="rejected" data-testid="tab-rejected">
+              Rejected ({rejectedSuggestions.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="pending" className="space-y-4">
+            {pendingSuggestions.length === 0 ? (
+              <Card className="p-8 text-center">
+                <Lightbulb className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No pending suggestions</p>
+              </Card>
+            ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {pendingSuggestions.map((suggestion) => (
                   <Card key={suggestion.id} className="p-4" data-testid={`card-suggestion-${suggestion.id}`}>
@@ -206,17 +299,18 @@ export default function TopicSuggestions() {
                   </Card>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </TabsContent>
 
-          {/* Reviewed Suggestions */}
-          {reviewedSuggestions.length > 0 && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4" data-testid="text-reviewed-heading">
-                Reviewed Suggestions
-              </h2>
+          <TabsContent value="approved" className="space-y-4">
+            {approvedSuggestions.length === 0 ? (
+              <Card className="p-8 text-center">
+                <Lightbulb className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No approved suggestions</p>
+              </Card>
+            ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {reviewedSuggestions.map((suggestion) => (
+                {approvedSuggestions.map((suggestion) => (
                   <Card key={suggestion.id} className="p-4" data-testid={`card-suggestion-${suggestion.id}`}>
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1 min-w-0">
@@ -240,19 +334,54 @@ export default function TopicSuggestions() {
                           )}
                         </div>
                       </div>
-                      <Badge 
-                        variant={suggestion.status === 'approved' ? 'default' : 'secondary'} 
-                        data-testid={`badge-status-${suggestion.id}`}
-                      >
-                        {suggestion.status === 'approved' ? 'Approved' : 'Rejected'}
-                      </Badge>
+                      <Badge variant="default">Approved</Badge>
                     </div>
                   </Card>
                 ))}
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="rejected" className="space-y-4">
+            {rejectedSuggestions.length === 0 ? (
+              <Card className="p-8 text-center">
+                <Lightbulb className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No rejected suggestions</p>
+              </Card>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {rejectedSuggestions.map((suggestion) => (
+                  <Card key={suggestion.id} className="p-4" data-testid={`card-suggestion-${suggestion.id}`}>
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold mb-1" data-testid={`text-title-${suggestion.id}`}>
+                          {suggestion.title}
+                        </h3>
+                        {suggestion.suggesterEmail && (
+                          <p className="text-xs text-muted-foreground" data-testid={`text-suggester-${suggestion.id}`}>
+                            Suggested by: {suggestion.suggesterEmail}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-3 mt-1">
+                          <p className="text-xs text-muted-foreground" data-testid={`text-date-${suggestion.id}`}>
+                            {new Date(suggestion.createdAt).toLocaleDateString()}
+                          </p>
+                          {suggestion.supporterCount > 0 && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground" data-testid={`text-supporters-${suggestion.id}`}>
+                              <Users className="w-3 h-3" />
+                              <span>{suggestion.supporterCount} {suggestion.supporterCount === 1 ? 'supporter' : 'supporters'}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <Badge variant="secondary">Rejected</Badge>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );

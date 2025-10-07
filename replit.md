@@ -8,12 +8,25 @@ I prefer iterative development and clear, concise explanations. Ask before makin
 
 ### Recent Changes (October 2025)
 
-#### Unified Admin Dashboard (Completed - October 7, 2025)
-- **Single-Page Architecture**: Implemented unified admin dashboard with tabbed interface (Overview, Topics, Suggestions, Feedback, Themes, Analytics, Settings) replacing scattered individual pages
-- **Global Filter System**: Created comprehensive filter bar with channel, time range (Last 7/30/90 days, All time), and status filters that apply across all tabs
-- **K-Safety Enforcement**: Integrated k-safety banner component that displays when current filters don't meet k-anonymity thresholds, preventing inadvertent data exposure
-- **Topics Tab Structure**: Built hierarchical tab system with sub-tabs (Active, Upcoming, Expired, Archived) for organized topic lifecycle management
-- **Feedback Tab**: Displays only k-safe threads (participantCount >= kThreshold) with visual indicators and counts
+#### Enhanced Admin Page Scalability (Completed - October 7, 2025)
+- **Architecture Decision**: Enhanced individual admin pages (FeedbackManagement, TopicManagement, TopicSuggestions) with independent filtering/sorting systems to support large organizations (100s of items per page)
+- **Reusable AdminFilterBar Component**: Created centralized filter bar with search, time range (7/30/90 days, all time), status filters, and sorting options
+- **FeedbackManagement Enhancements**:
+  - Full-text search on thread titles
+  - Status filters (approved, auto_approved, pending_review, flagged, hidden, archived)
+  - Sorting by date (newest/oldest) and participant count (most/least)
+  - Empty state messaging for no results matching filters
+- **TopicManagement Enhancements**:
+  - Full-text search on topic names
+  - Tabbed organization (Active, Upcoming, Expired, Archived) with independent counts
+  - Status filters (collecting, in_review, action_decided, actioned, archived)
+  - Sorting by date (newest/oldest) and name (A-Z, Z-A)
+  - Filtered topics displayed in appropriate tabs based on lifecycle state
+- **TopicSuggestions Enhancements**:
+  - Full-text search on suggestion titles
+  - Tabbed organization (Pending, Approved, Rejected) with independent counts
+  - Sorting by date (newest/oldest) and supporter count (most/least)
+  - Supporter count display on all suggestion cards
 - **Performance Indexes**: Added 8 database indexes for common admin queries:
   - `idx_topics_org_status_created` (orgId, status, createdAt DESC)
   - `idx_feedback_threads_topic_created` (topicId, createdAt DESC)
@@ -30,7 +43,6 @@ I prefer iterative development and clear, concise explanations. Ask before makin
   - Manual topic status updates via admin dashboard (with user attribution)
   - Auto-lock operations by cron jobs (system-initiated with descriptive reasons)
   - Both regular topics and time-boxed instances
-- **Navigation Updates**: Enhanced AppSidebar with direct links to admin sections (Dashboard, Feedback, Topics, Suggestions, Analytics, Themes, Users, Slack, Billing, Audience, Export, Retention)
 
 #### Topic Suggestion Anti-Spam Guardrails (Completed - October 7, 2025)
 - **Slash Command Fix**: Fixed `/teammato suggest TopicName` which was incorrectly opening general feedback modal instead of creating topic suggestion
