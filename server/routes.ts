@@ -2338,6 +2338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get installer's user info using USER token (not bot token)
       const userToken = authed_user.access_token;
       let installerEmail: string | undefined;
+      let installerProfile: any = {};
 
       if (userToken) {
         const userInfoResponse = await fetch(
@@ -2351,6 +2352,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const userInfo = await userInfoResponse.json();
         installerEmail = userInfo.user?.profile?.email;
+        
+        // Store Slack profile information
+        installerProfile = {
+          slackUsername: userInfo.user?.name,
+          slackDisplayName: userInfo.user?.profile?.display_name || userInfo.user?.real_name,
+          slackRealName: userInfo.user?.real_name,
+        };
       }
 
       // Check if this Slack team is already installed
@@ -2374,6 +2382,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             slackUserId: authed_user.id,
             email: installerEmail,
             role: 'admin',
+            profile: installerProfile,
           });
         }
         
@@ -2402,6 +2411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             slackUserId: authed_user.id,
             email: installerEmail,
             role: 'owner',
+            profile: installerProfile,
           });
         }
       }

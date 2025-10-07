@@ -28,7 +28,13 @@ import { useToast } from "@/hooks/use-toast";
 interface User {
   id: string;
   email: string | null;
+  slackUserId: string | null;
   role: string;
+  profile: {
+    slackUsername?: string;
+    slackDisplayName?: string;
+    slackRealName?: string;
+  } | null;
   createdAt: string;
 }
 
@@ -199,10 +205,25 @@ export default function UserManagement() {
                     data-testid={`user-${index}`}
                   >
                     <div className="flex-1">
-                      <p className="font-medium" data-testid={`text-email-${index}`}>
-                        {user.email || 'No email'}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        {user.profile?.slackDisplayName && (
+                          <p className="font-medium" data-testid={`text-display-name-${index}`}>
+                            {user.profile.slackDisplayName}
+                          </p>
+                        )}
+                        {user.profile?.slackUsername && (
+                          <p className="text-sm text-muted-foreground" data-testid={`text-slack-username-${index}`}>
+                            @{user.profile.slackUsername}
+                          </p>
+                        )}
+                        {!user.profile?.slackDisplayName && !user.profile?.slackUsername && (
+                          <p className="font-medium" data-testid={`text-email-${index}`}>
+                            {user.email || 'No email'}
+                          </p>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground">
+                        {user.email && (user.profile?.slackDisplayName || user.profile?.slackUsername) ? `${user.email} • ` : ''}
                         Joined {formatDate(user.createdAt)}
                       </p>
                     </div>
