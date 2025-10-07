@@ -2338,11 +2338,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         user = existingUser;
       } else {
-        // First install: auto-provision org
+        // First install: auto-provision org (no trial yet - must complete Stripe Checkout)
         const newOrg = await storage.createOrg({
           name: team.name,
           verifiedDomains: [],
-          trialEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days from now
         });
         
         orgId = newOrg.id;
