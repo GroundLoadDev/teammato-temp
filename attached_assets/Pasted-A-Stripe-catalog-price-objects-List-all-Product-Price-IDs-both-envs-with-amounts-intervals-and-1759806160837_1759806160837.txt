@@ -1,0 +1,195 @@
+A. Stripe catalog & price objects
+
+List all Product/Price IDs (both envs) with amounts/intervals and flags:
+
+Pro monthly/annual, each Scale band monthly/annual.
+
+Are any Price objects configured with trial_period_days? (Paste the JSON for each Price.)
+
+Confirm tax behavior (inclusive/exclusive), currency, and whether promotion codes/coupons are enabled.
+
+Do any Prices use metered/usage billing or tiers? (They should not.)
+
+Are billing cycle anchors customized anywhere, or defaulting to trial end?
+
+B. Current trial logic (root cause of “double trial”)
+
+When a workspace is already in trial (we store that internally) and the admin opens Checkout to “subscribe,” what params are we passing to:
+
+Checkout Session (mode=subscription) and subscription_data?
+
+Do we pass trial_end, trial_period_days, or neither?
+
+Is the Price itself carrying trial_period_days, causing Stripe to add a fresh 14-day trial on subscription creation regardless of our app state?
+
+Do we ever set trial_end: "now" (or omit trial) when “Charge today (skip trial)” is selected?
+
+Show the exact request bodies we send to Stripe in each path:
+
+Start trial (card-gated, default)
+
+Subscribe during an existing in-app trial
+
+Charge today (skip remaining)
+
+Annual checkout
+
+Confirm Stripe shows “Try Teammato <plan> 14 days free…” because:
+
+The Price has trial_period_days, or
+
+We provided trial_end/trial_period_days in subscription_data.
+
+C. DB model & state machine
+
+Paste schemas (or relevant fields) for:
+
+orgs (or equivalent): id, slack_team_id, trial_ends_at, plan_tier, seat_cap, term, stripe_customer_id, stripe_subscription_id, created_at, updated_at.
+
+slack_teams / slack_settings: where member_count is stored.
+
+Define the state machine (pseudo or real):
+
+installed → trialing → active_paid → past_due → read_only → canceled.
+
+What transitions flip these? (webhooks? cron? manual?)
+
+Where is time computed (UTC?) and who sets trial_ends_at? Show code.
+
+D. Post-install gate (UX & enforcement)
+
+After OAuth, which route is the post-install page (file path)? What does it render if:
+
+No card on file & no Stripe subscription? (Should show Start 14-day free trial)
+
+Card gated trial started (status trialing)?
+
+Trial expired & unpaid?
+
+Is the gate hard (blocks posting) or soft (limited usage)? Where is the check enforced in backend APIs?
+
+Show the logic that blocks new submissions when over seat cap or unpaid (read-only mode).
+
+E. Seat counting & caps
+
+How do we fetch Slack workspace member count? (endpoint, frequency, code path)
+
+Where do we persist member_count and last updated timestamp?
+
+Enforcement:
+
+Warn at 90% of cap? (Where is the banner/DM implemented?)
+
+Grace up to 110% for 7 days—where is that tracked?
+
+After grace, what specifically returns 403/blocked, and what remains readable?
+
+Show the UI element in Admin that displays N / seat_cap and the Upgrade CTA.
+
+F. Stripe Checkout & Portal config
+
+Show code that creates Checkout Sessions:
+
+mode, price, quantity, subscription_data, payment_method_collection, allow_promotion_codes, success/cancel URLs.
+
+Are we using save_default_payment_method: "on_subscription"?
+
+Do we ever pass trial_settings.end_behavior.missing_payment_method?
+
+Do we expose Customer Portal? For what actions? (We should mainly steer to Checkout for plan upgrades.)
+
+G. Webhooks (events, idempotency, security)
+
+Which webhooks are enabled and handled? (checkout.session.completed, customer.subscription.created/updated, invoice.paid/failed, customer.subscription.deleted).
+
+Paste handler file paths and outline logic for each. Confirm idempotency & signature verification.
+
+On checkout.session.completed, do we:
+
+Attach stripe_customer_id, stripe_subscription_id to the org?
+
+Persist trial_end (from Stripe) back to orgs.trial_ends_at?
+
+On invoice.payment_failed and dunning completion, what state do we set? (read-only? cancel?)
+
+H. Dunning, cancellation, refunds
+
+Stripe retry schedule & email settings—default or custom?
+
+Behavior on final payment failure: cancel immediately, at period end, or pause collection?
+
+Where is Cancel trial and Cancel subscription implemented (route + backend)? What does each do (cancel at period end vs immediately)?
+
+Do we send in-app/Slack DM notifications on failed payment / canceled?
+
+I. Plan changes & proration
+
+When upgrading bands mid-cycle, do we rely on Stripe proration (default)? What proration_behavior do we set?
+
+When moving monthly ↔ annual, how do we anchor cycles? (Any billing_cycle_anchor overrides?)
+
+Do we allow downgrades below current seat count? (Should block until below cap.)
+
+J. Multi-admin, reinstall, multi-workspace
+
+If multiple admins click “Start trial” or “Subscribe,” who becomes the payer? How do we prevent duplicate subs?
+
+What happens on reinstall—do we detect existing customer/subscription and relink?
+
+Enterprise Grid / multi-workspace: each workspace is a separate install/sub? Confirm.
+
+K. Metrics & telemetry (events to log)
+
+Emit (and where?): oauth_completed, trial_checkout_opened, trial_checkout_completed, first_post_created, trial_nudge_d3/d7/d12/d14, trial_canceled, first_charge_succeeded, seat_cap_warning_shown, over_cap_blocked.
+
+Where are these stored (DB table/analytics tool)?
+
+L. Copy surfaces (to align expectations)
+
+Identify all surfaced strings that mention “free/trial/payment” (files & keys). We need:
+
+Hero CTA helper: “Start free for 14 days — card required after install.”
+
+Post-install: “Free today. Renews $99/mo on {date} unless canceled.”
+
+FAQ: Do I need a card? Can I pay now?
+
+Confirm date formatting and timezone (always show explicit renewal date).
+
+M. Testing matrix (please run & report)
+
+For both monthly and annual:
+
+Install → card-gated trial start → verify trial_end in Stripe & in DB.
+
+Mid-trial choose Charge today → trial ends immediately; invoice now; next renewal 1 period out.
+
+Already-in-trial → open Checkout to subscribe → verify Stripe does NOT add another trial (root cause fix).
+
+If Price has trial_period_days, override with trial_end: org.trial_ends_at, or move trial off the Price entirely.
+
+Trial expiry unpaid → read-only enforced; Checkout deep-link works.
+
+Over seat cap → warn at 90%; after grace, block new posts.
+
+Upgrade band mid-cycle → proration correct; DB cap updated by webhook.
+
+Payment failure at renewal → dunning → final outcome & state transition verified.
+
+FROM: Replit (what we expect back)
+
+Please respond inline to each section above with:
+
+File paths & code snippets for relevant controllers, webhooks, and UI components.
+
+Exact Stripe payloads we send (obfuscated IDs ok).
+
+Screenshots or JSON of Price objects showing trial_period_days and other flags.
+
+DB schemas/DDL (or Prisma/SQL definitions) for the tables mentioned.
+
+A one-paragraph root-cause for the “double-trial” and the precise fix (e.g., remove trial_period_days from Prices and always set subscription_data.trial_end to the server-stored trial_ends_at; or detect existing trial and pass trial_end: org.trial_ends_at / trial_end: "now" for charge-today).
+
+A checklist of changes with commit plan (per file), and any Stripe Dashboard steps (new SKUs for bands; remove trial from Price).
+
+A brief test log walking through the Testing Matrix outcomes (pass/fail, screenshots or console logs).
