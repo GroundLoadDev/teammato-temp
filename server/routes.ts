@@ -417,9 +417,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         line_items: [{ price: priceId, quantity: 1 }],
         allow_promotion_codes: true,
         payment_method_collection: 'always',
+        payment_method_options: {
+          card: {
+            setup_future_usage: 'off_session',
+          },
+        },
         subscription_data: {
-          trial_end: trialEnd,
-          payment_settings: { save_default_payment_method: 'on_subscription' },
+          trial_end: trialEnd as any,
           trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },
           metadata: { org_id: orgId },
         },
@@ -700,14 +704,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get audit entries only for k-safe threads
       for (const thread of threads) {
-        const threadAudit = await storage.getModerationAudit('thread', thread.id, orgId);
-        allAudit.push(...threadAudit);
+        if (thread.id) {
+          const threadAudit = await storage.getModerationAudit('thread', thread.id, orgId);
+          allAudit.push(...threadAudit);
+        }
       }
       
       // Get audit entries only for k-safe comments
       for (const comment of comments) {
-        const itemAudit = await storage.getModerationAudit('item', comment.id, orgId);
-        allAudit.push(...itemAudit);
+        if (comment.id) {
+          const itemAudit = await storage.getModerationAudit('item', comment.id, orgId);
+          allAudit.push(...itemAudit);
+        }
       }
       
       let data = 'Timestamp,Action Type,Target Type,Target ID,Moderator ID,Reason\n';

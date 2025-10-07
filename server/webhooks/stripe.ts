@@ -34,6 +34,16 @@ export async function handleStripeWebhook(
   console.log(`[Stripe Webhook] ${event.type}:`, event.id);
 
   try {
+    // Idempotency check
+    const alreadyProcessed = await storage.isWebhookEventProcessed(event.id);
+    if (alreadyProcessed) {
+      console.log(`[Stripe Webhook] Event ${event.id} already processed, skipping`);
+      return res.json({ received: true, skipped: true });
+    }
+    
+    // Record event
+    await storage.recordWebhookEvent({ id: event.id, type: event.type });
+    
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
@@ -104,6 +114,14 @@ async function handleCheckoutCompleted(
   });
 
   await syncSubscriptionToOrg(org.id, subscription, storage);
+  
+  // Track event
+  await storage.trackEvent({
+    orgId: org.id,
+    eventType: 'trial_checkout_completed',
+    metadata: { subscriptionId, customerId },
+  });
+  
   console.log(`Checkout completed for org ${org.id}`);
 }
 
