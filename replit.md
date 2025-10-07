@@ -8,16 +8,17 @@ I prefer iterative development and clear, concise explanations. Ask before makin
 
 ### Recent Changes (October 2025)
 
-#### Slash Command Bug Fix: Topic Suggestions (Completed - October 7, 2025)
-- **Bug**: `/teammato suggest TopicName` was opening the general feedback modal instead of creating a topic suggestion
-- **Root Cause**: "suggest" wasn't recognized as a special command in the slash command handler, causing it to fall through to topic slug lookup, fail to find a topic, and default to general feedback mode
-- **Fix**: Added suggest command handler in `server/routes.ts` (lines 1623-1668) that intercepts both bare `/teammato suggest` and parameterized `/teammato suggest TopicName` commands
-- **Behavior**: 
-  - `/teammato suggest` → Returns usage error with example
-  - `/teammato suggest TopicName` → Creates topic suggestion directly, returns success message
-  - Validates topic name (5-60 chars) and provides clear error messages
-  - Finds or creates user record before creating suggestion
-- **Impact**: Users can now submit topic suggestions via slash command as documented in admin panel
+#### Topic Suggestion Anti-Spam Guardrails (Completed - October 7, 2025)
+- **Slash Command Fix**: Fixed `/teammato suggest TopicName` which was incorrectly opening general feedback modal instead of creating topic suggestion
+- **Per-User Cooldown**: 24-hour rate limit between suggestions per user with clear "try again in Xh Ym" messaging
+- **Similarity Detection**: Automatic duplicate detection using normalized titles (Levenshtein distance < 3) with auto-merge functionality
+- **Auto-Merge on Duplicate**: When similar suggestion exists, adds user support to existing suggestion instead of creating duplicate
+- **Org-Wide Queue Cap**: Maximum 50 pending suggestions per organization to prevent queue flooding
+- **Support Tracking**: New `topic_suggestion_supports` table tracks users who support duplicate suggestions
+- **Database Schema**: Added `normalized_title`, `duplicate_of_id`, `status_reason` to suggestions; `last_suggestion_at` to users
+- **Identity Disclosure**: All Slack responses explicitly state "Your name is attached to topic suggestions (feedback remains anonymous)"
+- **Admin UI Enhancements**: Supporter count displayed on suggestion cards using optimized LEFT JOIN aggregation (no N+1 queries)
+- **Performance**: Single-query supporter count retrieval via `storage.getTopicSuggestions()` with GROUP BY aggregation
 
 #### Stripe Checkout Bug Fix (Completed - October 7, 2025)
 - **Critical Production Bug**: Fixed "Skip trial" checkout flow that was completely broken for all customers
