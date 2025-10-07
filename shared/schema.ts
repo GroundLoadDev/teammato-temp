@@ -59,6 +59,7 @@ export const users = pgTable("users", {
   email: text("email"),
   role: text("role").notNull().default('member'),
   profile: jsonb("profile"),
+  lastSuggestionAt: timestamp("last_suggestion_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -166,10 +167,22 @@ export const topicSuggestions = pgTable("topic_suggestions", {
   orgId: uuid("org_id").notNull().references(() => orgs.id, { onDelete: 'cascade' }),
   suggestedBy: uuid("suggested_by").notNull().references(() => users.id, { onDelete: 'cascade' }),
   title: varchar("title", { length: 60 }).notNull(),
+  normalizedTitle: varchar("normalized_title", { length: 80 }),
   status: text("status").notNull().default('pending'),
+  statusReason: text("status_reason"),
+  duplicateOfId: uuid("duplicate_of_id").references((): any => topicSuggestions.id, { onDelete: 'set null' }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => ({
   orgStatusIndex: unique().on(table.orgId, table.status, table.createdAt),
+}));
+
+export const topicSuggestionSupports = pgTable("topic_suggestion_supports", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  suggestionId: uuid("suggestion_id").notNull().references(() => topicSuggestions.id, { onDelete: 'cascade' }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  uniqueSupport: unique().on(table.suggestionId, table.userId),
 }));
 
 export const orgKeys = pgTable("org_keys", {

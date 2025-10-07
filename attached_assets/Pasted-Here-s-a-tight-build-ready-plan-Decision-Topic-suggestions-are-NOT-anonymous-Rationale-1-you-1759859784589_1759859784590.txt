@@ -1,0 +1,149 @@
+Here’s a tight, build-ready plan.
+
+Decision
+
+Topic suggestions are NOT anonymous.
+Rationale: (1) you promise a notification to the suggestor; (2) suggestions aren’t sensitive content; (3) identity enables anti-spam controls and transparent follow-up; (4) keeps the anonymity surface small (only feedback stays anon).
+
+UX changes (Slack copy & flows)
+
+Ephemeral confirmation (slash command path)
+
+Current:
+
+✅ Topic suggestion submitted! “ThisTopic”… You’ll be notified once it’s available.
+
+Replace with (clear disclosure):
+
+✅ Suggestion submitted: “ThisTopic”
+Heads-up: your name is attached to topic suggestions (feedback remains anonymous).
+We’ll notify you if it’s approved.
+
+If hitting a guardrail (cooldown/duplicate):
+
+Cooldown:
+
+⏳ You can suggest one topic every 24 hours. Try again after HH:MM.
+
+Duplicate/near-duplicate:
+
+🔁 Looks similar to an existing suggestion: “{Existing Topic}”.
+We’ve added your support to that suggestion instead.
+
+Per-org queue limit reached:
+
+📥 The suggestion queue is full right now. Please try again later or ask an admin.
+
+Optional modal version (/teammato suggest)
+
+Fields: Title (required, 60 chars), Why this helps (optional, 100 chars)
+
+Inline note: “Your name is shown to admins for topic suggestions. Feedback posts remain anonymous.”
+
+Guardrails (even when identified)
+
+Implement these server-side; keep them light and invisible unless tripped.
+
+Per-user cooldown
+
+Default: 1 suggestion / 24h (configurable).
+
+Store next-allowed timestamp; return cooldown message if early.
+
+Rolling window cap
+
+Default: 3 suggestions / 7 days per user.
+
+Prevents burst spam across days.
+
+Org-wide queue cap
+
+Default: 50 open suggestions (pending).
+
+Keeps admin queue sane; instruct users to wait or consolidate.
+
+Similarity dedupe + auto-merge
+
+Normalize titles (lowercase, trim, collapse spaces, remove punctuation/stopwords).
+
+Fuzzy match (e.g., Levenshtein ≤ 3 or Jaccard > 0.8) against pending/approved last 90 days.
+
+If close match: don’t create a new row—instead add a support record and respond with the duplicate message above.
+
+Quality filter
+
+Block profanity/obvious junk; reject with:
+
+🚫 Please revise and resubmit—topic titles should be professional and specific.
+
+Per-user soft block (admin control)
+
+Admins can mute a user from suggesting for N days.
+
+User sees:
+
+🚫 Suggestions from your account are temporarily limited by an admin.
+
+Admin batch actions
+
+Approve → creates a scheduled/rolling topic.
+
+Reject → optional reason template (“Already covered,” “Out of scope,” “Not actionable”).
+
+Merge → consolidates duplicates; all supporters notified.
+
+Data changes (minimal)
+
+topic_suggestions (you already have):
+
+Ensure fields: id, org_id, suggested_by_user_id, title, status (pending|approved|rejected|merged), status_reason, created_at
+
+Add:
+
+normalized_title VARCHAR(80)
+
+duplicate_of_id UUID NULL (for merges)
+
+New support table (optional but helpful):
+
+topic_suggestion_supports(id, suggestion_id, user_id, created_at)
+
+Lets you “add support” instead of creating dupes and powers popularity sorting.
+
+Admin UI tweaks
+
+Suggestions queue: list with title · supporter count · age, actions Approve / Merge / Reject.
+
+Merge flow: select target suggestion; auto-moves supporters.
+
+Toggle settings: cooldown per user, org queue cap, similarity threshold.
+
+Privacy posture (keep this line crisp)
+
+Only feedback content is anonymous.
+
+Topic suggestions are identified to allow notifications, dedupe, and abuse prevention.
+
+This boundary keeps your k-anonymity story clean and auditable.
+
+Final Slack command behaviors
+
+/teammato suggest <title> → apply guardrails → create or support → ephemeral confirmation with notice of identity.
+
+/teammato suggest (no arg) → open modal with Title + optional Why; identity notice inline.
+
+Notifications:
+
+On approve: DM suggestor(s): “Approved: {Title}. You can now submit feedback to this topic.”
+
+On merge: DM: “Merged into: {Target Title}. You’re listed as a supporter.”
+
+On reject: DM (optional reason): “Closed: {Title}. Reason: {status_reason}.”
+
+Why (a) is the right call
+
+Behavioral: tiny friction + accountability cuts junk without scaring off real ideas.
+
+Operational: admins can triage, merge, and communicate decisions.
+
+Consistency: preserves your promise that only feedback is anonymous, which users can understand and trust.
