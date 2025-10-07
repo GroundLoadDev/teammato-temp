@@ -1,4 +1,8 @@
 import { useMemo, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
@@ -38,6 +42,13 @@ function pickBandBySeats(seats: number): Band {
 
 function formatUSD(n: number) {
   return `$${n.toLocaleString()}`;
+}
+
+function getPriceLookupKey(planKey: string, term: Term): string {
+  // Convert plan key (pro_250, scale_500) + term to price lookup key (cap_250_m, cap_500_a)
+  const cap = planKey.split('_')[1];
+  const suffix = term === 'monthly' ? 'm' : 'a';
+  return `cap_${cap}_${suffix}`;
 }
 
 export default function PricingPage() {
@@ -112,7 +123,28 @@ function SeatSizer({
   recommended: Band;
   term: Term;
 }) {
+  const { toast } = useToast();
   const price = term === "annual" ? recommended.annual : recommended.monthly;
+
+  const checkoutMutation = useMutation({
+    mutationFn: async (planKey: string) => {
+      const priceLookupKey = getPriceLookupKey(planKey, term);
+      const result = await apiRequest('POST', '/api/billing/checkout', { priceLookupKey, chargeToday: false });
+      return await result.json() as { url: string };
+    },
+    onSuccess: (data) => {
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Checkout failed",
+        description: error.message || "Unable to start checkout. Please try again.",
+      });
+    },
+  });
 
   return (
     <section className="mx-auto max-w-6xl px-6 pb-10">
@@ -155,13 +187,21 @@ function SeatSizer({
                 <span className="ml-1 text-sm font-normal text-muted-foreground">/{term === "annual" ? "yr" : "mo"}</span>
               </div>
             </div>
-            <a
-              href={`/api/billing/checkout?plan=${recommended.key}&term=${term}`}
-              className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+            <button
+              onClick={() => checkoutMutation.mutate(recommended.key)}
+              disabled={checkoutMutation.isPending}
+              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="button-start-trial"
             >
-              Start free trial
-            </a>
+              {checkoutMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Starting checkout...
+                </>
+              ) : (
+                "Start free trial"
+              )}
+            </button>
             <p className="mt-3 text-xs text-muted-foreground" data-testid="text-trial-info">
               14-day trial. Card added after install. You won't be charged until trial ends.
             </p>
@@ -187,6 +227,7 @@ function SeatSizer({
 }
 
 function PlansChooser({ term }: { term: Term }) {
+  const { toast } = useToast();
   const PRO = { key: "pro_250", cap: 250, monthly: 99, annual: 999 };
 
   type ScaleBand = {
@@ -214,6 +255,26 @@ function PlansChooser({ term }: { term: Term }) {
   const scalePrice = term === "annual" ? active.annual : active.monthly;
   const scaleSuffix = term === "annual" ? "/yr" : "/mo";
 
+  const checkoutMutation = useMutation({
+    mutationFn: async (planKey: string) => {
+      const priceLookupKey = getPriceLookupKey(planKey, term);
+      const result = await apiRequest('POST', '/api/billing/checkout', { priceLookupKey, chargeToday: false });
+      return await result.json() as { url: string };
+    },
+    onSuccess: (data) => {
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Checkout failed",
+        description: error.message || "Unable to start checkout. Please try again.",
+      });
+    },
+  });
+
   return (
     <section className="mx-auto max-w-6xl px-6 py-8">
       <div className="grid gap-6 md:grid-cols-2">
@@ -240,13 +301,21 @@ function PlansChooser({ term }: { term: Term }) {
             <li className="text-muted-foreground">K-anonymity & retention controls</li>
             <li className="text-muted-foreground">Email support</li>
           </ul>
-          <a
-            href={`/api/billing/checkout?plan=${PRO.key}&term=${term}`}
-            className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          <button
+            onClick={() => checkoutMutation.mutate(PRO.key)}
+            disabled={checkoutMutation.isPending}
+            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="button-choose-pro"
           >
-            Choose Pro
-          </a>
+            {checkoutMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Starting checkout...
+              </>
+            ) : (
+              "Choose Pro"
+            )}
+          </button>
           <p className="mt-2 text-xs text-center text-muted-foreground">Secure checkout via Stripe</p>
           <div className="mt-4 pt-4 border-t space-y-1.5 text-xs text-muted-foreground" data-testid="section-trust-bullets-pro">
             <div className="flex items-start gap-1.5">
@@ -322,13 +391,21 @@ function PlansChooser({ term }: { term: Term }) {
             <li className="text-muted-foreground">Email support</li>
           </ul>
 
-          <a
-            href={`/api/billing/checkout?plan=${active.key}&term=${term}`}
-            className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          <button
+            onClick={() => checkoutMutation.mutate(active.key)}
+            disabled={checkoutMutation.isPending}
+            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="button-choose-scale"
           >
-            Choose Scale
-          </a>
+            {checkoutMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Starting checkout...
+              </>
+            ) : (
+              "Choose Scale"
+            )}
+          </button>
           <p className="mt-2 text-xs text-center text-muted-foreground">Secure checkout via Stripe</p>
           <div className="mt-4 pt-4 border-t space-y-1.5 text-xs text-muted-foreground" data-testid="section-trust-bullets-scale">
             <div className="flex items-start gap-1.5">
