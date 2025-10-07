@@ -38,21 +38,11 @@ export default function PostInstall() {
 
   const startTrialMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/billing/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          priceLookupKey: 'cap_250_m', // Default to smallest plan
-          chargeToday: false 
-        }),
+      const result = await apiRequest('POST', '/api/billing/checkout', { 
+        priceLookupKey: 'cap_250_m',
+        chargeToday: false 
       });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create checkout');
-      }
-      return response.json();
+      return await result.json() as { url: string };
     },
     onSuccess: (data: any) => {
       if (data.url) {
@@ -115,6 +105,8 @@ export default function PostInstall() {
   const isGrace = org?.billingStatus === 'grace_period';
   const isPastDue = org?.billingStatus === 'past_due';
   const isCanceled = org?.billingStatus === 'canceled';
+  const isUnpaid = org?.billingStatus === 'unpaid';
+  const isPaused = org?.billingStatus === 'paused';
   
   const needsSubscription = !org?.billingStatus || org.billingStatus === 'incomplete';
 
@@ -204,7 +196,7 @@ export default function PostInstall() {
   }
 
   // Special handling for problematic subscription states
-  if (isPastDue) {
+  if (isPastDue || isUnpaid) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
         <div className="max-w-2xl w-full text-center">
@@ -230,7 +222,7 @@ export default function PostInstall() {
     );
   }
 
-  if (isGrace || isCanceled) {
+  if (isGrace || isCanceled || isPaused) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
         <div className="max-w-2xl w-full text-center">
@@ -238,12 +230,16 @@ export default function PostInstall() {
             <Check className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
           </div>
           <h1 className="text-3xl font-semibold mb-2" data-testid="text-subscription-status-title">
-            {isGrace ? 'Subscription in Grace Period' : 'Subscription Canceled'}
+            {isGrace ? 'Subscription in Grace Period' : 
+             isCanceled ? 'Subscription Canceled' :
+             'Subscription Paused'}
           </h1>
           <p className="text-muted-foreground mb-6" data-testid="text-subscription-status-subtitle">
             {isGrace 
               ? 'You have exceeded your seat cap. Please upgrade or adjust your audience to restore full access.'
-              : 'Your subscription has been canceled. Reactivate to continue using Teammato.'}
+              : isCanceled
+              ? 'Your subscription has been canceled. Reactivate to continue using Teammato.'
+              : 'Your subscription is paused. Reactivate to continue using Teammato.'}
           </p>
           <div className="flex gap-3 justify-center">
             <Button asChild variant="default" size="lg" data-testid="button-manage-billing">
@@ -258,7 +254,9 @@ export default function PostInstall() {
     );
   }
 
-  return (
+  // If subscription status is active or trialing, show success screen
+  if (hasActiveSubscription) {
+    return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="max-w-2xl w-full text-center">
         <div className="mb-8">
@@ -266,7 +264,7 @@ export default function PostInstall() {
             <Check className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-3xl font-semibold mb-2" data-testid="text-success-title">
-            You're All Set! 🎉
+            You're All Set!
           </h1>
           <p className="text-muted-foreground" data-testid="text-success-subtitle">
             {org?.name} is ready to collect anonymous feedback
@@ -288,6 +286,30 @@ export default function PostInstall() {
             Go to Dashboard
           </Link>
         </Button>
+      </div>
+    </div>
+    );
+  }
+
+  // Default fallback for unknown subscription states
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <div className="max-w-2xl w-full text-center">
+        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+          <CreditCard className="w-8 h-8 text-muted-foreground" />
+        </div>
+        <h1 className="text-3xl font-semibold mb-2">Unknown Subscription Status</h1>
+        <p className="text-muted-foreground mb-6">
+          Please contact support or visit the billing page for assistance.
+        </p>
+        <div className="flex gap-3 justify-center">
+          <Button asChild variant="default" size="lg">
+            <Link href="/admin/billing">Go to Billing</Link>
+          </Button>
+          <Button asChild variant="outline" size="lg">
+            <Link href="/admin">Go to Dashboard</Link>
+          </Button>
+        </div>
       </div>
     </div>
   );
