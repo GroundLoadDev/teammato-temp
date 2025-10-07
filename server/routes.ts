@@ -97,6 +97,30 @@ function requireRole(...roles: string[]) {
   };
 }
 
+// Billing gate middleware - blocks usage until subscription exists
+async function requireActiveSubscription(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.orgId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const org = await storage.getOrg(req.session.orgId);
+  if (!org) {
+    return res.status(404).json({ error: 'Organization not found' });
+  }
+
+  const validStatuses = ['trialing', 'active'];
+  if (!org.billingStatus || !validStatuses.includes(org.billingStatus)) {
+    return res.status(403).json({ 
+      error: 'Subscription required',
+      message: 'Please complete billing setup to use Teammato',
+      billingStatus: org.billingStatus,
+      requiresSetup: true,
+    });
+  }
+
+  next();
+}
+
 // Slack signature verification
 function verifySlackSignature(req: Request): boolean {
   if (!SLACK_SIGNING_SECRET) {
@@ -1376,6 +1400,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const orgId = slackTeam.orgId;
 
+      // Billing gate: check if org has active subscription
+      const org = await storage.getOrg(orgId);
+      if (!org) {
+        return res.json({
+          response_type: 'ephemeral',
+          text: '❌ Organization not found.',
+        });
+      }
+
+      const validStatuses = ['trialing', 'active'];
+      if (!org.billingStatus || !validStatuses.includes(org.billingStatus)) {
+        return res.json({
+          response_type: 'ephemeral',
+          text: '🔒 *Subscription Required*\n\nYour team\'s Teammato subscription needs to be set up before you can submit feedback.\n\nPlease ask your workspace owner or admin to visit the billing page to complete setup.',
+        });
+      }
+
       // Handle special commands
       if (!text || text === 'list' || text === 'help') {
         // Get active topics for this org
@@ -2089,7 +2130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/topics', requireRole('owner', 'admin'), async (req, res) => {
+  app.post('/api/topics', requireRole('owner', 'admin'), requireActiveSubscription, async (req, res) => {
     try {
       const orgId = req.session.orgId!;
       const userId = req.session.userId!;
