@@ -1,43 +1,85 @@
 import { Button } from "@/components/ui/button";
-import { Check, Slack, Settings, BarChart, XCircle } from "lucide-react";
+import { Check, CreditCard, XCircle, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+
+type Org = {
+  id: string;
+  name: string;
+  billingStatus: string | null;
+  seatCap: number | null;
+};
 
 export default function PostInstall() {
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [orgName, setOrgName] = useState<string>('');
+  const [installStatus, setInstallStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const { toast } = useToast();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const success = params.get('success');
     const error = params.get('error');
-    const org = params.get('org');
 
-    if (success === 'true') {
-      setStatus('success');
-      setOrgName(org || 'your workspace');
-    } else if (error) {
-      setStatus('error');
+    if (error) {
+      setInstallStatus('error');
       setErrorMessage(error === 'access_denied' ? 'Installation was cancelled' : `Error: ${error}`);
     } else {
-      setStatus('error');
-      setErrorMessage('Unknown installation status');
+      setInstallStatus('success');
     }
   }, []);
 
-  if (status === 'loading') {
+  // Fetch org data after successful install
+  const { data: org, isLoading: orgLoading } = useQuery<Org>({
+    queryKey: ['/api/org'],
+    enabled: installStatus === 'success',
+  });
+
+  const startTrialMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/billing/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          priceLookupKey: 'cap_250_m', // Default to smallest plan
+          chargeToday: false 
+        }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create checkout');
+      }
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start checkout",
+        variant: "destructive",
+      });
+    },
+  });
+
+  if (installStatus === 'loading') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Setting up your workspace...</p>
         </div>
       </div>
     );
   }
 
-  if (status === 'error') {
+  if (installStatus === 'error') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
         <div className="max-w-md w-full text-center">
@@ -58,6 +100,98 @@ export default function PostInstall() {
     );
   }
 
+  if (orgLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading organization...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const hasActiveSubscription = org?.billingStatus === 'trialing' || org?.billingStatus === 'active';
+
+  if (!hasActiveSubscription) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="max-w-2xl w-full">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CreditCard className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-3xl font-semibold mb-2" data-testid="text-setup-title">
+              Complete Setup - Start Your 14-Day Trial
+            </h1>
+            <p className="text-muted-foreground max-w-md mx-auto" data-testid="text-setup-subtitle">
+              Your Slack workspace is connected! To start using Teammato, complete your billing setup with a card on file.
+            </p>
+          </div>
+
+          <div className="rounded-md border bg-card p-8 mb-6">
+            <div className="space-y-4 mb-6">
+              <div className="flex gap-3">
+                <Check className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">14-day free trial</p>
+                  <p className="text-sm text-muted-foreground">Full access to all features - cancel anytime</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Check className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">Card required</p>
+                  <p className="text-sm text-muted-foreground">You won't be charged until the trial ends</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Check className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">K-anonymity protection</p>
+                  <p className="text-sm text-muted-foreground">Enterprise-grade privacy with XChaCha20 encryption</p>
+                </div>
+              </div>
+            </div>
+
+            <Button 
+              className="w-full gap-2" 
+              size="lg"
+              onClick={() => startTrialMutation.mutate()}
+              disabled={startTrialMutation.isPending}
+              data-testid="button-start-trial"
+            >
+              {startTrialMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Starting checkout...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="w-4 h-4" />
+                  Start 14-Day Trial
+                </>
+              )}
+            </Button>
+          </div>
+
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">
+              By continuing, you agree to our{' '}
+              <Link href="/terms" className="underline hover:text-foreground">
+                Terms of Service
+              </Link>
+              {' '}and{' '}
+              <Link href="/privacy" className="underline hover:text-foreground">
+                Privacy Policy
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="max-w-2xl w-full text-center">
@@ -66,44 +200,28 @@ export default function PostInstall() {
             <Check className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-3xl font-semibold mb-2" data-testid="text-success-title">
-            Connected to Slack ✓
+            You're All Set! 🎉
           </h1>
           <p className="text-muted-foreground" data-testid="text-success-subtitle">
-            {orgName} has been successfully set up with Teammato
+            {org?.name} is ready to collect anonymous feedback
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-4 mb-8">
-          <Link href="/admin/slack-settings">
-            <Button variant="outline" className="w-full gap-2 h-auto py-4 flex-col" data-testid="button-slack-settings">
-              <Settings className="w-6 h-6 mb-1" />
-              <span>Slack Settings</span>
-              <span className="text-xs text-muted-foreground">Configure commands</span>
-            </Button>
-          </Link>
-          <Button variant="outline" className="w-full gap-2 h-auto py-4 flex-col" data-testid="button-sample-digest">
-            <Slack className="w-6 h-6 mb-1" />
-            <span>Sample Digest</span>
-            <span className="text-xs text-muted-foreground">See what it looks like</span>
-          </Button>
-          <Link href="/admin/get-started">
-            <Button variant="outline" className="w-full gap-2 h-auto py-4 flex-col" data-testid="button-get-started">
-              <BarChart className="w-6 h-6 mb-1" />
-              <span>Get Started</span>
-              <span className="text-xs text-muted-foreground">Setup guide</span>
-            </Button>
-          </Link>
-        </div>
-
-        <div className="p-6 rounded-md border bg-card text-left">
-          <h3 className="font-semibold mb-3">Next Steps</h3>
+        <div className="p-6 rounded-md border bg-card text-left mb-6">
+          <h3 className="font-semibold mb-3">Quick Start Guide</h3>
           <ul className="space-y-2 text-sm text-muted-foreground">
-            <li>• Use <code className="bg-muted px-1 rounded">/teammato</code> command in Slack to submit feedback</li>
-            <li>• Configure topics and k-anonymity thresholds in admin panel</li>
-            <li>• Set up moderation workflows and notification channels</li>
+            <li>• Use <code className="bg-muted px-1 rounded">/teammato</code> in Slack to submit anonymous feedback</li>
+            <li>• Visit the <Link href="/admin" className="underline hover:text-foreground">admin dashboard</Link> to create topics</li>
+            <li>• Configure k-anonymity thresholds and moderation workflows</li>
             <li>• Invite team admins and moderators</li>
           </ul>
         </div>
+
+        <Button asChild size="lg" data-testid="button-go-to-dashboard">
+          <Link href="/admin">
+            Go to Dashboard
+          </Link>
+        </Button>
       </div>
     </div>
   );
