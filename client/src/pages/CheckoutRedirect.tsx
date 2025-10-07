@@ -5,6 +5,17 @@ import { apiRequest } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+// Valid plan configurations
+const VALID_PLANS = new Set([
+  'pro_250',
+  'scale_500',
+  'scale_1000',
+  'scale_2500',
+  'scale_5000',
+  'scale_10000',
+  'scale_25000',
+]);
+
 export default function CheckoutRedirect() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -12,17 +23,23 @@ export default function CheckoutRedirect() {
   const planKey = params.get('plan');
 
   // Convert plan key (pro_250, scale_500) to price lookup key based on default term (monthly)
-  function getPriceLookupKey(planKey: string): string {
+  function getPriceLookupKey(planKey: string): string | null {
+    if (!VALID_PLANS.has(planKey)) {
+      return null;
+    }
     const cap = planKey.split('_')[1];
     return `cap_${cap}_m`;
   }
 
   const checkoutMutation = useMutation({
     mutationFn: async () => {
-      if (!planKey) {
-        throw new Error('No plan selected');
+      if (!planKey || !VALID_PLANS.has(planKey)) {
+        throw new Error('Invalid or missing plan selection');
       }
       const priceLookupKey = getPriceLookupKey(planKey);
+      if (!priceLookupKey) {
+        throw new Error('Unable to determine pricing');
+      }
       const result = await apiRequest('POST', '/api/billing/checkout', { 
         priceLookupKey, 
         chargeToday: false 
@@ -47,17 +64,22 @@ export default function CheckoutRedirect() {
   });
 
   useEffect(() => {
-    if (!planKey) {
+    if (!planKey || !VALID_PLANS.has(planKey)) {
       toast({
         variant: "destructive",
-        title: "No plan selected",
+        title: "Invalid plan selection",
         description: "Redirecting to dashboard...",
       });
       setLocation('/admin/get-started');
       return;
     }
     
-    checkoutMutation.mutate();
+    // Small delay to ensure session is established after OAuth
+    const timer = setTimeout(() => {
+      checkoutMutation.mutate();
+    }, 500);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   return (

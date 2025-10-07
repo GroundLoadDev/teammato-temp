@@ -627,7 +627,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Analytics API (admin-only)
-  app.get('/api/analytics/topic-activity', requireRole('owner', 'admin'), async (req, res) => {
+  app.get('/api/analytics/topic-activity', requireRole('owner', 'admin'), requireActiveSubscription, async (req, res) => {
     try {
       const orgId = req.session.orgId!;
       const activity = await storage.getTopicActivity(orgId);
@@ -638,7 +638,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/analytics/weekly-trend', requireRole('owner', 'admin'), async (req, res) => {
+  app.get('/api/analytics/weekly-trend', requireRole('owner', 'admin'), requireActiveSubscription, async (req, res) => {
     try {
       const orgId = req.session.orgId!;
       const days = parseInt(req.query.days as string) || 7;
@@ -650,7 +650,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/analytics/participant-count', requireRole('owner', 'admin'), async (req, res) => {
+  app.get('/api/analytics/participant-count', requireRole('owner', 'admin'), requireActiveSubscription, async (req, res) => {
     try {
       const orgId = req.session.orgId!;
       const count = await storage.getUniqueParticipantCount(orgId);
@@ -662,7 +662,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Export API (admin-only)
-  app.post('/api/export/analytics', requireRole('owner', 'admin'), async (req, res) => {
+  app.post('/api/export/analytics', requireRole('owner', 'admin'), requireActiveSubscription, async (req, res) => {
     try {
       const orgId = req.session.orgId!;
       const { format, timeRange } = req.body;
@@ -694,7 +694,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/export/threads', requireRole('owner', 'admin'), async (req, res) => {
+  app.post('/api/export/threads', requireRole('owner', 'admin'), requireActiveSubscription, async (req, res) => {
     try {
       const orgId = req.session.orgId!;
       // Use k-safe method that only returns threads meeting k-anonymity threshold
@@ -716,7 +716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/export/comments', requireRole('owner', 'admin'), async (req, res) => {
+  app.post('/api/export/comments', requireRole('owner', 'admin'), requireActiveSubscription, async (req, res) => {
     try {
       const orgId = req.session.orgId!;
       // Use k-safe method that only returns comments from threads meeting k-anonymity threshold
@@ -737,7 +737,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/export/audit', requireRole('owner', 'admin'), async (req, res) => {
+  app.post('/api/export/audit', requireRole('owner', 'admin'), requireActiveSubscription, async (req, res) => {
     try {
       const orgId = req.session.orgId!;
       
@@ -1137,7 +1137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Feedback Management API (moderator-only)
-  app.get('/api/feedback/threads', requireRole('owner', 'admin', 'moderator'), async (req, res) => {
+  app.get('/api/feedback/threads', requireRole('owner', 'admin', 'moderator'), requireActiveSubscription, async (req, res) => {
     try {
       const orgId = req.session.orgId!;
       const threads = await storage.getFeedbackThreads(orgId);
@@ -1148,7 +1148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/feedback/threads/:id', requireRole('owner', 'admin', 'moderator'), async (req, res) => {
+  app.get('/api/feedback/threads/:id', requireRole('owner', 'admin', 'moderator'), requireActiveSubscription, async (req, res) => {
     try {
       const orgId = req.session.orgId!;
       const thread = await storage.getFeedbackThread(req.params.id);
@@ -1195,7 +1195,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/feedback/items/:id/moderate', requireRole('owner', 'admin', 'moderator'), async (req, res) => {
+  app.post('/api/feedback/items/:id/moderate', requireRole('owner', 'admin', 'moderator'), requireActiveSubscription, async (req, res) => {
     try {
       const { status } = req.body;
       const itemId = req.params.id;
@@ -2053,7 +2053,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Topic Management API (admin-only)
   // More specific routes first to avoid matching issues
-  app.get('/api/topics/categorized', requireRole('owner', 'admin'), async (req, res) => {
+  app.get('/api/topics/categorized', requireRole('owner', 'admin'), requireActiveSubscription, async (req, res) => {
     try {
       const orgId = req.session.orgId!;
       const categorized = await storage.getCategorizedTopics(orgId);
@@ -2088,7 +2088,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/topics', requireRole('owner', 'admin'), async (req, res) => {
+  app.get('/api/topics', requireRole('owner', 'admin'), requireActiveSubscription, async (req, res) => {
     try {
       const orgId = req.session.orgId!;
       const topicsList = await storage.getTopics(orgId);
@@ -2175,7 +2175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/topics/:id', requireRole('owner', 'admin'), async (req, res) => {
+  app.patch('/api/topics/:id', requireRole('owner', 'admin'), requireActiveSubscription, async (req, res) => {
     try {
       const orgId = req.session.orgId!;
       const { name, slug, slackChannelId, kThreshold, isActive, status, actionNotes, expiresAt, windowDays, ownerId } = req.body;
@@ -2252,7 +2252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/topics/:id', requireRole('owner', 'admin'), async (req, res) => {
+  app.delete('/api/topics/:id', requireRole('owner', 'admin'), requireActiveSubscription, async (req, res) => {
     try {
       const orgId = req.session.orgId!;
       await storage.deleteTopic(req.params.id, orgId);
