@@ -25,6 +25,7 @@ import Sample from "@/pages/Sample";
 import PostInstall from "@/pages/PostInstall";
 import NoOrg from "@/pages/NoOrg";
 import Auth from "@/pages/Auth";
+import CheckoutRedirect from "@/pages/CheckoutRedirect";
 
 // Admin pages
 import GetStarted from "@/pages/admin/GetStarted";
@@ -65,6 +66,7 @@ function Router() {
       <Route path="/post-install" component={PostInstall} />
       <Route path="/no-org" component={NoOrg} />
       <Route path="/auth" component={Auth} />
+      <Route path="/billing/checkout-redirect" component={CheckoutRedirect} />
 
       {/* Admin pages */}
       <Route path="/admin/get-started" component={GetStarted} />

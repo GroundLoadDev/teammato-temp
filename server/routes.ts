@@ -46,7 +46,8 @@ const USER_SCOPES = [
 ].join(',');
 
 // In-memory state storage (TODO: use Redis/session store in production)
-const oauthStates = new Map<string, number>();
+// Store state -> { timestamp, plan? }
+const oauthStates = new Map<string, { timestamp: number; plan?: string }>();
 
 // Stripe configuration
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || process.env.TESTING_STRIPE_SECRET_KEY;
@@ -2265,9 +2266,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Slack OAuth - Initiate install
   app.get('/api/slack/install', (req, res) => {
     const state = crypto.randomBytes(16).toString('hex');
+    const plan = req.query.plan as string | undefined;
     
-    // Store state with timestamp for CSRF validation (expire after 10 min)
-    oauthStates.set(state, Date.now());
+    // Store state with timestamp and optional plan for CSRF validation (expire after 10 min)
+    oauthStates.set(state, { 
+      timestamp: Date.now(),
+      plan: plan 
+    });
     
     const slackAuthUrl = new URL('https://slack.com/oauth/v2/authorize');
     slackAuthUrl.searchParams.set('client_id', SLACK_CLIENT_ID!);
@@ -2292,16 +2297,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     // Validate state for CSRF protection
-    const stateTimestamp = oauthStates.get(state as string);
-    if (!stateTimestamp) {
+    const stateData = oauthStates.get(state as string);
+    if (!stateData) {
       return res.redirect('/post-install?error=invalid_state');
     }
 
     // Check state hasn't expired (10 minutes)
-    if (Date.now() - stateTimestamp > 10 * 60 * 1000) {
+    if (Date.now() - stateData.timestamp > 10 * 60 * 1000) {
       oauthStates.delete(state as string);
       return res.redirect('/post-install?error=state_expired');
     }
+
+    // Extract plan from state
+    const selectedPlan = stateData.plan;
 
     // Remove used state
     oauthStates.delete(state as string);
@@ -2463,8 +2471,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           req.session.save((err) => {
             if (err) {
               console.error('Session save error:', err);
+              return res.redirect('/post-install?error=session_error');
             }
-            // Redirect to admin dashboard
+            
+            // If a plan was selected, redirect to Stripe checkout
+            if (selectedPlan) {
+              return res.redirect(`/billing/checkout-redirect?plan=${selectedPlan}`);
+            }
+            
+            // Otherwise redirect to admin dashboard (for existing users reinstalling)
             res.redirect(`/admin/get-started`);
           });
         });
