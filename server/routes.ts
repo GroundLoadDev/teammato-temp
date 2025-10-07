@@ -1617,6 +1617,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Handle 'suggest' command
+      if (text === 'suggest' || text.startsWith('suggest ')) {
+        const topicName = text === 'suggest' ? '' : text.slice(8).trim();
+        
+        // Validate topic name
+        if (topicName.length === 0) {
+          return res.json({
+            response_type: 'ephemeral',
+            text: '❌ Please provide a topic name.\n\nUsage: `/teammato suggest "Your Topic Name"`\n\nExample: `/teammato suggest "Improve code review process"`',
+          });
+        }
+        
+        if (topicName.length < 5) {
+          return res.json({
+            response_type: 'ephemeral',
+            text: '❌ Topic title must be at least 5 characters.\n\nUsage: `/teammato suggest "Your Topic Name"`',
+          });
+        }
+        
+        if (topicName.length > 60) {
+          return res.json({
+            response_type: 'ephemeral',
+            text: '❌ Topic title must be 60 characters or less.\n\nUsage: `/teammato suggest "Your Topic Name"`',
+          });
+        }
+        
+        // Find or create user for suggested_by
+        let userRecord = await storage.getUserBySlackId(userId, orgId);
+        if (!userRecord) {
+          userRecord = await storage.createUser({
+            orgId,
+            slackUserId: userId,
+            email: null,
+            role: 'viewer',
+          });
+        }
+        
+        // Create topic suggestion
+        await storage.createTopicSuggestion({
+          orgId,
+          suggestedBy: userRecord.id,
+          title: topicName,
+          status: 'pending',
+        });
+        
+        return res.json({
+          response_type: 'ephemeral',
+          text: `✅ *Topic suggestion submitted!*\n\n"${topicName}"\n\nYour admin will review and approve new topics. You'll be notified once it's available.`,
+        });
+      }
+
       // Parse topic slug and optional prefill text
       const parts = text.split(/\s+/);
       const topicSlug = parts[0];
