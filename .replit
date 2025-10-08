@@ -4,6 +4,7 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
 channel = "stable-24_05"
+packages = ["stripe-cli"]
 
 [deployment]
 deploymentTarget = "autoscale"
@@ -61,6 +62,10 @@ externalPort = 5000
 [[ports]]
 localPort = 42755
 externalPort = 6000
+
+[[ports]]
+localPort = 43005
+externalPort = 9000
 
 [[ports]]
 localPort = 44729

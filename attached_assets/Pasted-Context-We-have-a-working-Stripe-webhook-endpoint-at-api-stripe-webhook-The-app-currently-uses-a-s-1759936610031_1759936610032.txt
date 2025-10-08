@@ -1,0 +1,74 @@
+Context:
+We have a working Stripe webhook endpoint at
+/api/stripe/webhook
+The app currently uses a single environment variable:
+STRIPE_WEBHOOK_SECRET
+
+We now want to support two different webhook secrets:
+
+STRIPE_WEBHOOK_SECRET → used by Stripe Dashboard (real test/live endpoints)
+
+STRIPE_WEBHOOK_SECRET_TEST → used only when testing via the Stripe CLI listener (stripe listen)
+
+When we run the CLI locally or on Replit, we want to temporarily verify using the test secret — without overwriting the live one.
+
+Your task:
+
+Update the webhook handler so it dynamically selects the right secret:
+
+If process.env.USE_STRIPE_CLI === "1", use STRIPE_WEBHOOK_SECRET_TEST.
+
+Otherwise, use STRIPE_WEBHOOK_SECRET.
+
+Keep everything else in the webhook identical:
+
+Continue verifying with stripe.webhooks.constructEvent(req.body, sig, secret).
+
+Still return a 2xx status quickly after handling events.
+
+Add a short console log before verification:
+
+console.log("Using webhook secret:", process.env.USE_STRIPE_CLI ? "TEST" : "LIVE");
+
+
+Confirm the file updated is the webhook handler — likely:
+
+server/webhooks/stripe.ts
+
+
+or wherever stripe.webhooks.constructEvent is used.
+
+Do not remove the existing live secret; just extend the logic.
+No other behavior should change.
+
+Acceptance Criteria:
+
+When running normally, the handler uses STRIPE_WEBHOOK_SECRET.
+
+When USE_STRIPE_CLI=1 is set, it uses STRIPE_WEBHOOK_SECRET_TEST.
+
+Verification succeeds with either source.
+
+The console prints which secret type is active.
+
+Example expected code diff (TypeScript / Express):
+
+const sig = req.headers["stripe-signature"];
+const useCli = process.env.USE_STRIPE_CLI === "1";
+const secret = useCli
+  ? process.env.STRIPE_WEBHOOK_SECRET_TEST
+  : process.env.STRIPE_WEBHOOK_SECRET;
+
+console.log("Using webhook secret:", useCli ? "TEST" : "LIVE");
+
+let event;
+try {
+  event = stripe.webhooks.constructEvent(req.body, sig as string, secret!);
+} catch (err: any) {
+  console.error("⚠️ Webhook signature verification failed:", err.message);
+  return res.status(400).send(`Webhook Error: ${err.message}`);
+}
+
+
+Reminder to Replit:
+Don’t modify unrelated code, routes, or middleware. Only adjust the secret selection logic for Stripe webhook verification.

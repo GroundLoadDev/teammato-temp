@@ -2,28 +2,25 @@ import type { Request, Response } from 'express';
 import Stripe from 'stripe';
 import { IStorage } from '../storage';
 
-const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
-
 export async function handleStripeWebhook(
   req: Request,
   res: Response,
   stripe: Stripe,
   storage: IStorage
 ) {
-  if (!STRIPE_WEBHOOK_SECRET) {
-    console.error('STRIPE_WEBHOOK_SECRET not configured');
+  const sig = req.headers['stripe-signature'] as string;
+  const useCli = process.env.USE_STRIPE_CLI === "1";
+  const secret = useCli
+    ? process.env.STRIPE_WEBHOOK_SECRET_TEST
+    : process.env.STRIPE_WEBHOOK_SECRET;
+
+  console.log("Using webhook secret:", useCli ? "TEST" : "LIVE");
+
+  if (!secret) {
+    console.error('Webhook secret not configured');
     return res.status(500).json({ error: 'Webhook secret not configured' });
   }
 
-  const sig = req.headers['stripe-signature'] as string;
-  
-  // Debug logging
-  console.log('[Stripe Webhook Debug] Body type:', typeof req.body);
-  console.log('[Stripe Webhook Debug] Is Buffer:', Buffer.isBuffer(req.body));
-  console.log('[Stripe Webhook Debug] Signature present:', !!sig);
-  console.log('[Stripe Webhook Debug] Secret configured:', !!STRIPE_WEBHOOK_SECRET);
-  console.log('[Stripe Webhook Debug] Secret starts with:', STRIPE_WEBHOOK_SECRET?.substring(0, 7));
-  
   let event: Stripe.Event;
   
   try {
@@ -34,10 +31,10 @@ export async function handleStripeWebhook(
     event = stripe.webhooks.constructEvent(
       payload,
       sig,
-      STRIPE_WEBHOOK_SECRET
+      secret
     );
   } catch (err: any) {
-    console.error('Webhook signature verification failed:', err.message);
+    console.error('⚠️ Webhook signature verification failed:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
