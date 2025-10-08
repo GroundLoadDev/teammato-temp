@@ -94,6 +94,7 @@ export const topics = pgTable("topics", {
   windowDays: integer("window_days").notNull().default(21),
   status: text("status").notNull().default('collecting'),
   ownerId: uuid("owner_id").references(() => users.id, { onDelete: 'set null' }),
+  suggestionId: uuid("suggestion_id").references((): any => topicSuggestions.id, { onDelete: 'set null' }),
   actionNotes: text("action_notes"),
   parentTopicId: uuid("parent_topic_id").references((): any => topics.id, { onDelete: 'cascade' }),
   isParent: boolean("is_parent").notNull().default(false),

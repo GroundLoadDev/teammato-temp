@@ -51,6 +51,8 @@ interface Topic {
   windowStart: string | null;
   windowEnd: string | null;
   participantCount?: number;
+  suggesterEmail?: string | null;
+  approvedByEmail?: string | null;
 }
 
 export default function TopicManagement() {
@@ -348,13 +350,18 @@ export default function TopicManagement() {
           <code className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded" data-testid={`text-topic-slug-${topic.id}`}>
             {topic.slug}
           </code>
-          {topic.instanceIdentifier && (
-            <div className="mt-1">
+          <div className="mt-1 flex flex-wrap gap-1">
+            {topic.instanceIdentifier && (
               <Badge variant="outline" className="text-xs" data-testid={`badge-instance-${topic.id}`}>
                 Instance: {topic.instanceIdentifier}
               </Badge>
-            </div>
-          )}
+            )}
+            {topic.suggesterEmail && (
+              <Badge variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-700" data-testid={`badge-suggested-${topic.id}`}>
+                Suggested
+              </Badge>
+            )}
+          </div>
         </div>
         <Badge variant={topic.isActive ? 'default' : 'secondary'} data-testid={`badge-status-${topic.id}`}>
           {topic.isActive ? 'Active' : 'Inactive'}
@@ -366,7 +373,22 @@ export default function TopicManagement() {
         </p>
       )}
       <div className="space-y-2 mb-3">
-        {topic.ownerEmail && (
+        {topic.suggesterEmail && topic.approvedByEmail ? (
+          <>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Tag className="w-3 h-3" />
+              <span data-testid={`text-suggester-${topic.id}`}>
+                Suggested by: {topic.suggesterEmail}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Tag className="w-3 h-3" />
+              <span data-testid={`text-approver-${topic.id}`}>
+                Approved by: {topic.approvedByEmail}
+              </span>
+            </div>
+          </>
+        ) : topic.ownerEmail && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Tag className="w-3 h-3" />
             <span data-testid={`text-creator-${topic.id}`}>

@@ -1040,6 +1040,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           windowDays: 21,
           status: 'collecting',
           ownerId: req.session.userId!,
+          suggestionId: suggestion.id,
           actionNotes: null,
           parentTopicId: null,
           isParent: false,
@@ -2331,7 +2332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orgId = req.session.orgId!;
       const categorized = await storage.getCategorizedTopics(orgId);
       
-      // Enhance each category with owner information and participant count
+      // Enhance each category with owner information, participant count, and suggestion details
       const enhanceTopics = async (topicsList: any[]) => {
         return await Promise.all(
           topicsList.map(async (topic) => {
@@ -2341,10 +2342,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ownerEmail = owner?.email || null;
             }
             const participantCount = await storage.getTopicParticipantCount(topic.id, orgId);
+            
+            let suggesterEmail = null;
+            let approvedByEmail = null;
+            if (topic.suggestionId) {
+              const allSuggestions = await storage.getTopicSuggestions(orgId);
+              const suggestion = allSuggestions.find(s => s.id === topic.suggestionId);
+              if (suggestion) {
+                const suggester = await storage.getUser(suggestion.suggestedBy);
+                suggesterEmail = suggester?.email || null;
+                approvedByEmail = ownerEmail; // ownerId is the approver
+              }
+            }
+            
             return {
               ...topic,
               ownerEmail,
               participantCount,
+              suggesterEmail,
+              approvedByEmail,
             };
           })
         );
