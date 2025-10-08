@@ -6,6 +6,29 @@ Teammato is an enterprise-grade, Slack-first SaaS platform for anonymous feedbac
 ### User Preferences
 I prefer iterative development and clear, concise explanations. Ask before making major changes to the architecture or core functionalities. Ensure all new features align with the privacy-first principle.
 
+### Recent Changes (October 8, 2025)
+
+#### Privacy & Anti-Gamification Enhancements
+- **K-Threshold Enforcement**: K-threshold now enforces a minimum of 5 and cannot be edited after topic creation to prevent anonymity bypass attacks
+- **Collection Window Lock**: windowDays field is non-editable after topic creation to prevent gaming feedback timing
+- **Tooltips Added**: Explanatory tooltips on locked fields explain privacy protection rationale
+
+#### Topic Suggestion Tracking
+- **Schema Enhancement**: Added `suggestionId` field to topics table to track which topics originated from user suggestions
+- **Display Updates**: Topic cards now show "Suggested by: {email}" and "Approved by: {email}" for suggested topics
+- **Visual Badge**: "Suggested" badge displays on topic cards that originated from suggestions
+
+#### K-Threshold Progress Display
+- **Color-Coded Progress**: Visual indicator shows participant count vs k-threshold with color coding:
+  - Red: <50% of threshold
+  - Yellow: ≥50% and <100% of threshold
+  - Green: ≥100% of threshold (ready for release)
+- **Days Remaining**: Topic cards display countdown of days remaining in collection window
+
+#### Slash Command Improvements
+- **Case-Insensitive Matching**: Topic slug matching in Slack commands now case-insensitive (prevents lookup failures)
+- **Enhanced Help**: Updated `/teammato help` command with comprehensive instructions including privacy tips, suggest command, and case-insensitivity examples
+
 ### System Architecture
 
 #### UI/UX Decisions
@@ -15,10 +38,10 @@ The frontend utilizes React, TypeScript, Vite, and Tailwind CSS for a modern adm
 - **Frontend**: React + TypeScript + Vite + Tailwind CSS.
 - **Backend**: Express.js with PostgreSQL (Neon) via Drizzle ORM.
 - **Authentication & Authorization**: Session-based authentication, Slack OAuth v2, and role-based access control (Owner, Admin, Moderator, Viewer) with Row-Level Security (RLS) for multi-tenancy.
-- **Privacy Architecture**: K-anonymity (k=5), application-layer encryption (XChaCha20-Poly1305 AEAD with per-org DEKs), pseudonymity, PII/`@mention` filtering, and daily-rotating submitter hashes.
-- **Slack Integration**: Slack OAuth v2, Slash Commands, and Events API for feedback submission (modals), daily digests, and invitations.
+- **Privacy Architecture**: K-anonymity (k=5 minimum enforced), application-layer encryption (XChaCha20-Poly1305 AEAD with per-org DEKs), pseudonymity, PII/`@mention` filtering, and daily-rotating submitter hashes. K-threshold and collection window are locked after topic creation to prevent anonymity gaming.
+- **Slack Integration**: Slack OAuth v2, Slash Commands (case-insensitive topic slug matching), and Events API for feedback submission (modals), daily digests, and invitations.
 - **Moderation Workflow**: Flag queue, bulk actions, and immutable audit trails for moderation.
-- **Topic Management**: Time-boxed feedback campaigns, auto-lock cron jobs, "You said / We did" loops, and user-suggested topics. Anti-gamification safeguards prevent topic creators from submitting feedback to their own topics and enforce one submission per user per topic.
+- **Topic Management**: Time-boxed feedback campaigns, auto-lock cron jobs, "You said / We did" loops, and user-suggested topics with tracking (suggestionId field). Anti-gamification safeguards prevent topic creators from submitting feedback to their own topics and enforce one submission per user per topic. Topic cards display k-threshold progress with color coding (red <50%, yellow ≥50%, green ≥100%) and days remaining.
 - **Analytics & Export**: Privacy-preserving aggregated metrics with k-safe export capabilities using database views (`v_threads`, `v_comments`) that enforce k-anonymity thresholds.
 - **User Management**: Slack-native invitation system, role management, and user removal.
 - **Security**: Session regeneration, CSRF protection, and robust org-scoping.
