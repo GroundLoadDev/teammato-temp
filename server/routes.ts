@@ -597,13 +597,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cancelUrl = `${baseUrl}/admin/billing?canceled=1`;
 
       // Calculate trial_end based on org state
-      let trialEnd: number | undefined;
+      let trialEnd: number | 'now' | undefined;
       
       // R2: One trial per org - if trial already used, charge now
       const hasUsedTrial = org.trialEnd && org.trialEnd.getTime() < Date.now();
       
       if (chargeToday || hasUsedTrial) {
-        trialEnd = Math.floor(Date.now() / 1000);
+        // Don't set trial_end - Stripe will start subscription immediately
+        trialEnd = undefined;
       } else if (org.trialEnd && org.billingStatus === 'trialing') {
         // Keep existing trial period
         trialEnd = Math.floor(org.trialEnd.getTime() / 1000);
@@ -614,24 +615,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         trialEnd = Math.floor(trialEndDate.getTime() / 1000);
       } else {
         // Default to charge now
-        trialEnd = Math.floor(Date.now() / 1000);
+        trialEnd = undefined;
       }
 
       // Create checkout session
-      const session = await stripe.checkout.sessions.create({
+      const sessionConfig: any = {
         mode: 'subscription',
         customer: customerId,
         line_items: [{ price: priceId, quantity: 1 }],
         allow_promotion_codes: true,
         payment_method_collection: 'always',
         subscription_data: {
-          trial_end: trialEnd,
           trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },
           metadata: { org_id: orgId },
         },
         success_url: successUrl,
         cancel_url: cancelUrl,
-      });
+      };
+
+      // Only set trial_end if we have a value (don't set it for immediate charging)
+      if (trialEnd !== undefined) {
+        sessionConfig.subscription_data.trial_end = trialEnd;
+      }
+
+      const session = await stripe.checkout.sessions.create(sessionConfig);
 
       // Track checkout event
       await storage.trackEvent({

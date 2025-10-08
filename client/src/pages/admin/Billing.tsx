@@ -116,7 +116,7 @@ export default function Billing() {
       if (errorMessage.includes('Stripe') || errorMessage.includes('payment')) {
         title = "Payment service error";
         description = "There was an issue connecting to the payment service. Please try again in a few moments.";
-      } else if (errorMessage.includes('session') || errorMessage.includes('expired')) {
+      } else if (errorMessage.includes('authenticated') || errorMessage.includes('auth')) {
         title = "Session expired";
         description = "Your session has expired. Please refresh the page and try again.";
       } else if (errorMessage.includes('plan') || errorMessage.includes('price')) {
