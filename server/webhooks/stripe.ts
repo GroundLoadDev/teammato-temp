@@ -17,12 +17,22 @@ export async function handleStripeWebhook(
 
   const sig = req.headers['stripe-signature'] as string;
   
+  // Debug logging
+  console.log('[Stripe Webhook Debug] Body type:', typeof req.body);
+  console.log('[Stripe Webhook Debug] Is Buffer:', Buffer.isBuffer(req.body));
+  console.log('[Stripe Webhook Debug] Signature present:', !!sig);
+  console.log('[Stripe Webhook Debug] Secret configured:', !!STRIPE_WEBHOOK_SECRET);
+  console.log('[Stripe Webhook Debug] Secret starts with:', STRIPE_WEBHOOK_SECRET?.substring(0, 7));
+  
   let event: Stripe.Event;
   
   try {
-    // Verify webhook signature
+    // When using express.raw(), req.body is a Buffer
+    // Stripe needs it as a string for signature verification
+    const payload = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : req.body;
+    
     event = stripe.webhooks.constructEvent(
-      req.body,
+      payload,
       sig,
       STRIPE_WEBHOOK_SECRET
     );
