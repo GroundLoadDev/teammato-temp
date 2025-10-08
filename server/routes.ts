@@ -1614,7 +1614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         return res.json({
           response_type: 'ephemeral',
-          text: `📋 *Available Topics*\n\n${topicList}\n\n💡 *How to submit:*\n\`/teammato <topic-slug>\` - Opens feedback form for that topic\n\`/teammato <message>\` - Opens general feedback\n\nExamples:\n• \`/teammato testing\` (opens Testing topic)\n• \`/teammato My general feedback\` (general feedback with prefill)`,
+          text: `🎯 *Teammato - Anonymous Team Feedback*\nShare honest feedback without revealing your identity. All submissions are anonymous and protected by k-anonymity (minimum 5 people).\n\n📋 *Active Topics*\n${topicList}\n\n💬 *Submit Feedback*\n\`/teammato <topic-slug>\` - Submit to specific topic\n\`/teammato <your message>\` - Submit general feedback\n\n*Examples:*\n• \`/teammato testing\` (case-insensitive ✓)\n• \`/teammato TESTING\` (same result)\n• \`/teammato My general feedback here\`\n\n💡 *Suggest a Topic*\n\`/teammato suggest "Topic Name"\` - Propose new feedback topic\n_Note: Your name is attached to suggestions (not to feedback)_\n\n🔒 *Privacy Tips*\n• Avoid identifying details (team names, specific projects, dates)\n• Don't mention your role or location\n• Use general language to maintain anonymity`,
         });
       }
 
