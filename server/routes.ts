@@ -2331,7 +2331,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orgId = req.session.orgId!;
       const categorized = await storage.getCategorizedTopics(orgId);
       
-      // Enhance each category with owner information
+      // Enhance each category with owner information and participant count
       const enhanceTopics = async (topicsList: any[]) => {
         return await Promise.all(
           topicsList.map(async (topic) => {
@@ -2340,9 +2340,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const owner = await storage.getUser(topic.ownerId);
               ownerEmail = owner?.email || null;
             }
+            const participantCount = await storage.getTopicParticipantCount(topic.id, orgId);
             return {
               ...topic,
               ownerEmail,
+              participantCount,
             };
           })
         );
@@ -2414,6 +2416,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Name and slug are required' });
       }
       
+      // Validate k-threshold minimum
+      const kThresholdValue = kThreshold !== undefined ? parseInt(kThreshold) : 5;
+      if (kThresholdValue < 5) {
+        return res.status(400).json({ error: 'K-threshold must be at least 5 for anonymity protection' });
+      }
+      
       // Calculate expiresAt based on windowDays
       const windowDaysValue = windowDays !== undefined ? parseInt(windowDays) : 21;
       const expiresAt = new Date();
@@ -2425,7 +2433,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         slug: slug.toLowerCase().trim(),
         description: description || null,
         slackChannelId: slackChannelId || null,
-        kThreshold: kThreshold !== undefined ? parseInt(kThreshold) : 5,
+        kThreshold: kThresholdValue,
         isActive: isActive !== undefined ? isActive : true,
         windowDays: windowDaysValue,
         expiresAt,
@@ -2492,7 +2500,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (name !== undefined) updateData.name = name;
       if (slug !== undefined) updateData.slug = slug.toLowerCase().trim();
       if (slackChannelId !== undefined) updateData.slackChannelId = slackChannelId || null;
-      if (kThreshold !== undefined) updateData.kThreshold = parseInt(kThreshold);
+      // kThreshold and windowDays cannot be edited after creation for privacy protection
+      // if (kThreshold !== undefined) updateData.kThreshold = parseInt(kThreshold);
+      // if (windowDays !== undefined) updateData.windowDays = parseInt(windowDays);
       if (isActive !== undefined) updateData.isActive = isActive;
       if (status !== undefined) updateData.status = status;
       if (actionNotes !== undefined) updateData.actionNotes = actionNotes;

@@ -50,6 +50,7 @@ interface Topic {
   instanceIdentifier: string | null;
   windowStart: string | null;
   windowEnd: string | null;
+  participantCount?: number;
 }
 
 export default function TopicManagement() {
@@ -377,12 +378,28 @@ export default function TopicManagement() {
           <Tag className="w-3 h-3" />
           <span data-testid={`text-duration-${topic.id}`}>
             Duration: {topic.windowDays} days
+            {topic.expiresAt && (() => {
+              const now = new Date();
+              const expiry = new Date(topic.expiresAt);
+              const daysRemaining = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+              return daysRemaining > 0 ? ` (${daysRemaining} days left)` : ' (expired)';
+            })()}
           </span>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 text-xs">
           <Tag className="w-3 h-3" />
           <span data-testid={`text-k-threshold-${topic.id}`}>
-            K-Threshold: {topic.kThreshold}
+            K-Threshold: <span className={
+              topic.participantCount !== undefined 
+                ? topic.participantCount >= topic.kThreshold 
+                  ? 'text-emerald-600' 
+                  : topic.participantCount >= topic.kThreshold / 2 
+                    ? 'text-yellow-600' 
+                    : 'text-red-600'
+                : 'text-muted-foreground'
+            }>
+              {topic.participantCount ?? 0}/{topic.kThreshold}
+            </span>
           </span>
         </div>
         {topic.slackChannelId && (
@@ -639,23 +656,34 @@ export default function TopicManagement() {
                     <Info className="inline w-3 h-3 ml-1 text-muted-foreground" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Minimum participants before feedback is visible</p>
+                    <p>{editingTopic ? 'Cannot be changed after creation for privacy and anonymity protection' : 'Minimum participants before feedback is visible (minimum 5)'}</p>
                   </TooltipContent>
                 </Tooltip>
               </Label>
               <Slider
                 id="kThreshold"
-                min={3}
+                min={5}
                 max={10}
                 step={1}
                 value={[formData.kThreshold]}
                 onValueChange={(value) => setFormData({ ...formData, kThreshold: value[0] })}
+                disabled={!!editingTopic}
                 data-testid="slider-k-threshold"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="windowDays">Collection Window (days): {formData.windowDays}</Label>
+              <Label htmlFor="windowDays">
+                Collection Window (days): {formData.windowDays}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="inline w-3 h-3 ml-1 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{editingTopic ? 'Cannot be changed after creation for privacy and anonymity protection' : 'Number of days to collect feedback'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
               <Slider
                 id="windowDays"
                 min={7}
@@ -663,6 +691,7 @@ export default function TopicManagement() {
                 step={1}
                 value={[formData.windowDays]}
                 onValueChange={(value) => setFormData({ ...formData, windowDays: value[0] })}
+                disabled={!!editingTopic}
                 data-testid="slider-window-days"
               />
             </div>
