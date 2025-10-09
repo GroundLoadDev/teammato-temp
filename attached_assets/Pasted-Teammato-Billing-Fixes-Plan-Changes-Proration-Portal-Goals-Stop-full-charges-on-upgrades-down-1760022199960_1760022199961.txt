@@ -1,0 +1,201 @@
+Teammato – Billing Fixes (Plan Changes, Proration, Portal)
+Goals
+
+Stop full charges on upgrades/downgrades by updating the existing subscription (not creating a new one).
+
+Use Customer Portal for self-serve billing management (now configured).
+
+Guard routing so paid users never re-install or create duplicate subscriptions.
+
+Keep the current Checkout flow only for first subscription (card-gated trial).
+
+0) References (you set these up)
+
+Portal configuration id: bpc_1SGKiX8PaOLOdaxJKwEpo6PW
+
+Portal login link (test): https://billing.stripe.com/p/login/test_bJeeV77MD52U0FV3h2bo400
+
+Use the config id when creating Portal sessions (see §3).
+
+1) Server: add a plan-change endpoint (Subscriptions API, not Checkout)
+
+File: server/routes.ts (or billing controller)
+
+// Change plan on EXISTING subscription: update item with proration
+app.post('/api/billing/change-plan', requireRole('owner'), async (req, res) => {
+  const { priceLookupKey } = req.body;
+  const orgId = req.user.orgId;
+  const org = await storage.getOrg(orgId);
+
+  if (!org?.stripeSubscriptionId) {
+    return res.status(400).json({
+      error: 'No active subscription. Use /api/billing/checkout to start one.'
+    });
+  }
+
+  // 1) Resolve target price from lookup key
+  const prices = await stripe.prices.list({ lookup_keys: [priceLookupKey], expand: ['data.product'] });
+  const newPrice = prices.data?.[0];
+  if (!newPrice) return res.status(400).json({ error: 'Invalid price lookup key' });
+
+  // 2) Fetch current subscription & primary item
+  const sub = await stripe.subscriptions.retrieve(org.stripeSubscriptionId, { expand: ['items'] });
+  const item = sub.items.data?.[0];
+  if (!item) return res.status(400).json({ error: 'Subscription has no items' });
+
+  // (Optional) block downgrades below current eligibleCount — you already do this elsewhere
+
+  // 3) Update the item price WITH proration and keep the renewal date
+  const updated = await stripe.subscriptions.update(sub.id, {
+    items: [{ id: item.id, price: newPrice.id }],
+    proration_behavior: 'create_prorations',
+    billing_cycle_anchor: 'unchanged',
+    payment_behavior: 'allow_incomplete', // safe; Stripe collects with saved PM
+    metadata: { org_id: org.id }
+  });
+
+  return res.json({ subscriptionId: updated.id, status: updated.status });
+});
+
+
+Notes:
+
+Do not create a Checkout Session for existing subscribers; this endpoint replaces that path.
+
+create_prorations → upgrades charge only the delta now; downgrades create credit for next invoice.
+
+billing_cycle_anchor: 'unchanged' → keeps the original renewal date.
+
+2) Server: keep Checkout only for first-time subscription
+
+Your existing /api/billing/checkout stays as-is only when !org.stripeSubscriptionId.
+If org.stripeSubscriptionId exists, block and instruct the client to call /api/billing/change-plan instead.
+
+Minimal guard:
+
+app.post('/api/billing/checkout', requireRole('owner'), async (req, res) => {
+  const org = await storage.getOrg(req.user.orgId);
+  if (org?.stripeSubscriptionId) {
+    return res.status(400).json({ error: 'Subscription exists. Use /api/billing/change-plan.' });
+  }
+  // ...existing Checkout creation (trial start / first sub)...
+});
+
+3) Server: fix Customer Portal route (use your config id)
+
+File: server/routes.ts (existing portal route)
+
+app.post('/api/billing/portal', requireRole('owner'), async (req, res) => {
+  const org = await storage.getOrg(req.user.orgId);
+  if (!org?.stripeCustomerId) return res.status(400).json({ error: 'No Stripe customer' });
+
+  const session = await stripe.billingPortal.sessions.create({
+    customer: org.stripeCustomerId,
+    configuration: 'bpc_1SGKiX8PaOLOdaxJKwEpo6PW', // <-- your Test config id
+    return_url: `${process.env.APP_BASE_URL || 'https://your-app'}/admin/billing`
+  });
+  res.json({ url: session.url });
+});
+
+
+Portal is now the one-stop for: update card, invoices, cancel, and (optionally) plan switches.
+
+We still prefer /api/billing/change-plan for explicit seat-band switches inside Admin, but Portal is a safe fallback.
+
+4) Client: route correctly based on state
+
+File: client/src/pages/admin/Billing.tsx
+
+When the user selects a plan:
+
+If no org.stripeSubscriptionId → POST /api/billing/checkout (first subscription).
+
+If exists → POST /api/billing/change-plan (update existing).
+
+Pseudocode:
+
+const onSelectPlan = async (priceLookupKey: string) => {
+  if (org?.stripeSubscriptionId) {
+    await api.post('/api/billing/change-plan', { priceLookupKey });
+    toast.success('Plan updated. Proration applied.');
+    // Optionally refetch billing state
+  } else {
+    const { url } = await api.post('/api/billing/checkout', { priceLookupKey });
+    window.location.href = url; // Checkout for first sub
+  }
+};
+
+
+/pricing page guard
+
+If the session indicates an org with a subscription, “Upgrade” should not re-install or open Checkout.
+
+Instead, route to /admin/billing or call /api/billing/change-plan directly with the targeted priceLookupKey.
+
+5) Webhooks: no change needed (verify mapping)
+
+Your existing handlers (customer.subscription.updated, invoice.paid, etc.) are fine. Ensure syncSubscriptionToOrg still maps price.metadata.cap → seatCap and updates priceAmount, billingPeriod, currentPeriodEnd. No creation/cancellation in webhook code.
+
+6) One-off cleanup (tests created duplicates)
+
+In Test mode, some customers now have multiple active subscriptions. Add a one-time script or admin action to:
+
+const subs = await stripe.subscriptions.list({ customer: org.stripeCustomerId, status: 'active' });
+subs.data.sort((a,b) => b.created - a.created); // newest first
+const keep = subs.data[0];
+for (const s of subs.data.slice(1)) {
+  await stripe.subscriptions.cancel(s.id);
+}
+// persist keep.id -> org.stripeSubscriptionId
+await storage.updateOrg(org.id, { stripeSubscriptionId: keep.id });
+
+
+Run this only for test customers where duplicates exist.
+
+7) QA – Acceptance tests (Test mode)
+
+Fresh start (first sub):
+
+250 → Checkout (trial or charge-today).
+
+Webhook sets trialing or active.
+
+Mid-cycle upgrade (250 → 500):
+
+Click plan in Admin → hits /api/billing/change-plan → proration line on invoice (small charge now).
+
+Renewal date unchanged.
+
+Mid-cycle downgrade (500 → 250):
+
+Use /api/billing/change-plan → negative proration/credit on next invoice, no full $99 now.
+
+Renewal date unchanged.
+
+Portal:
+
+“Manage Billing” opens Portal (no errors).
+
+Switching plans in Portal also yields proration and preserves cycle anchor.
+
+/pricing guard:
+
+Logged-in paying user clicking “Upgrade” goes to /admin/billing (no OAuth, no Checkout).
+
+New user (no sub) still goes to Checkout.
+
+No new duplicate subs:
+
+After multiple plan changes, customer.subscription.created is not fired again; only subscription.updated.
+
+8) Rollback / safety
+
+All changes are additive and behind clear conditions.
+
+If needed, you can temporarily route everything through Portal by disabling plan buttons and leaving only “Manage Billing.”
+
+9) Optional niceties (future)
+
+Show a “price delta preview” before applying change: call invoices.upcoming with subscription_items to display the proration estimate.
+
+Add a small “Last invoice” card in Admin Billing with a link to Stripe’s hosted invoice.

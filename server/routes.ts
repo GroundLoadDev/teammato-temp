@@ -528,7 +528,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Billing API - Create Checkout Session (Owner only)
+  // Billing API - Create Checkout Session (Owner only) - FIRST SUBSCRIPTION ONLY
   app.post('/api/billing/checkout', requireRole('owner'), async (req, res) => {
     try {
       if (!stripe) {
@@ -540,6 +540,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!org) {
         return res.status(404).json({ error: 'Organization not found' });
+      }
+
+      // Guard: block existing subscribers from creating duplicate subscriptions
+      if (org.stripeSubscriptionId) {
+        return res.status(400).json({ 
+          error: 'Subscription exists. Use /api/billing/change-plan to update your plan.' 
+        });
       }
 
       const { priceLookupKey, chargeToday } = req.body;
@@ -655,6 +662,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Billing API - Change Plan on EXISTING subscription (Owner only)
+  app.post('/api/billing/change-plan', requireRole('owner'), async (req, res) => {
+    try {
+      if (!stripe) {
+        return res.status(503).json({ error: 'Stripe not configured' });
+      }
+
+      const orgId = req.session.orgId!;
+      const org = await storage.getOrg(orgId);
+      
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+
+      if (!org.stripeSubscriptionId) {
+        return res.status(400).json({
+          error: 'No active subscription. Use /api/billing/checkout to start one.'
+        });
+      }
+
+      const { priceLookupKey } = req.body;
+      if (!priceLookupKey) {
+        return res.status(400).json({ error: 'priceLookupKey required' });
+      }
+
+      // Extract seat cap from lookup key for downgrade validation
+      const capMatch = priceLookupKey.match(/cap_(\d+)_/);
+      const newSeatCap = capMatch ? parseInt(capMatch[1], 10) : null;
+      
+      // Validate downgrade against current usage
+      if (newSeatCap && newSeatCap < (org.seatCap || 250)) {
+        const usage = await storage.getOrgUsage(orgId);
+        const eligibleCount = usage?.eligibleCount || 0;
+        
+        if (eligibleCount > newSeatCap) {
+          return res.status(400).json({ 
+            error: 'Cannot downgrade below current usage',
+            message: `You currently have ${eligibleCount} eligible members, but the plan you selected supports only ${newSeatCap}. Please reduce your audience size or select a higher tier.`,
+            eligibleCount,
+            newSeatCap,
+          });
+        }
+      }
+
+      // Resolve target price from lookup key
+      const prices = await stripe.prices.list({
+        lookup_keys: [priceLookupKey],
+        expand: ['data.product'],
+      });
+
+      const newPrice = prices.data?.[0];
+      if (!newPrice) {
+        return res.status(400).json({ error: 'Invalid price lookup key' });
+      }
+
+      // Fetch current subscription & primary item
+      const sub = await stripe.subscriptions.retrieve(org.stripeSubscriptionId, {
+        expand: ['items']
+      });
+      
+      const item = sub.items.data?.[0];
+      if (!item) {
+        return res.status(400).json({ error: 'Subscription has no items' });
+      }
+
+      // Update the item price WITH proration and keep the renewal date
+      const updated = await stripe.subscriptions.update(sub.id, {
+        items: [{ id: item.id, price: newPrice.id }],
+        proration_behavior: 'create_prorations',
+        billing_cycle_anchor: 'unchanged',
+        payment_behavior: 'allow_incomplete',
+        metadata: { org_id: orgId }
+      });
+
+      // Track plan change event
+      await storage.trackEvent({
+        orgId,
+        eventType: 'plan_changed',
+        userId: req.session.userId || null,
+        metadata: { 
+          priceLookupKey, 
+          oldSeatCap: org.seatCap,
+          newSeatCap,
+          subscriptionId: updated.id 
+        },
+      });
+
+      res.json({ subscriptionId: updated.id, status: updated.status });
+    } catch (error) {
+      console.error('Change plan error:', error);
+      res.status(500).json({ error: 'Failed to change plan' });
+    }
+  });
+
   // Billing API - Create Portal Session (Owner only)
   app.post('/api/billing/portal', requireRole('owner'), async (req, res) => {
     try {
@@ -674,6 +775,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const session = await stripe.billingPortal.sessions.create({
         customer: org.stripeCustomerId,
+        configuration: 'bpc_1SGKiX8PaOLOdaxJKwEpo6PW',
         return_url: returnUrl,
       });
 

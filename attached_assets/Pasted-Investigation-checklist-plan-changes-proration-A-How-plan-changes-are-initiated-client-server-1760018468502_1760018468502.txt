@@ -1,0 +1,105 @@
+Investigation checklist: plan changes & proration
+A) How plan changes are initiated (client → server)
+
+Buttons & routes: From which UI paths can a user change plans? (e.g., /pricing → “Upgrade”, /admin/billing → “Change plan”.) For each, list the API endpoint it calls.
+
+Behavior split: If the org has an existing stripeSubscriptionId, do we:
+
+(a) open Checkout (new subscription),
+
+(b) open Customer Portal, or
+
+(c) call stripe.subscriptions.update(...) on the existing sub?
+Paste the relevant code branches.
+
+B) If using Checkout for upgrades/downgrades (suspect root cause)
+
+Paste the exact Checkout Session creation you use for plan changes (server-side). Include:
+
+mode, line_items.price, any subscription_data fields (trial_end, metadata, billing_cycle_anchor, proration_behavior, etc.)
+
+Confirm whether you cancel the existing subscription or leave it running when starting Checkout for an upgrade/downgrade.
+
+If Checkout is used for existing subscribers, this explains full new-cycle charges.
+
+C) If using Subscriptions API (correct path)
+
+Paste the exact code that runs on plan change for existing subs:
+
+const sub = await stripe.subscriptions.retrieve(subId, { expand: ['items'] });
+await stripe.subscriptions.update(sub.id, {
+  items: [{ id: sub.items.data[0].id, price: NEW_PRICE_ID }],
+  proration_behavior: 'create_prorations',
+  billing_cycle_anchor: 'unchanged',
+  payment_behavior: 'allow_incomplete' // or what you use
+});
+
+
+Show values you actually set for proration_behavior, billing_cycle_anchor, and payment_behavior.
+
+If you don’t pass those fields, what are your defaults? (Show your code—Stripe defaults can cause immediate full invoices depending on config.)
+
+D) Webhooks & state sync
+
+Paste the handlers for:
+
+customer.subscription.updated
+
+invoice.upcoming (if any)
+
+invoice.finalized and/or invoice.paid
+Confirm you do not create/cancel subscriptions in these handlers during a plan change.
+
+On customer.subscription.updated, how do you map price → seatCap? Show that code. Ensure you’re not creating a new sub by mistake here.
+
+E) Customer Portal usage
+
+Do any upgrade/downgrade buttons open Customer Portal? If yes, Portal settings usually handle proration automatically. Paste where Portal is launched (server route + client handler).
+
+F) Example evidence (very important)
+
+Provide one upgrade event example (250 → 500) from logs:
+
+Time of click.
+
+Which endpoint ran.
+
+The Stripe request your server made (params/body).
+
+The subscription id and invoice id generated.
+
+The invoice line items (show the JSON): do you see prorated lines, or a full monthly line?
+
+Provide one downgrade event example (500 → 250) from logs:
+
+Same details; if a full charge was created, show the invoice JSON.
+
+Tip: In Stripe Dashboard, open the invoice → “View source” → copy JSON (redact ids) so we can see if there were proration items.
+
+G) Edge conditions
+
+Are you changing quantity or price? (You should change the price on the existing subscription item; not create a new item unless you multi-product.)
+
+Any coupon/promotion codes applied that might force immediate invoicing?
+
+Any custom billing settings on the customer or subscription (collection method, default payment method, proration_behavior override at account level)?
+
+H) Guardrails we expect (confirm presence/absence)
+
+From /pricing, if the user already has a subscription, do you bypass OAuth/Checkout and route to /admin/billing (or call the update endpoint) instead? Show that router code.
+
+Do you block downgrades below current eligibleCount? If not, show the current validation (or note “not implemented”).
+
+What we’re looking for (so you know why we asked)
+
+If your plan-change path creates a new Checkout Session (new sub), Stripe issues a full new charge—no proration.
+
+Correct behavior is: update the existing subscription item (or use Customer Portal). Ensure:
+
+proration_behavior: 'create_prorations'
+
+billing_cycle_anchor: 'unchanged'
+
+sensible payment_behavior (e.g., allow_incomplete or default_incomplete depending on your retry flow)
+
+Once we see the snippets + one upgrade/downgrade invoice JSON, we’ll recommend the smallest code change (likely: reroute plan-change buttons away from Checkout and call subscriptions.update, or switch those flows to Customer Portal).
