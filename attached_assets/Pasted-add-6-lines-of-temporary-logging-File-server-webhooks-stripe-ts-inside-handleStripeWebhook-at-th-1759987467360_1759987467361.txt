@@ -1,0 +1,61 @@
+add 6 lines of temporary logging
+
+File: server/webhooks/stripe.ts (inside handleStripeWebhook, at the very top, before constructEvent)
+
+console.log("[wh] hit", req.method, req.originalUrl);
+console.log("[wh] hdr sig:", (req.headers["stripe-signature"] || "").toString().slice(0,16), "..."); 
+console.log("[wh] body is Buffer:", Buffer.isBuffer(req.body), "len:", Buffer.isBuffer(req.body) ? req.body.length : (req.body ? JSON.stringify(req.body).length : 0));
+console.log("[wh] mode:", process.env.NODE_ENV, "cliFlag:", process.env.USE_STRIPE_CLI);
+console.log("[wh] secret mode:", (process.env.USE_STRIPE_CLI === "1") ? "TEST" : "LIVE");
+
+
+(Keep your existing console.log("Using webhook secret: ...") too.)
+
+Then have Replit do these 2 tests and paste both logs
+
+Test A — Stripe Dashboard (LIVE secret):
+
+In Stripe Dashboard → Webhooks (Test), select your endpoint
+https://…janeway.replit.dev/api/stripe/webhook
+
+Click Send test webhook → checkout.session.completed.
+
+Paste: Stripe delivery status + your server logs (the [wh] … lines).
+
+Expected outcomes (and what they mean):
+
+If you see [wh] hit POST /api/stripe/webhook + [wh] hdr sig: … + body is Buffer: true + secret mode: LIVE → the request is reaching the handler; signature/secret mismatch (or price/trial issue) is next to check.
+
+If you don’t see [wh] hit… at all → Stripe is likely hitting a different URL (old Replit preview) or a proxy/Vite path is intercepting.
+
+Test B — Stripe CLI (TEST secret):
+
+Start listener:
+./stripe listen --forward-to "https://…janeway.replit.dev/api/stripe/webhook"
+Copy the whsec_… and set it as STRIPE_WEBHOOK_SECRET_TEST.
+
+Restart server (no flags needed for now).
+
+Trigger: ./stripe trigger checkout.session.completed.
+
+Paste your server logs (the [wh] … lines).
+
+Expected:
+
+[wh] secret mode: LIVE (since you’re not setting a flag) but your current code uses LIVE unless USE_STRIPE_CLI=1. That’s fine for this test—we just want to see [wh] hit… at all. If it hits, we’ll flip to TEST secret next.
+
+If Test A shows no [wh] hit…
+
+Ask Replit to verify exact endpoint URL in Stripe Dashboard equals the current Replit preview URL (these rotate). Update if needed, resend the test, and paste logs.
+
+If Test A shows [wh] hit… but we still 400
+
+Have Replit paste the exact constructEvent error string (it says whether it’s “No signatures found”, “JSON payload was not provided”, etc.). Common fixes:
+
+Secret mismatch (wrong whsec for that endpoint) → update STRIPE_WEBHOOK_SECRET.
+
+Body not raw (but they mounted express.raw correctly) → confirm [wh] body is Buffer: true.
+
+Wrong path (middleware vs route mismatch) → [wh] hit will reveal the exact URL.
+
+Once we see those 8–10 debug log lines from both tests, I’ll tell them exactly what to change—no more shell steps from you.

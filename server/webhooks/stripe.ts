@@ -8,6 +8,12 @@ export async function handleStripeWebhook(
   stripe: Stripe,
   storage: IStorage
 ) {
+  console.log("[wh] hit", req.method, req.originalUrl);
+  console.log("[wh] hdr sig:", (req.headers["stripe-signature"] || "").toString().slice(0,16), "..."); 
+  console.log("[wh] body is Buffer:", Buffer.isBuffer(req.body), "len:", Buffer.isBuffer(req.body) ? req.body.length : (req.body ? JSON.stringify(req.body).length : 0));
+  console.log("[wh] mode:", process.env.NODE_ENV, "cliFlag:", process.env.USE_STRIPE_CLI);
+  console.log("[wh] secret mode:", (process.env.USE_STRIPE_CLI === "1") ? "TEST" : "LIVE");
+  
   const sig = req.headers['stripe-signature'] as string;
   const useCli = process.env.USE_STRIPE_CLI === "1";
   const secret = useCli

@@ -1,0 +1,87 @@
+Questions for Replit (please answer inline)
+A) Runtime & Routing
+
+Framework & router: Are we on Express? If not, what? File/path of the exact webhook route handler?
+
+Mount order: Where (file + line) is the webhook route registered relative to any global parsers like express.json() / bodyParser.json() / other middleware?
+
+Raw body: Do we use bodyParser.raw({ type: 'application/json' }) (or equivalent) on the webhook route only? Paste that route registration snippet.
+
+B) Environment & Secrets
+
+Current env vars that the handler reads for verification (names + values redacted, just whether set):
+
+STRIPE_WEBHOOK_SECRET (present Y/N)
+
+STRIPE_WEBHOOK_SECRET_TEST (present Y/N)
+
+any flag like USE_STRIPE_CLI (present Y/N)
+
+In code, which env var is actually passed to stripe.webhooks.constructEvent(...)? Paste those 5–10 lines.
+
+C) Endpoint URLs (Dashboard vs CLI)
+
+Stripe Dashboard endpoint URL(s) (Test and/or Live) configured to hit us now? Paste the full URLs as displayed in Stripe.
+
+The signing secret(s) (last 6 chars only) tied to those Dashboard endpoints?
+
+Is a Stripe CLI listener currently running and forwarding to us? If yes, what URL and what whsec_... (last 6 chars)?
+
+D) Incoming Requests & Errors
+
+From server logs, paste the full error when we return 400 for:
+
+checkout.session.completed
+
+customer.subscription.created
+
+invoice.paid
+(The message thrown by constructEvent if any; include stack line numbers if present.)
+
+Confirm we log the Stripe-Signature header (redact values) and the byte length of req.body on the webhook path. If not, add a temporary log and paste a sample line for one failing event.
+
+E) Handler Behavior
+
+After successful verification, what do we do? (Function names/paths for: checkout.session.completed, customer.subscription.created/updated, invoice.paid/failed, customer.subscription.deleted.)
+
+Do we always return a 2xx quickly, or can handlers throw/await long DB calls before responding? Paste the response lines.
+
+F) Dev vs Test vs Live Modes
+
+Which Stripe mode are we using right now to send events (Test vs Live)?
+
+Are Price objects in Test mode carrying trial_period_days? (If you can, paste one Price JSON from Test—redact ids.)
+
+Is the app running with NODE_ENV=development on Replit? Any code paths conditional on env that affect the webhook?
+
+G) Replit Process/Port
+
+What port is the server bound to? (Log shows 5000; confirm.)
+
+Do we run multiple Node processes (e.g., dev server + background worker) that could also bind to webhook or parse body globally?
+
+H) Recent Code Changes
+
+You mentioned “Fixed Import Issue: Removed the Stripe CLI binary that was blocking the npm package import.”
+
+Which files changed? (paths)
+
+Any changes to imports of stripe SDK or body parsers on the webhook file?
+
+Dual-secret support: paste the exact code block that selects between STRIPE_WEBHOOK_SECRET and STRIPE_WEBHOOK_SECRET_TEST.
+
+I) Minimal Repro (you run, paste output)
+
+Run these (no CLI needed first):
+
+Start server; paste the first 10 log lines (include any “Using webhook secret: …”).
+
+In Stripe Dashboard → Webhooks (Test), Send test webhook to our endpoint for checkout.session.completed; paste our server’s log lines for that request and Stripe’s delivery status.
+
+Then run with CLI (if possible):
+
+Start listener: ./stripe listen --forward-to <our-url>/api/stripe/webhook → paste the printed whsec (last 6 only).
+
+Ensure STRIPE_WEBHOOK_SECRET_TEST matches that value.
+
+Trigger: ./stripe trigger checkout.session.completed → paste our server logs and CLI output lines.
