@@ -14,6 +14,7 @@ import Stripe from 'stripe';
 import { handleStripeWebhook } from './webhooks/stripe';
 import { generateDigest, sendDigestToOrg } from "./cron/digestWeekly";
 import { enforceSeatCap, getSeatCapStatus } from "./middleware/seatCap";
+import { resolveOrgSubscriptionState } from './lib/billing';
 
 // Slack OAuth configuration
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
@@ -480,6 +481,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate usage percentage
       const percent = seatCap > 0 ? Math.round((eligibleCount / seatCap) * 100) : 0;
 
+      // Resolve subscription state (handles webhook lag)
+      const { hasSubscription, subId } = await resolveOrgSubscriptionState(stripe, storage, org);
+
       // Fetch invoices from Stripe if available
       let invoices: any[] = [];
       if (stripe && org.stripeCustomerId) {
@@ -514,7 +518,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         eligibleCount,
         percent,
         customerEmail,
-        hasSubscription: !!org.stripeSubscriptionId,
+        hasSubscription,
+        subscriptionId: subId,
         invoices,
         audience: {
           mode: audienceMode,

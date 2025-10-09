@@ -1,0 +1,181 @@
+Teammato – Stop duplicate subscriptions + ensure proration path
+Objectives
+
+After first Checkout success, don’t allow plan changes until the subscription is actually synced.
+
+If the DB is briefly stale, ask Stripe directly before deciding whether to create a new sub or change the existing one.
+
+Always route existing subscribers to change-plan (Subscriptions API with proration) or Customer Portal, never to Checkout.
+
+1) Server helper: source-of-truth subscription state
+
+File: server/lib/billing.ts (new) or inside server/routes.ts
+
+export async function resolveOrgSubscriptionState(stripe, storage, org) {
+  // Fast path: DB knows the sub id
+  if (org?.stripeSubscriptionId) return { hasSubscription: true, subId: org.stripeSubscriptionId };
+
+  // If we have a customer in Stripe, confirm directly with Stripe (handles webhook lag)
+  if (org?.stripeCustomerId) {
+    const subs = await stripe.subscriptions.list({
+      customer: org.stripeCustomerId,
+      status: 'all',
+      limit: 10,
+      expand: ['data.items'],
+    });
+    const current = subs.data.find(s => s.status !== 'canceled');
+    if (current) {
+      // Heal the DB
+      await storage.updateOrg(org.id, { stripeSubscriptionId: current.id });
+      return { hasSubscription: true, subId: current.id, healed: true };
+    }
+  }
+  return { hasSubscription: false, subId: null };
+}
+
+2) Harden /api/billing/status (used by Admin Billing page)
+
+Make the endpoint call resolveOrgSubscriptionState(...) so the UI sees accurate hasSubscription even if the webhook hasn’t fired yet.
+
+app.get('/api/billing/status', requireAuth, async (req, res) => {
+  const org = await storage.getOrg(req.user.orgId);
+  const { hasSubscription, subId } = await resolveOrgSubscriptionState(stripe, storage, org);
+  res.json({
+    hasSubscription,
+    subscriptionId: subId,
+    // …include seatCap, billingStatus, trialEnd, etc.
+  });
+});
+
+3) Guard /api/billing/checkout (NO new subs if one exists)
+app.post('/api/billing/checkout', requireRole('owner'), async (req, res) => {
+  const org = await storage.getOrg(req.user.orgId);
+  const { hasSubscription } = await resolveOrgSubscriptionState(stripe, storage, org);
+
+  if (hasSubscription) {
+    return res.status(409).json({
+      error: 'SUB_EXISTS',
+      message: 'Subscription already exists. Use change-plan instead.',
+    });
+  }
+
+  // … proceed to create Checkout for FIRST subscription only (trial start / charge today)
+});
+
+
+This stops the duplicate “full charge” scenario even if the UI misroutes.
+
+4) Ensure plan changes use Subscriptions API (proration)
+
+(If not done already.)
+
+app.post('/api/billing/change-plan', requireRole('owner'), async (req, res) => {
+  const { priceLookupKey } = req.body;
+  const org = await storage.getOrg(req.user.orgId);
+  const { hasSubscription, subId } = await resolveOrgSubscriptionState(stripe, storage, org);
+  if (!hasSubscription) return res.status(400).json({ error: 'NO_SUB', message: 'Start a subscription first.' });
+
+  const prices = await stripe.prices.list({ lookup_keys: [priceLookupKey], expand: ['data.product'] });
+  const newPrice = prices.data?.[0];
+  if (!newPrice) return res.status(400).json({ error: 'BAD_PRICE' });
+
+  const sub = await stripe.subscriptions.retrieve(subId, { expand: ['items'] });
+  const item = sub.items.data?.[0];
+  if (!item) return res.status(400).json({ error: 'NO_ITEM' });
+
+  const updated = await stripe.subscriptions.update(sub.id, {
+    items: [{ id: item.id, price: newPrice.id }],
+    proration_behavior: 'create_prorations',
+    billing_cycle_anchor: 'unchanged',
+    payment_behavior: 'allow_incomplete',
+    metadata: { org_id: org.id },
+  });
+
+  res.json({ subscriptionId: updated.id, status: updated.status });
+});
+
+5) Client: post-Checkout polling gate (simple & reliable)
+
+File: client/src/pages/admin/Billing.tsx
+
+After returning from Checkout (e.g., /admin/billing?success=1), poll /api/billing/status every 1s up to 30s until hasSubscription === true.
+
+While polling, disable plan buttons and show: “Confirming subscription…”.
+
+Pseudo:
+
+async function waitForSubscription() {
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    const s = await api.get('/api/billing/status');
+    if (s.data.hasSubscription) return true;
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  return false;
+}
+
+useEffect(() => {
+  if (qs.success === '1') {
+    setBlocking(true);
+    waitForSubscription().finally(() => setBlocking(false));
+  }
+}, [qs.success]);
+
+
+In handleSelectPlan(cap):
+
+If billing.hasSubscription === false, call /api/billing/checkout.
+
+If true, call /api/billing/change-plan.
+
+Combined with the server guard, this removes the race entirely.
+
+6) Customer Portal routing
+
+Button should call your existing /api/billing/portal.
+
+Ensure you pass your Portal config id and a sane return_url (e.g., /admin/billing).
+
+If user already has a subscription and clicks “Manage Billing” anywhere (including /pricing), open Portal, don’t start Checkout.
+
+7) /pricing routing guard
+
+If session indicates hasSubscription === true, clicking any plan on /pricing should navigate to /admin/billing (or call /api/billing/change-plan directly).
+
+Do not initiate Slack OAuth or Checkout for logged-in subscribers.
+
+8) QA script (Test mode)
+
+New org → start 250 via Checkout → return to /admin/billing?success=1
+
+See “Confirming subscription…” for up to a few seconds.
+
+Buttons enable once hasSubscription flips true.
+
+Upgrade 250→500 (Admin)
+
+Calls /api/billing/change-plan → proration line on invoice; no full $149.
+
+Renewal date unchanged.
+
+Downgrade 500→250
+
+/api/billing/change-plan → negative proration/credit on next invoice; no immediate $99.
+
+Click Manage Billing
+
+Opens Portal (no error). Switching plans there also shows prorations.
+
+From /pricing while logged in with a sub
+
+“Upgrade” navigates to /admin/billing (no OAuth, no Checkout).
+
+Try to force /api/billing/checkout after you have a sub
+
+Expect 409 SUB_EXISTS response.
+
+9) (Optional) Clean test duplicates
+
+Write a small admin script to cancel older active subs for the same customer and keep the newest; persist its id into org.stripeSubscriptionId.
+
+This gives you: UI that waits politely, server that refuses duplicates, and a single proration-correct path for plan changes.
