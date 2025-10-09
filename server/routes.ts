@@ -2907,13 +2907,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
               return res.redirect('/post-install?error=session_error');
             }
             
-            // If a plan was selected, redirect to Stripe checkout
-            if (selectedPlan) {
-              return res.redirect(`/billing/checkout-redirect?plan=${selectedPlan}`);
+            // New install: Enforce checkout flow
+            if (!existingTeam) {
+              if (selectedPlan) {
+                // Plan provided - proceed to checkout
+                return res.redirect(`/billing/checkout-redirect?plan=${selectedPlan}`);
+              } else {
+                // No plan - redirect to pricing for selection
+                return res.redirect(`/pricing?new_install=true`);
+              }
             }
             
-            // Otherwise redirect to admin dashboard (for existing users reinstalling)
-            res.redirect(`/admin/get-started`);
+            // Reinstall: Go to post-install to handle subscription check
+            res.redirect(`/post-install`);
           });
         });
       } else {
