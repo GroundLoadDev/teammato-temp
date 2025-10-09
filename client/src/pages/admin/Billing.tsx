@@ -55,6 +55,7 @@ export default function Billing() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const [chargeToday, setChargeToday] = useState(false);
+  const [isPolling, setIsPolling] = useState(false);
 
   const { data: authData } = useQuery<{ user: { id: string; email: string; role: string } }>({
     queryKey: ['/api/auth/me'],
@@ -66,13 +67,39 @@ export default function Billing() {
   
   const isOwner = authData?.user?.role === 'owner';
 
+  // Polling function to wait for subscription sync after checkout
+  const waitForSubscription = async () => {
+    const deadline = Date.now() + 30_000; // 30 second timeout
+    while (Date.now() < deadline) {
+      const status = await refetch();
+      if (status.data?.hasSubscription) {
+        return true;
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Poll every 1 second
+    }
+    return false;
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     
     // Handle success callback from Stripe
     if (params.get('success') === '1') {
       setShowSuccessBanner(true);
-      refetch();
+      setIsPolling(true);
+      
+      // Poll until subscription is synced
+      waitForSubscription().then((synced) => {
+        setIsPolling(false);
+        if (!synced) {
+          toast({
+            title: "Subscription confirmation delayed",
+            description: "Your subscription is being confirmed. Please refresh the page in a moment.",
+            variant: "default",
+          });
+        }
+      });
+      
       window.history.replaceState({}, '', '/admin/billing');
       return;
     }
@@ -279,7 +306,7 @@ export default function Billing() {
         <Alert className="bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900" data-testid="alert-success">
           <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
           <AlertDescription className="text-emerald-800 dark:text-emerald-200">
-            Your subscription has been successfully updated!
+            {isPolling ? 'Confirming subscription...' : 'Your subscription has been successfully updated!'}
           </AlertDescription>
         </Alert>
       )}
@@ -477,11 +504,12 @@ export default function Billing() {
                       variant={isPopular ? 'default' : 'outline'}
                       className="w-full"
                       onClick={() => handleSelectPlan(plan.cap)}
-                      disabled={!isOwner}
+                      disabled={!isOwner || isPolling}
                       data-testid={`button-select-${plan.cap}`}
                     >
                       {!isOwner && <Lock className="w-4 h-4 mr-2" />}
-                      {isTrialing && plan.cap === billing.seatCap ? 'Subscribe' : 
+                      {isPolling ? 'Confirming subscription...' : 
+                       isTrialing && plan.cap === billing.seatCap ? 'Subscribe' : 
                        plan.cap > billing.seatCap ? 'Upgrade' : 'Switch Plan'}
                     </Button>
                   )}
