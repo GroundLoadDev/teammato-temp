@@ -514,6 +514,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         eligibleCount,
         percent,
         customerEmail,
+        hasSubscription: !!org.stripeSubscriptionId,
         invoices,
         audience: {
           mode: audienceMode,

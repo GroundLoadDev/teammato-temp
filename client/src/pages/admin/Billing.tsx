@@ -24,6 +24,7 @@ interface BillingStatus {
   eligibleCount: number;
   percent: number;
   customerEmail: string | null;
+  hasSubscription: boolean;
   invoices: Array<{
     id: string;
     number: string;
@@ -80,12 +81,18 @@ export default function Billing() {
     const action = params.get('action');
     const price = params.get('price');
     
-    if (action === 'start_trial' && price && isOwner) {
-      // Auto-trigger checkout with specified price
-      checkoutMutation.mutate({ priceLookupKey: price });
+    if (action === 'start_trial' && price && isOwner && billing) {
+      // Route based on subscription state
+      if (billing.hasSubscription) {
+        // Existing subscriber: update plan with proration
+        changePlanMutation.mutate({ priceLookupKey: price });
+      } else {
+        // New subscriber: use Checkout (first subscription)
+        checkoutMutation.mutate({ priceLookupKey: price });
+      }
       window.history.replaceState({}, '', '/admin/billing');
     }
-  }, [refetch, isOwner]);
+  }, [refetch, isOwner, billing]);
 
   const checkoutMutation = useMutation({
     mutationFn: async ({ priceLookupKey, chargeToday }: { priceLookupKey: string; chargeToday?: boolean }) => {
@@ -125,6 +132,41 @@ export default function Billing() {
       } else if (errorMessage.includes('subscription') || errorMessage.includes('already')) {
         title = "Existing subscription";
         description = "You already have an active subscription. Use the billing portal to make changes.";
+      }
+      
+      toast({
+        variant: "destructive",
+        title,
+        description,
+      });
+    },
+  });
+
+  const changePlanMutation = useMutation({
+    mutationFn: async ({ priceLookupKey }: { priceLookupKey: string }) => {
+      const result = await apiRequest('POST', '/api/billing/change-plan', { priceLookupKey });
+      return await result.json() as { subscriptionId: string; status: string };
+    },
+    onSuccess: () => {
+      toast({
+        title: "Plan updated",
+        description: "Your subscription has been updated with proration applied.",
+      });
+      setShowUpgradeModal(false);
+      refetch();
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.message || '';
+      
+      let title = "Plan change failed";
+      let description = "Unable to update your plan. Please try again.";
+      
+      if (errorMessage.includes('usage') || errorMessage.includes('downgrade')) {
+        title = "Cannot downgrade";
+        description = "You cannot downgrade below your current usage. Please reduce your audience size first.";
+      } else if (errorMessage.includes('subscription') || errorMessage.includes('checkout')) {
+        title = "No active subscription";
+        description = "Please start a subscription first.";
       }
       
       toast({
@@ -202,7 +244,15 @@ export default function Billing() {
     if (!plan) return;
     
     const lookupKey = billingPeriod === 'monthly' ? plan.monthlyLookup : plan.annualLookup;
-    checkoutMutation.mutate({ priceLookupKey: lookupKey, chargeToday });
+    
+    // Route based on subscription state
+    if (billing.hasSubscription) {
+      // Existing subscriber: update subscription with proration
+      changePlanMutation.mutate({ priceLookupKey: lookupKey });
+    } else {
+      // New subscriber: use Checkout (first subscription)
+      checkoutMutation.mutate({ priceLookupKey: lookupKey, chargeToday });
+    }
   };
 
   const selectedPlanData = selectedPlan ? billing.prices.find(p => p.cap === selectedPlan) : null;
