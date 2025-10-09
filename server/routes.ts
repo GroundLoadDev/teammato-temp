@@ -548,10 +548,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Organization not found' });
       }
 
-      // Guard: block existing subscribers from creating duplicate subscriptions
-      if (org.stripeSubscriptionId) {
-        return res.status(400).json({ 
-          error: 'Subscription exists. Use /api/billing/change-plan to update your plan.' 
+      // Guard: block existing subscribers (checks DB + Stripe to handle webhook lag)
+      const { hasSubscription } = await resolveOrgSubscriptionState(stripe, storage, org);
+      if (hasSubscription) {
+        return res.status(409).json({ 
+          error: 'SUB_EXISTS',
+          message: 'Subscription already exists. Use /api/billing/change-plan to update your plan.' 
         });
       }
 
@@ -682,9 +684,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Organization not found' });
       }
 
-      if (!org.stripeSubscriptionId) {
+      // Resolve subscription state (handles webhook lag)
+      const { hasSubscription, subId } = await resolveOrgSubscriptionState(stripe, storage, org);
+      if (!hasSubscription) {
         return res.status(400).json({
-          error: 'No active subscription. Use /api/billing/checkout to start one.'
+          error: 'NO_SUB',
+          message: 'No active subscription. Use /api/billing/checkout to start one.'
         });
       }
 
@@ -724,7 +729,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Fetch current subscription & primary item
-      const sub = await stripe.subscriptions.retrieve(org.stripeSubscriptionId, {
+      const sub = await stripe.subscriptions.retrieve(subId!, {
         expand: ['items']
       });
       
