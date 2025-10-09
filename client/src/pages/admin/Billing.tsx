@@ -25,6 +25,7 @@ interface BillingStatus {
   percent: number;
   customerEmail: string | null;
   hasSubscription: boolean;
+  subscriptionId: string | null;
   invoices: Array<{
     id: string;
     number: string;
