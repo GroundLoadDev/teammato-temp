@@ -3248,14 +3248,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let user;
       let userAlreadyExisted = false;
 
+      console.log('[OAuth Debug] Team ID:', team.id);
+      console.log('[OAuth Debug] Authed User ID:', authed_user.id);
+      console.log('[OAuth Debug] Existing Team:', existingTeam ? 'Found' : 'Not Found');
+
       if (existingTeam) {
         // Reinstall: update access token
         await storage.updateSlackTeamToken(team.id, access_token);
         orgId = existingTeam.orgId;
         
+        console.log('[OAuth Debug] Org ID:', orgId);
+        
         // Get or create user
         let existingUser = await storage.getUserBySlackId(authed_user.id, existingTeam.orgId);
         userAlreadyExisted = existingUser !== null;
+        
+        console.log('[OAuth Debug] Existing User:', existingUser ? 'Found' : 'Not Found');
+        console.log('[OAuth Debug] userAlreadyExisted:', userAlreadyExisted);
         
         if (!existingUser && installerEmail) {
           // New user in existing org - create as admin
@@ -3266,6 +3275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             role: 'admin',
             profile: installerProfile,
           });
+          console.log('[OAuth Debug] Created new user in existing org');
         }
         
         user = existingUser;
@@ -3351,6 +3361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // New install: Enforce checkout flow
             if (!existingTeam) {
+              console.log('[OAuth Debug] Redirect: New install -> pricing/checkout');
               if (selectedPlan) {
                 // Plan provided - proceed to checkout
                 return res.redirect(`/billing/checkout-redirect?plan=${selectedPlan}`);
@@ -3361,11 +3372,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             
             // Existing team - check if user already existed
+            console.log('[OAuth Debug] Existing team - userAlreadyExisted:', userAlreadyExisted);
             if (userAlreadyExisted) {
               // User sign-in: redirect to dashboard
+              console.log('[OAuth Debug] Redirect: Existing user -> /admin/dashboard');
               return res.redirect('/admin/dashboard');
             } else {
               // New user in existing org (reinstall): check subscription status
+              console.log('[OAuth Debug] Redirect: New user in existing org -> /post-install');
               return res.redirect('/post-install');
             }
           });
