@@ -60,6 +60,7 @@ export interface IStorage {
   
   // Topics
   getTopics(orgId: string): Promise<Topic[]>;
+  getActiveTopics(orgId: string): Promise<Topic[]>;
   getCategorizedTopics(orgId: string): Promise<{
     created: Topic[];
     instances: Topic[];
@@ -354,6 +355,15 @@ export class PgStorage implements IStorage {
   // Topics
   async getTopics(orgId: string): Promise<Topic[]> {
     return await db.select().from(topics).where(eq(topics.orgId, orgId)).orderBy(desc(topics.createdAt));
+  }
+
+  async getActiveTopics(orgId: string): Promise<Topic[]> {
+    return await db.select().from(topics)
+      .where(and(
+        eq(topics.orgId, orgId),
+        eq(topics.isActive, true)
+      ))
+      .orderBy(desc(topics.createdAt));
   }
 
   async getCategorizedTopics(orgId: string): Promise<{
@@ -753,6 +763,7 @@ export class PgStorage implements IStorage {
     const result = await db.select({
       id: feedbackThreads.id,
       orgId: feedbackThreads.orgId,
+      workspaceId: feedbackThreads.workspaceId,
       topicId: feedbackThreads.topicId,
       title: feedbackThreads.title,
       status: feedbackThreads.status,

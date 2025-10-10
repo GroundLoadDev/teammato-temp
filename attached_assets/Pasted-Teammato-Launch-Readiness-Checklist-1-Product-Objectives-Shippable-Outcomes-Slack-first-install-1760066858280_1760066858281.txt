@@ -1,0 +1,132 @@
+Teammato Launch Readiness Checklist
+1) Product Objectives → Shippable Outcomes
+
+ Slack-first install is the primary CTA; web is admin/analytics.
+
+ Anonymous posting & k-anonymity are enforced across threads/comments, analytics, exports.
+
+ Weekly digests run reliably (cron + “Send Sample Now”).
+
+ Self-serve pricing: 14-day trial → paywall; Pro $99/mo or $999/yr; Scale bands auto-enforced by seat caps.
+
+ Low-touch ops: email support only, no SLAs, no on-prem.
+
+2) Environments & Secrets (Test ↔ Live)
+
+ APP_ENV and VITE_PUBLIC_APP_ENV aligned (test/live banners visible).
+
+ Slack (client ID/secret/signing secret/redirect) configured for both apps (Test & Live).
+
+ Stripe keys & webhook secrets set for test/live; live webhook endpoint verified.
+
+ No secrets leak to client bundle (checked).
+
+3) Slack Install, Commands, Events
+
+ OAuth flow completes → creates/maps org + Slack team; redirects to /post-install with welcome message.
+
+ Slash command verifies HMAC; acks <2s; never logs plaintext.
+
+ Events: url_verification handled; on app_uninstalled → redact token, disable digests, audit log.
+
+ Post-install UI: choose channel, “send sample,” show /teammato help|about.
+
+4) Billing, Pricing, Trial, Seat Caps
+
+ Stripe prices exist for Pro (monthly/annual) and Scale bands (500/1k/2.5k/5k; monthly/annual).
+
+ Checkout/Portal endpoints working; webhook updates plan_tier, seat_cap, term in orgs.settings.
+
+ Trial logic: 14-day timer; D12 & D14 nudges (Slack DM + email); read-only on expiry until upgrade.
+
+ Automated seat counting from Slack; store member_count; warn at 90%, grace to 110% for 7 days, then block new posts.
+
+ Admin Billing UI shows plan, term, usage meter, trial chip, over-cap/read-only banners.
+
+5) Data Model, RLS, and Security
+
+ Core tables present (orgs, users, threads, comments, reactions, Slack tables, analytics, moderation).
+
+ End-to-end encryption-at-rest for content (ciphertext + nonce); no plaintext logs.
+
+ RLS isolates by org_id; secure views (v_threads, v_comments, etc.) enforce k-anonymity.
+
+ Structured logging via shared logger with redaction; no PII or tokens in logs.
+
+6) Admin & Analytics
+
+ /admin/* guarded by JWT org_id & role; session refresh after org changes/OAuth.
+
+ Analytics dashboard renders with k-anonymity gating; daily aggregates job healthy.
+
+ Export admin returns signed URL (no ciphertext fields).
+
+7) Retention, Legal, Deletion, Export
+
+ Retention controls visible; retention_purge_cron respects legal_hold.
+
+ Two-step org deletion flow works; cascades Slack rows → content → users → org.
+
+ Trust/Privacy/Terms pages live; sitemap/robots good.
+
+8) Marketing Site & Pricing Page
+
+ Pages: /, /pricing, /faq, /contact, /privacy, /trust, /terms complete with SEO meta.
+
+ Pricing page shows single product; feature parity; seat-cap bands; annual toggle “Save 2 months.”
+
+9) Operational Runbooks
+
+ Health check endpoint returns OK with Slack/Stripe checks.
+
+ On-call basics: how to rotate keys, redeploy functions, view logs, pause digests.
+
+ Support: email-only policy documented; escalation limited to outages.
+
+10) Manual QA (Happy Paths + Edge Cases)
+
+ Install flow (Test): Add to Slack → /slack/oauth → /post-install → welcome message appears.
+
+ Slash command: /teammato help|about, create thread; no plaintext in logs.
+
+ Digest: “Send Sample Now” works; scheduled weekly digest posts.
+
+ Uninstall: App removed → tokens redacted; digests disabled; audit written.
+
+ Billing: Trial start/expiry, monthly & annual checkout; webhook sets plan & cap; over-cap grace then block.
+
+ Exports & retention: Export excludes ciphertext; purge respects retention_days/legal_hold.
+
+ Env labeling: Test banner in test; none in live; wrong redirect URIs rejected.
+
+11) Live Cutover Plan
+
+ Duplicate Slack app to Live; set live redirect/command/events URLs; verify OAuth.
+
+ Flip APP_ENV + public env to live; rebuild frontend; deploy Edge; confirm banners & IDs.
+
+ Create live Stripe prices (if not already); point webhooks to live endpoint; test $0 test card in live disabled.
+
+ Smoke test: install, post, digest, upgrade, uninstall (Live).
+
+12) Risk, Rollback, and Guardrails
+
+ Rollback notes for each function (previous deploy IDs, how to revert).
+
+ Feature flags for trial enforcement & over-cap block (quick disable path).
+
+ Stripe webhook idempotency verified; dead-letter strategy for failures.
+
+13) Assets & Content
+
+ Slack App Directory manifest + brand assets; /.well-known/slack/manifest.json routable.
+
+ In-product help copy (slash help, welcome message, trust explainer) finalized.
+
+ Pricing copy: simple/self-serve, identical features, seat caps vary, email support only.
+
+14) Ownership & Contacts
+
+ Owner/Admin bootstrap path documented (SQL or /no-org bootstrap).
+
+ Support & Security emails routed and monitored.
