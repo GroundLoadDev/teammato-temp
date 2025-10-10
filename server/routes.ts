@@ -609,7 +609,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Determine success/cancel URLs
       const baseUrl = process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'http://localhost:5000';
       const successUrl = `${baseUrl}/admin/billing?success=1`;
-      const cancelUrl = `${baseUrl}/admin/billing?canceled=1`;
+      const cancelUrl = `${baseUrl}/post-install`; // Send to post-install on cancel
 
       // Calculate trial_end based on org state
       let trialEnd: number | 'now' | undefined;
@@ -666,6 +666,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ url: session.url });
     } catch (error) {
       console.error('Checkout error:', error);
+      res.status(500).json({ error: 'Failed to create checkout session' });
+    }
+  });
+
+  // Billing API - Idempotent Checkout/Ensure (Owner only)
+  app.post('/api/billing/checkout/ensure', requireRole('owner'), async (req, res) => {
+    try {
+      if (!stripe) {
+        return res.status(503).json({ error: 'Stripe not configured' });
+      }
+
+      const orgId = req.session.orgId!;
+      const org = await storage.getOrg(orgId);
+      
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+
+      // Guard: block existing subscribers
+      const { hasSubscription } = await resolveOrgSubscriptionState(stripe, storage, org);
+      if (hasSubscription) {
+        return res.status(409).json({ 
+          error: 'SUB_EXISTS',
+          message: 'Subscription already exists. Use /api/billing/change-plan to update your plan.' 
+        });
+      }
+
+      const { priceLookupKey } = req.body;
+      if (!priceLookupKey) {
+        return res.status(400).json({ error: 'priceLookupKey required' });
+      }
+
+      // Check if there's an open checkout session
+      if (org.checkoutSessionId && org.checkoutStatus === 'open') {
+        try {
+          // Verify session still exists and is valid in Stripe
+          const existingSession = await stripe.checkout.sessions.retrieve(org.checkoutSessionId);
+          
+          if (existingSession.status === 'open' && existingSession.url) {
+            // Reuse existing session
+            console.log(`[Checkout/Ensure] Reusing open session ${org.checkoutSessionId} for org ${orgId}`);
+            return res.json({ url: existingSession.url, reused: true });
+          } else {
+            // Session expired or completed, mark as expired
+            await storage.updateOrg(orgId, { checkoutStatus: 'expired' });
+          }
+        } catch (error: any) {
+          // Session not found in Stripe, mark as expired
+          if (error.code === 'resource_missing') {
+            await storage.updateOrg(orgId, { checkoutStatus: 'expired' });
+          } else {
+            throw error;
+          }
+        }
+      }
+
+      // Create new checkout session (same logic as /api/billing/checkout)
+      let customerId = org.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: org.billingEmail || undefined,
+          metadata: { org_id: orgId },
+        });
+        customerId = customer.id;
+        await storage.updateOrg(orgId, { stripeCustomerId: customerId });
+      }
+
+      const prices = await stripe.prices.list({
+        lookup_keys: [priceLookupKey],
+        expand: ['data.product'],
+      });
+
+      if (prices.data.length === 0) {
+        return res.status(404).json({ error: 'Price not found' });
+      }
+
+      const priceId = prices.data[0].id;
+      
+      const baseUrl = process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'http://localhost:5000';
+      const successUrl = `${baseUrl}/admin/billing?success=1`;
+      const cancelUrl = `${baseUrl}/post-install`; // Send to post-install on cancel
+
+      // Calculate trial_end
+      let trialEnd: number | undefined;
+      const hasUsedTrial = org.trialEnd && org.trialEnd.getTime() < Date.now();
+      
+      if (!hasUsedTrial && !org.stripeSubscriptionId) {
+        const trialEndDate = new Date();
+        trialEndDate.setDate(trialEndDate.getDate() + 14);
+        trialEnd = Math.floor(trialEndDate.getTime() / 1000);
+      }
+
+      const sessionConfig: any = {
+        mode: 'subscription',
+        customer: customerId,
+        line_items: [{ price: priceId, quantity: 1 }],
+        allow_promotion_codes: true,
+        payment_method_collection: 'always',
+        subscription_data: {
+          trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },
+          metadata: { org_id: orgId },
+        },
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+      };
+
+      if (trialEnd !== undefined) {
+        sessionConfig.subscription_data.trial_end = trialEnd;
+      }
+
+      const session = await stripe.checkout.sessions.create(sessionConfig);
+
+      // Store session info in DB
+      await storage.updateOrg(orgId, { 
+        checkoutSessionId: session.id,
+        checkoutStatus: 'open'
+      });
+
+      await storage.trackEvent({
+        orgId,
+        eventType: 'trial_checkout_opened',
+        userId: req.session.userId || null,
+        metadata: { priceLookupKey, idempotent: true },
+      });
+
+      console.log(`[Checkout/Ensure] Created new session ${session.id} for org ${orgId}`);
+      res.json({ url: session.url, reused: false });
+    } catch (error) {
+      console.error('Checkout/Ensure error:', error);
       res.status(500).json({ error: 'Failed to create checkout session' });
     }
   });
