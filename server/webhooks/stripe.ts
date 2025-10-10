@@ -121,21 +121,20 @@ async function handleCheckoutCompleted(
     return;
   }
 
-  // Fetch full subscription details
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
-    expand: ['items.data.price.product']
+  // Mark checkout as completed (don't activate trial yet - wait for subscription webhook)
+  await storage.updateOrg(org.id, { 
+    checkoutStatus: 'completed',
+    checkoutSessionId: session.id
   });
-
-  await syncSubscriptionToOrg(org.id, subscription, storage);
   
   // Track event
   await storage.trackEvent({
     orgId: org.id,
     eventType: 'trial_checkout_completed',
-    metadata: { subscriptionId, customerId },
+    metadata: { subscriptionId, customerId, sessionId: session.id },
   });
   
-  console.log(`Checkout completed for org ${org.id}`);
+  console.log(`Checkout session completed for org ${org.id}, waiting for subscription webhook`);
 }
 
 async function handleSubscriptionUpdate(
