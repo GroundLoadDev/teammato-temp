@@ -1,0 +1,552 @@
+Replit Prompt — Apply V2 “Review Before Send” Slack Modal
+
+Summary of changes
+
+NEW robust scrubbing (scrubPII + highlights) for review (replace, don’t block)
+
+NEW quote prep (coarsening) for digest/leader view
+
+NEW Block Kit builders for Modal A and Modal B
+
+UPDATED modal submit route to response_action: "push" the Review view
+
+UPDATED final “Send” handler: encrypt + store, optional channel post (feature flag), DM receipt
+
+Uses topics.kThreshold and the pre-selected topic from private_metadata (as you do today)
+
+1) server/utils/scrub.ts — NEW (robust scrub + highlighting)
+// server/utils/scrub.ts  (NEW)
+export type ScrubResult = {
+  scrubbed: string;
+  issues: Array<{ kind: string; value: string }>;
+};
+
+const REDACT = {
+  email: "[email]",
+  phone: "[phone]",
+  id: "[id]",
+  link: "[link]",
+  card: "[card]",
+  ip: "[ip]",
+  at: "[@redacted]",
+  channel: "[channel]",
+  group: "[@group]",
+};
+
+function luhnCheck(s: string) {
+  const digits = s.replace(/\D/g, "");
+  if (digits.length < 13) return false;
+  let sum = 0, dbl = false;
+  for (let i = digits.length - 1; i >= 0; i--) {
+    let d = parseInt(digits[i], 10);
+    if (dbl) { d *= 2; if (d > 9) d -= 9; }
+    sum += d; dbl = !dbl;
+  }
+  return sum % 10 === 0;
+}
+
+/**
+ * Scrub personally identifying tokens for REVIEW (replace, don't reject).
+ * NOTE: This is separate from your existing validator; keep validator for hard-blocks if desired.
+ */
+export function scrubPIIForReview(text: string): ScrubResult {
+  if (!text) return { scrubbed: "", issues: [] };
+  const issues: ScrubResult["issues"] = [];
+  let t = text;
+
+  // Normalize common obfuscations to catch them
+  t = t
+    .replace(/\[(at|dot)\]/gi, (m) => m.toLowerCase() === "[at]" ? "@" : ".")
+    .replace(/\s+at\s+/gi, "@")
+    .replace(/\s+dot\s+/gi, ".");
+
+  // Slack mentions/groups/channels
+  t = t.replace(/<@U[A-Z0-9]+>/g, (m) => { issues.push({ kind: "at", value: m }); return REDACT.at; });
+  t = t.replace(/<!subteam\^S[A-Z0-9]+(?:\|[^>]+)?>/g, (m) => { issues.push({ kind: "group", value: m }); return REDACT.group; });
+  t = t.replace(/<#C[A-Z0-9]+(?:\|[^>]+)?>/g, (m) => { issues.push({ kind: "channel", value: m }); return REDACT.channel; });
+
+  // Emails
+  t = t.replace(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi, (m) => { issues.push({ kind: "email", value: m }); return REDACT.email; });
+
+  // Generic @handles (non-Slack)
+  t = t.replace(/(^|\s)@([A-Za-z0-9_.-]+)/g, (m) => { issues.push({ kind: "at", value: m.trim() }); return " " + REDACT.at; });
+
+  // Phones (broad)
+  t = t.replace(/\+?\d[\d\s().-]{7,}\d/g, (m) => { issues.push({ kind: "phone", value: m }); return REDACT.phone; });
+
+  // Potential credit cards via Luhn
+  t = t.replace(/\b(?:\d[ -]*?){13,19}\b/g, (m) => {
+    if (luhnCheck(m)) { issues.push({ kind: "card", value: m }); return REDACT.card; }
+    return m;
+  });
+
+  // IDs (6–10 digits)
+  t = t.replace(/\b\d{6,10}\b/g, (m) => { issues.push({ kind: "id", value: m }); return REDACT.id; });
+
+  // URLs
+  t = t.replace(/https?:\/\/\S+/gi, (m) => { issues.push({ kind: "link", value: m }); return REDACT.link; });
+
+  // IPv4
+  t = t.replace(/\b(\d{1,3}\.){3}\d{1,3}\b/g, (m) => { issues.push({ kind: "ip", value: m }); return REDACT.ip; });
+
+  return { scrubbed: t, issues };
+}
+
+/** Optional: simple HTML-mark highlight for REVIEW modal (not stored). */
+export function highlightRedactions(scrubbed: string) {
+  return scrubbed.replace(
+    /\[(email|phone|id|link|card|ip|@redacted|channel|@group)\]/g,
+    (m) => `\`${m}\`` // renders as inline code in Slack mrkdwn
+  );
+}
+
+2) server/utils/quotePrep.ts — NEW (coarsen for “what leaders might see”)
+// server/utils/quotePrep.ts  (NEW)
+
+// Very light coarsening for review/quote preview.
+// - Normalize explicit dates/times ("Tuesday 3:15pm" -> "earlier this week")
+// - Remove precise numbers > 3 digits ("12345" -> "xx,xxx")
+// - Keep gist; enforce max length
+export function prepQuoteForDigest(input: string, maxLen = 240): string {
+  if (!input) return "";
+  let s = input;
+
+  // Dates & weekdays
+  s = s.replace(/\b(mon|tue|wed|thu|fri|sat|sun)\w*(day)?\b.*?\b(\d{1,2}:\d{2}\s*(am|pm)?)?/gi, "earlier this week");
+  s = s.replace(/\b(20\d{2}|19\d{2})[-/\.]\d{1,2}[-/\.]\d{1,2}\b/gi, "recently");
+
+  // Exact big numbers
+  s = s.replace(/\b\d{4,}\b/g, (m) => "≈" + m.replace(/\d/g, "x"));
+
+  // Collapse whitespace
+  s = s.replace(/\s+/g, " ").trim();
+
+  if (s.length > maxLen) s = s.slice(0, maxLen - 1) + "…";
+  return s;
+}
+
+3) server/utils/slackModal.ts — REPLACE (add V2 builders)
+// server/utils/slackModal.ts  (REPLACE with this minimal, backward-compatible API)
+import type { ScrubResult } from "./scrub.ts";
+
+// Modal A (input) → SBI (Situation/Behavior/Impact)
+// topic + org are pre-selected and passed via private_metadata (as you do today)
+export function buildInputModalA(opts: {
+  topicName: string;
+  topicId: string;
+  orgId: string;
+  prefill?: { situation?: string; behavior?: string; impact?: string };
+}) {
+  const pm = JSON.stringify({
+    orgId: opts.orgId,
+    topicId: opts.topicId,
+    topicName: opts.topicName,
+  });
+
+  return {
+    type: "modal",
+    callback_id: "teammato_input",
+    private_metadata: pm,
+    title: { type: "plain_text", text: "Share Feedback" },
+    submit: { type: "plain_text", text: "Review" },
+    close: { type: "plain_text", text: "Cancel" },
+    blocks: [
+      { type: "section", text: { type: "mrkdwn", text: `*Topic:* ${opts.topicName}` } },
+      { type: "divider" },
+      {
+        type: "input",
+        block_id: "situation_b",
+        element: { type: "plain_text_input", action_id: "situation", multiline: true, max_length: 300, initial_value: opts.prefill?.situation ?? "" },
+        label: { type: "plain_text", text: "Situation (optional)" },
+        optional: true,
+      },
+      {
+        type: "input",
+        block_id: "behavior_b",
+        element: { type: "plain_text_input", action_id: "behavior", multiline: true, max_length: 800, initial_value: opts.prefill?.behavior ?? "" },
+        label: { type: "plain_text", text: "Behavior (required)" },
+      },
+      {
+        type: "input",
+        block_id: "impact_b",
+        element: { type: "plain_text_input", action_id: "impact", multiline: true, max_length: 500, initial_value: opts.prefill?.impact ?? "" },
+        label: { type: "plain_text", text: "Impact (required)" },
+      },
+      { type: "context", elements: [{ type: "mrkdwn", text: "No names/emails/IDs/links. We’ll scrub what we find." }] },
+    ],
+  };
+}
+
+// Modal B (review) – show before/after, rewrite, and k-threshold rule.
+export function buildReviewModalB(opts: {
+  topicName: string;
+  topicId: string;
+  orgId: string;
+  k: number;
+  beforeText: string;                // concatenated SBI (raw)
+  scrub: ScrubResult;                // scrubbed + issues
+  scrubbedHighlighted: string;       // mrkdwn string (`[email]` etc highlighted with backticks)
+  rewrittenPreview: string;          // coarsened digest-ready one-liner
+  // we pass all data forward using private_metadata for "Send"
+}) {
+  const pm = JSON.stringify({
+    orgId: opts.orgId,
+    topicId: opts.topicId,
+    topicName: opts.topicName,
+    k: opts.k,
+    beforeText: opts.beforeText,
+    scrubbed: opts.scrub.scrubbed,
+    rewritten: opts.rewrittenPreview,
+  });
+
+  const issuesSummary =
+    opts.scrub.issues.length === 0
+      ? "No personal info detected."
+      : opts.scrub.issues
+          .slice(0, 6)
+          .map((i) => "`" + i.kind + "`")
+          .join(" • ") + (opts.scrub.issues.length > 6 ? " …" : "");
+
+  return {
+    type: "modal",
+    callback_id: "teammato_review_send",
+    private_metadata: pm,
+    title: { type: "plain_text", text: "Review & Confirm" },
+    submit: { type: "plain_text", text: "Send" },
+    close: { type: "plain_text", text: "Go back" }, // We'll handle "back" with response_action:"update"
+    blocks: [
+      { type: "section", text: { type: "mrkdwn", text: `*Topic:* ${opts.topicName}` } },
+      { type: "divider" },
+      { type: "section", text: { type: "mrkdwn", text: "*You wrote (S/B/I)*" } },
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: "```" + (opts.beforeText || "(empty)") + "```" },
+      },
+      { type: "section", text: { type: "mrkdwn", text: "*After scrubbing*" } },
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: opts.scrubbedHighlighted || "(nothing to show)" },
+      },
+      { type: "context", elements: [{ type: "mrkdwn", text: `Detected: ${issuesSummary}` }] },
+      { type: "divider" },
+      { type: "section", text: { type: "mrkdwn", text: "*What leaders might see in a digest (when safe)*" } },
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: `> ${opts.rewrittenPreview || "(no preview)"}` },
+      },
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: `Quotes only appear when at least *k=${opts.k}* teammates have similar feedback for this topic.`,
+          },
+        ],
+      },
+      {
+        type: "actions",
+        block_id: "review_actions",
+        elements: [
+          // Primary "Send" is provided by modal submit. We add an explicit Cancel as a secondary option.
+          { type: "button", text: { type: "plain_text", text: "Cancel" }, style: "danger", action_id: "cancel_review" },
+        ],
+      },
+    ],
+  };
+}
+
+4) server/routes.ts — PATCH (wire 2-step flow)
+
+Below are surgical inserts. Search for the indicated anchors and replace/add the shown blocks.
+
+4.1 Import the new helpers (top of file)
+// server/routes.ts  (ADD imports near other utils)
+import { scrubPIIForReview, highlightRedactions } from "./utils/scrub.ts";
+import { prepQuoteForDigest } from "./utils/quotePrep.ts";
+import { buildInputModalA, buildReviewModalB } from "./utils/slackModal.ts";
+
+4.2 Open Modal A from the existing command/shortcut
+
+Find your existing /api/slack/command handler. After you resolve orgId, topicId, topicName, build and open Modal A:
+
+// /api/slack/command handler — inside the case where you intend to open the modal
+const modalA = buildInputModalA({
+  topicName,
+  topicId,
+  orgId,
+  prefill: {}, // optional backfill
+});
+
+// respond with views.open via Web API as you already do, or whatever helper you use:
+await slackClient.views.open({
+  trigger_id: body.trigger_id,
+  view: modalA,
+});
+
+return res.status(200).send(); // ack immediately
+
+
+(If you already open a modal today, just replace the old view builder with buildInputModalA.)
+
+4.3 Handle view submissions → push Review (Modal B)
+
+Find your /api/slack/modal handler. You already handle view_submission with response_action: 'errors' or 'clear'. Insert this logic:
+
+// /api/slack/modal handler
+if (body.type === "view_submission") {
+  const view = body.view;
+  const pm = JSON.parse(view.private_metadata || "{}");
+
+  // A) From Modal A → push Review modal
+  if (view.callback_id === "teammato_input") {
+    // Extract fields (SBI)
+    const situation = view.state.values?.["situation_b"]?.["situation"]?.value?.trim() ?? "";
+    const behavior  = view.state.values?.["behavior_b"]?.["behavior"]?.value?.trim() ?? "";
+    const impact    = view.state.values?.["impact_b"]?.["impact"]?.value?.trim() ?? "";
+
+    // Validate like before (soft minimums)
+    const errors: Record<string, string> = {};
+    if (!behavior || behavior.length < 20) errors["behavior_b"] = "Please add at least a short description (≥ 20 chars).";
+    if (!impact || impact.length < 15) errors["impact_b"] = "Please add why it matters (≥ 15 chars).";
+    if (Object.keys(errors).length > 0) {
+      return res.json({ response_action: "errors", errors });
+    }
+
+    // Compose SBI
+    const beforeText = [
+      situation ? `Situation: ${situation}` : null,
+      behavior  ? `Behavior: ${behavior}` : null,
+      impact    ? `Impact: ${impact}` : null,
+    ].filter(Boolean).join("\n\n");
+
+    // SCRUB (replace, don't block)
+    const scrub = scrubPIIForReview(beforeText);
+    const scrubbedHighlighted = highlightRedactions(scrub.scrubbed);
+
+    // K from per-topic
+    const topicId = pm.topicId;
+    const topic = await storage.getTopicById(topicId); // your existing DAO
+    const k = topic?.kThreshold ?? 5;
+
+    // REWRITE preview (coarsen)
+    const rewrittenPreview = prepQuoteForDigest(scrub.scrubbed, 240);
+
+    // Build Modal B
+    const modalB = buildReviewModalB({
+      topicName: pm.topicName,
+      topicId,
+      orgId: pm.orgId,
+      k,
+      beforeText,
+      scrub,
+      scrubbedHighlighted,
+      rewrittenPreview,
+    });
+
+    // IMPORTANT: push view in the submission ACK
+    return res.json({
+      response_action: "push",
+      view: modalB,
+    });
+  }
+
+  // B) From Modal B submit (Send)
+  if (view.callback_id === "teammato_review_send") {
+    const pmB = JSON.parse(view.private_metadata || "{}");
+    const { orgId, topicId, beforeText, scrubbed, rewritten, k } = pmB;
+
+    // Finalize: encrypt + store the scrubbed content (not raw).
+    // Create / append to feedback thread for topic, per your current model.
+    const result = await storage.createFeedbackFromModal({
+      orgId,
+      topicId,
+      // Store SBI as separate columns if you prefer, or a single "content"
+      content: scrubbed, // post-scrub
+      raw: undefined,    // DO NOT STORE RAW
+      rewrittenPreview: rewritten,
+      userSlackId: body.user?.id, // only for DM receipt; do not persist to feedback row
+    });
+
+    // Optional: post to channel (feature flag)
+    const shouldPostToChannel = process.env.FEATURE_POST_TO_CHANNEL === "1";
+    if (shouldPostToChannel) {
+      const channel = result.thread.slackChannelId; // set by your topic->thread creation
+      await slackClient.chat.postMessage({
+        channel,
+        blocks: [
+          { type: "header", text: { type: "plain_text", text: `New anonymous feedback — ${pmB.topicName}` } },
+          { type: "section", text: { type: "mrkdwn", text: `> ${rewritten}` } },
+          { type: "context", elements: [{ type: "mrkdwn", text: `Quotes appear only when ≥ *k=${k}*` }] },
+        ],
+      });
+    }
+
+    // DM receipt (you already have sendContributionReceipt)
+    try {
+      await sendContributionReceipt({
+        slackUserId: body.user?.id,
+        topicName: pmB.topicName,
+        k,
+        receiptHash: result.receiptHash, // return from storage.createFeedbackFromModal
+      });
+    } catch (e) {
+      // swallow; don't fail UX
+    }
+
+    // Close the modal stack
+    return res.json({ response_action: "clear" });
+  }
+}
+
+4.4 Handle “Cancel” button in Modal B (optional)
+
+Still in /api/slack/modal:
+
+// Handle block_actions on the Review modal
+if (body.type === "block_actions") {
+  const action = body.actions?.[0];
+  if (action?.action_id === "cancel_review") {
+    // Close entire stack
+    return res.json({ response_action: "clear" });
+  }
+}
+
+4.5 Support “Go back” (update to Modal A with fields restored)
+
+Slack sends the X (close) click to your handler as view_closed (no interactive ack).
+For “Go back” we’re using the modal close control as a cue to “re-open” A populated.
+
+Add after the view_submission branch:
+
+if (body.type === "view_closed" && body.view?.callback_id === "teammato_review_send") {
+  const pmB = JSON.parse(body.view.private_metadata || "{}");
+  // Re-open Modal A with prefilled SBI parsed from beforeText
+  const { orgId, topicId, topicName, beforeText } = pmB;
+  const prefill = {
+    situation: (beforeText.match(/Situation:\s*([\s\S]*?)(\n\n|$)/)?.[1] ?? "").trim(),
+    behavior:  (beforeText.match(/Behavior:\s*([\s\S]*?)(\n\n|$)/)?.[1] ?? "").trim(),
+    impact:    (beforeText.match(/Impact:\s*([\s\S]*?)(\n\n|$)/)?.[1] ?? "").trim(),
+  };
+  const modalA = buildInputModalA({ orgId, topicId, topicName, prefill });
+  await slackClient.views.open({ trigger_id: body.trigger_id, view: modalA }).catch(()=>{});
+  return res.status(200).send(); // non-blocking
+}
+
+
+If you’d rather use response_action: "update" for “Go back” without a new trigger_id, you can: make the close button a secondary “Back” button inside actions, capture block_actions, and return { response_action: "update", view: buildInputModalA(...) }. Either approach is fine; above uses simple re-open for resilience.
+
+5) server/utils/slackMessaging.ts — PATCH (optional convenience)
+
+Make sure your sendContributionReceipt accepts k and topicName (you said it does). If not, extend it minimally:
+
+// server/utils/slackMessaging.ts  (PATCH if needed)
+export async function sendContributionReceipt(opts: {
+  slackUserId: string;
+  topicName: string;
+  k: number;
+  receiptHash: string;
+}) {
+  // existing implementation — ensure message includes:
+  // - topic name
+  // - “Quotes only appear when ≥ k”
+  // - receipt hash + anti-retaliation note
+}
+
+6) storage.createFeedbackFromModal — PATCH (use scrubbed text)
+
+If you don’t have this exact helper, adapt the one you use in modal submit. Core rule:
+
+Store only scrubbed text (encrypt at rest using your encryptFeedbackFields)
+
+Never persist raw SBI
+
+Bind thread/topic/channel as you currently do
+
+// server/storage/feedback.ts  (NEW or PATCH)
+export async function createFeedbackFromModal(args: {
+  orgId: string;
+  topicId: string;
+  content: string;          // scrubbed text (S+B+I)
+  rewrittenPreview?: string;
+  userSlackId?: string;     // DM receipt only
+}) {
+  // 1) create or fetch open thread for topic
+  const thread = await ensureOpenThreadForTopic(args.topicId);
+
+  // 2) encrypt and insert feedback item
+  const enc = await encryptFeedbackFields({
+    content: args.content,
+    behavior: null, // optional if you store SBI split; content is enough here
+    impact: null,
+    orgId: args.orgId,
+  });
+
+  const item = await db.insert("feedback_items", {
+    org_id: args.orgId,
+    thread_id: thread.id,
+    content_ct: enc.contentCt,
+    nonce: enc.nonce,
+    aad_hash: enc.aadHash,
+    // other cols...
+  });
+
+  // 3) bump participant counts etc. (your existing logic)
+  await maybeUpdateThreadStats(thread.id);
+
+  const receiptHash = makeReceiptHash(item.id, thread.id);
+
+  return { item, thread, receiptHash };
+}
+
+7) Feature flag (optional posting)
+
+In your environment:
+
+# .env
+FEATURE_POST_TO_CHANNEL=0  # set to 1 to enable posting anonymized summary to the topic channel
+
+✅ Behavior you’ll get after this patch
+
+Install/usage stays identical: users click your “Submit Feedback” in App Home (topic pre-selected), or use /teammato if you expose it.
+
+Modal A: SBI inputs, same limits.
+
+Submit: server scrubs (replaces; does not block), coarsens quote preview, loads k from the topic, then pushes Modal B.
+
+Modal B (Review & Confirm) shows:
+
+You wrote (S/B/I concatenated)
+
+After scrubbing with obvious inline code backticks on placeholders
+
+What leaders might see (coarsened preview)
+
+Quotes only appear when ≥ k
+
+Buttons: Send, Cancel (and the modal close acts as “Back”—or switch to the update style if you prefer in one place)
+
+Send: stores scrubbed content (encrypted), optional channel post (feature flag), and DM receipt.
+
+Latency: Response to Slack is under 3s (we do no heavy work here).
+
+🧪 Dev test notes
+
+Use a dev-only shortcut (e.g., /teammato review) to open Modal A quickly while you iterate.
+
+Try these inputs in Behavior to see scrubbing in the review:
+
+Ping <@U02AB3CDE> and <#C01FEEDBACK|feedback> with update.
+
+Email jane.doe[at]company[dot]com or visit https://internal/wiki?id=123.
+
+Call +1 (415) 555-0189 (case #8823417).
+
+Verify:
+
+Modal B shows backticked placeholders ([email], [@redacted], etc.)
+
+“What leaders might see” trims specifics but keeps gist
+
+DM receipt includes k-note and receipt hash
+
+No raw SBI in logs or DB

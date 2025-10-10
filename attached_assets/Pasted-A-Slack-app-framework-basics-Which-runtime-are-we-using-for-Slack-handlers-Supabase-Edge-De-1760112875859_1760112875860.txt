@@ -1,0 +1,201 @@
+A) Slack app + framework basics
+
+Which runtime are we using for Slack handlers?
+
+☐ Supabase Edge (Deno, plain HTTP)
+
+☐ Bolt for JS (Node/Express)
+
+☐ Other (describe)
+
+Current Slack endpoints (from KB I see /slack/command, /slack/oauth, /slack/events). Confirm exact paths used in Test:
+
+slash command URL:
+
+views.open/submit webhook handler path (same as command, or separate?):
+
+events URL (for app_uninstalled):
+
+Scopes and interactivity:
+
+Confirm scopes: commands, chat:write (any others?)
+
+Interactivity + modal handling enabled in Slack App config: ☐ Yes / ☐ No
+
+Modal stack strategy:
+
+Prefer submit → response_action: "push" for the review modal (best UX): ☐ Yes / ☐ No
+
+If “No,” do you prefer views.push from a “Review” button? (requires fresh trigger_id) ☐ Yes / ☐ No
+
+B) Data model / org binding
+
+How do we resolve org_id from a Slack team during modal submits? (e.g., read by team.id → slack_teams → org_id)
+
+Where do we store per-org settings used in the review screen?
+
+orgs.settings.k_anonymity.threshold (k): ☐ Yes key / ☐ No—where should I read it?
+
+digest channel / topic mapping source of truth: ☐ slack_settings / ☐ topics / ☐ other
+
+Topic selection in the Input modal:
+
+Do we currently expose a Topic dropdown to the user? ☐ Yes / ☐ No
+
+If “No,” what’s the default topic? (or do we always send to a single channel?)
+
+C) Input model (SBI + ancillary fields)
+
+Finalize SBI fields in Modal A:
+
+Situation (multiline)
+
+Behavior (multiline)
+
+Impact (multiline)
+
+Any optional fields to include now? (e.g., Topic select, private “for moderators only” flag, severity, attachments link)
+
+Field limits in Slack:
+
+Max chars per field you want enforced? (Slack plain_text_input hard-limit vs. our soft validation)
+
+Validation rules to enforce before the Review step (examples):
+
+Minimum combined length?
+
+Block if all three are empty (obvious): ☐ Yes
+
+Disallow messages that are only links/numbers? ☐ Yes / ☐ No
+
+D) Scrub → Rewrite → Eligibility (what the Review modal must show)
+
+Scrub implementation (server-side production):
+
+Do we already have the robust scrubber from the simulator v2 (emails, Slack mentions <@U…>, <#C…>, subteams, obfuscated emails, phones, IDs, URLs, IPv4, Luhn)?
+☐ Yes (path:) ☐ No (I’ll port the JS regex set you approved)
+
+Should we highlight redactions in the review modal (e.g., wrap with backticks or brackets), or show a simple diff? Preference:
+
+Rewrite logic (what leaders might see in digests):
+
+Do we have a quote-prep function today (trim specifics, normalize dates/names, enforce max length)?
+☐ Yes (path:) ☐ No (I’ll implement: trim to N chars, drop exact dates/IDs, keep gist)
+
+Max length for a single quote line in digest? (e.g., 240 chars)
+
+k-anonymity message in the Review modal:
+
+What value of k do we show? From orgs.settings.k_anonymity.threshold or a global default (e.g., 5)?
+
+Should we surface current signals in selected theme/topic (if known) or just the rule (“Quotes appear only when ≥ k”)?
+
+If signals are available, where do I fetch them quickly without heavy compute?
+
+Eligibility states to display:
+
+Always show: “Won’t be released unless k-threshold is met.”
+
+If signals >= k at submit time, should we explicitly state “Eligible to appear as a quote (scrubbed)”?
+
+Any legal wording we must include?
+
+E) UX specifics for the second modal
+
+Before → After blocks:
+
+Show user text exactly as typed (concatenated SBI)? ☐ Yes
+
+Show scrubbed version with visible placeholders [email], [@redacted], etc.? ☐ Yes
+
+Show “What leaders might see” = rewritten & scrubbed? ☐ Yes
+
+Buttons:
+
+Primary: Send
+
+Secondary: Go back (returns to Modal A with fields preserved)
+
+Tertiary: Cancel (close modal) ☐ Include / ☐ Omit
+
+Add Block Kit confirm on Send? (“Are you sure? This will be posted anonymously.”) ☐ Yes / ☐ No
+
+Navigation:
+
+For Go back, I’ll use response_action: "update" and re-render Modal A with fields restored via private_metadata. OK? ☐ Yes
+
+Copy tone (final review screen):
+
+Short, reassuring; bullets ok? Provide any “must-use” phrases or legal disclaimers you want locked.
+
+F) Posting destination & threading
+
+Where does the final post go?
+
+Channel: from org’s Slack settings? ☐ Yes
+
+Topic → channel mapping? (If Topic selected, map it to a channel; confirm table/source)
+
+Post as:
+
+☐ A new parent “thread” message (anonymous post)
+
+☐ An ephemeral confirmation only (no channel post)? (for certain topics?)
+
+Do we also DM the submitter a receipt (ephemeral) summarizing what was sent? ☐ Yes / ☐ No
+
+Message format in channel:
+
+Do we include a small header like “New anonymous feedback (Topic: X)” and the rewritten text?
+
+Add a reaction set (e.g., 👀 ✅ ❌) automatically? ☐ Yes / ☐ No
+
+G) Security, logging, performance
+
+3-second rule: Our submit handler must scrub/prepare and return response_action: "push" under 3s. Any heavy steps I should defer (e.g., theme scoring) to background after Send?
+
+Logging: Confirm we NEVER log plaintext fields (S/B/I) at any step, including validation errors.
+
+Rate limiting: Any per-user or per-team limits for /teammato today? If not, should I add a simple guard (e.g., 1 submit/5s per user_id)?
+
+Moderation flags: Should we run a fast rule-based check and add a hidden “flag” badge in the review (e.g., profanity/PII density), or keep this invisible to the user for now?
+
+H) Internationalization & accessibility
+
+Any locales beyond English we must support in the modal copy?
+
+Accessibility: prefer shorter labels + hint text. Any internal terminology we must avoid?
+
+I) Storage & metadata handoff
+
+Where should I store the pre-scrub text vs post-scrub?
+
+As per KB, bodies in DB are encrypted; confirm that the stored payload is the scrubbed version (not raw), and identity is never stored.
+
+private_metadata payload shape between views:
+
+OK to JSON-encode { org_id, team_id, user_id (for DM only), topic_id, k, fields: { situation, behavior, impact }, scrubbed, rewritten }? ☐ Yes
+
+Any size constraints I should worry about? (Slack allows ~3–4KB; our SBI should fit.)
+
+J) Test vs live, and QA plan
+
+We’ll ship to Test app first. Confirm Test app credentials set in Supabase Edge secrets and interactivity URL matches our handler.
+
+Sandbox test plan:
+
+I’ll include sample payloads using views.open and view_submission with Slack’s example triggers. OK to add a /teammato review dev-only shortcut? ☐ Yes
+
+Success criteria you want validated before Live flip:
+
+(a) Two-step flow works under 3s; (b) No plaintext in logs; (c) Correct channel/topic; (d) k-message shown; (e) Cancel/Back behaves; (f) Uninstall event still redacts & disables digests.
+
+K) Edge cases to lock down
+
+Empty or near-empty input (e.g., only whitespace or only a URL) → block with inline error on Modal A? ☐ Yes
+
+Extremely long input (>5k chars across SBI) → truncate with polite error? Desired max length: ____
+
+Inputs packed with PII (emails/phones/IDs) → allow but scrub and show strong warning on Review? ☐ Yes / ☐ No
+
+Small teams (k high, signals low) → always show “Will not be released until ≥ k.” Any alternate wording?
