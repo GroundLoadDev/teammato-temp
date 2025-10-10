@@ -103,6 +103,7 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
+      await queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
       navigate('/');
     } catch (error) {
       console.error('Logout failed:', error);
