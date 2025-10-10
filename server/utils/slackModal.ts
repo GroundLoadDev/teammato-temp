@@ -131,6 +131,7 @@ export function buildReviewModalB(opts: {
         type: "actions",
         block_id: "review_actions",
         elements: [
+          { type: "button", text: { type: "plain_text", text: "Go Back" }, action_id: "go_back_to_edit" },
           { type: "button", text: { type: "plain_text", text: "Cancel" }, style: "danger", action_id: "cancel_review" },
         ],
       },

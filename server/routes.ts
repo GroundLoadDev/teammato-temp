@@ -6,7 +6,9 @@ import { z } from "zod";
 import "./types"; // Load session type extensions
 import { filterAnonymousFeedback, generateSubmitterHash, coarsenSituation } from "./utils/contentFilter";
 import { sendContributionReceipt, postActionNotesToChannel, sendInstallerWelcomeDM } from "./utils/slackMessaging";
-import { buildFeedbackModal } from "./utils/slackModal";
+import { buildFeedbackModal, buildInputModalA, buildReviewModalB } from "./utils/slackModal";
+import { scrubPIIForReview, highlightRedactions } from "./utils/scrub";
+import { prepQuoteForDigest } from "./utils/quotePrep";
 import { WebClient } from '@slack/web-api';
 import adminKeysRouter from "./routes/admin-keys";
 import themesRouter from "./routes/themes";
@@ -2090,22 +2092,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Build and open modal
+      // Build and open Modal A (two-step review flow)
       const client = new WebClient(slackTeam.accessToken);
-      const modal = buildFeedbackModal(topic, {
+      const modalA = buildInputModalA({
+        topicName: topic.name,
         topicId: topic.id,
-        topicSlug: topic.slug,
         orgId,
-        prefillBehavior: isGeneralFeedback ? freeText : (prefillText || undefined),
-      }, {
-        showTopicSuggestions: false,
-        ownerName,
+        prefill: {
+          behavior: isGeneralFeedback ? freeText : (prefillText || undefined),
+        },
       });
 
       try {
         await client.views.open({
           trigger_id: triggerId,
-          view: modal as any,
+          view: modalA as any,
         });
 
         // If text was provided, acknowledge prefill
@@ -2428,6 +2429,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
+        // Handle "Go Back" button in Modal B (review)
+        if (action.action_id === 'go_back_to_edit') {
+          const pmB = JSON.parse(payload.view.private_metadata || "{}");
+          const { orgId, topicId, topicName, beforeText } = pmB;
+          
+          // Parse SBI from beforeText to prefill Modal A
+          const prefill = {
+            situation: (beforeText.match(/Situation:\s*([\s\S]*?)(?:\n\nBehavior:|$)/)?.[1] ?? "").trim(),
+            behavior: (beforeText.match(/Behavior:\s*([\s\S]*?)(?:\n\nImpact:|$)/)?.[1] ?? "").trim(),
+            impact: (beforeText.match(/Impact:\s*([\s\S]*?)$/)?.[1] ?? "").trim(),
+          };
+          
+          // Build Modal A with prefilled fields
+          const modalA = buildInputModalA({ orgId, topicId, topicName, prefill });
+          
+          console.log('[MODAL] User went back to edit from review modal');
+          return res.json({
+            response_action: 'update',
+            view: modalA,
+          });
+        }
+        
+        // Handle "Cancel" button in Modal B (review)
+        if (action.action_id === 'cancel_review') {
+          console.log('[MODAL] User cancelled review modal');
+          return res.json({
+            response_action: 'clear',
+          });
+        }
+        
         // Handle App Home "Submit Feedback" button clicks
         if (action.action_id && action.action_id.startsWith('submit_feedback_')) {
           const topicId = action.action_id.replace('submit_feedback_', '');
@@ -2532,21 +2563,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
               }
               
-              // Build and open modal
+              // Build and open Modal A (two-step review flow)
               const client = new WebClient(slackTeam.accessToken);
-              const modal = buildFeedbackModal(topic, {
+              const modalA = buildInputModalA({
+                topicName: topic.name,
                 topicId: topic.id,
-                topicSlug: topic.slug,
                 orgId,
-                prefillBehavior: undefined,
-              }, {
-                showTopicSuggestions: false,
-                ownerName,
+                prefill: {},
               });
               
               await client.views.open({
                 trigger_id: triggerId,
-                view: modal as any,
+                view: modalA as any,
               });
               
               console.log(`[App Home] Opened feedback modal for topic ${topic.slug}`);
@@ -2581,12 +2609,240 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Handle modal view submissions
       const { user, view, team } = payload;
-      console.log(`[MODAL] User: ${user.id}, Team: ${team.id}`);
+      console.log(`[MODAL] User: ${user.id}, Team: ${team.id}, callback_id: ${view.callback_id}`);
 
-      // Extract metadata
+      // TWO-STEP MODAL FLOW
+      // A) From Modal A (teammato_input) → push Review Modal B
+      if (view.callback_id === "teammato_input") {
+        const pm = JSON.parse(view.private_metadata || "{}");
+        const { topicId, orgId, topicName } = pm;
+
+        // Extract SBI fields
+        const situation = view.state.values?.["situation_b"]?.["situation"]?.value?.trim() ?? "";
+        const behavior = view.state.values?.["behavior_b"]?.["behavior"]?.value?.trim() ?? "";
+        const impact = view.state.values?.["impact_b"]?.["impact"]?.value?.trim() ?? "";
+
+        // Validate (soft minimums)
+        const errors: Record<string, Record<string, string>> = {};
+        if (!behavior || behavior.length < 20) {
+          errors["behavior_b"] = { behavior: "Please add at least a short description (≥ 20 chars)." };
+        }
+        if (!impact || impact.length < 15) {
+          errors["impact_b"] = { impact: "Please add why it matters (≥ 15 chars)." };
+        }
+        if (Object.keys(errors).length > 0) {
+          return res.json({ response_action: "errors", errors });
+        }
+
+        // Compose SBI for review
+        const beforeText = [
+          situation ? `Situation: ${situation}` : null,
+          behavior ? `Behavior: ${behavior}` : null,
+          impact ? `Impact: ${impact}` : null,
+        ].filter(Boolean).join("\n\n");
+
+        // SCRUB (replace, don't block)
+        const scrub = scrubPIIForReview(beforeText);
+        const scrubbedHighlighted = highlightRedactions(scrub.scrubbed);
+
+        // Get topic for k-threshold
+        const topic = await storage.getTopic(topicId, orgId);
+        const k = topic?.kThreshold ?? 5;
+
+        // REWRITE preview (coarsen for digest)
+        const rewrittenPreview = prepQuoteForDigest(scrub.scrubbed, 240);
+
+        // Build Modal B (review)
+        const modalB = buildReviewModalB({
+          topicName: topicName,
+          topicId,
+          orgId,
+          k,
+          beforeText,
+          scrub,
+          scrubbedHighlighted,
+          rewrittenPreview,
+        });
+
+        // PUSH Modal B
+        return res.json({
+          response_action: "push",
+          view: modalB,
+        });
+      }
+
+      // B) From Modal B (teammato_review_send) → Final submission
+      if (view.callback_id === "teammato_review_send") {
+        const pmB = JSON.parse(view.private_metadata || "{}");
+        const { orgId, topicId, topicName, scrubbed, rewritten, k } = pmB;
+
+        // Check seat cap before accepting feedback
+        const seatCapStatus = await getSeatCapStatus(orgId);
+        if (seatCapStatus.status === 'blocked') {
+          return res.json({
+            response_action: 'errors',
+            errors: {
+              general: seatCapStatus.message || 'Seat capacity exceeded. Please contact your administrator.',
+            },
+          });
+        }
+
+        // Look up org from Slack team
+        const slackTeam = await storage.getSlackTeamByTeamId(team.id);
+        if (!slackTeam) {
+          return res.json({
+            response_action: 'errors',
+            errors: {
+              general: 'Your Slack workspace is not connected.',
+            },
+          });
+        }
+
+        // Get topic
+        const topic = await storage.getTopic(topicId, orgId);
+        if (!topic || !topic.isActive) {
+          return res.json({
+            response_action: 'errors',
+            errors: {
+              general: 'This topic is no longer active.',
+            },
+          });
+        }
+
+        // Anti-gamification checks
+        if (topic.ownerId) {
+          const userRecord = await storage.getUserBySlackId(user.id, orgId);
+          if (userRecord && userRecord.id === topic.ownerId) {
+            return res.json({
+              response_action: 'errors',
+              errors: {
+                general: 'You created this topic and cannot submit feedback to it.',
+              },
+            });
+          }
+        }
+
+        const hasSubmitted = await storage.hasUserSubmittedToTopic(topic.id, user.id, orgId);
+        if (hasSubmitted) {
+          return res.json({
+            response_action: 'errors',
+            errors: {
+              general: "You've already submitted feedback to this topic.",
+            },
+          });
+        }
+
+        // Find or create collecting thread
+        let thread = await storage.getActiveCollectingThread(topic.id, orgId);
+        if (!thread) {
+          try {
+            thread = await storage.createFeedbackThread({
+              orgId,
+              topicId: topic.id,
+              title: `${topic.name} Feedback`,
+              status: 'collecting',
+              kThreshold: topic.kThreshold,
+              participantCount: 0,
+              slackChannelId: topic.slackChannelId || null,
+              slackMessageTs: null,
+            });
+          } catch (error: any) {
+            if (error.code === '23505') {
+              thread = await storage.getActiveCollectingThread(topic.id, orgId);
+              if (!thread) {
+                throw new Error('Failed to create or retrieve collecting thread');
+              }
+            } else {
+              throw error;
+            }
+          }
+        }
+
+        // Generate submitter hash and coarsen situation (extract from scrubbed)
+        const submitterHash = generateSubmitterHash(user.id, orgId);
+        const situationMatch = scrubbed.match(/Situation:\s*([\s\S]*?)(?:\n\nBehavior:|$)/);
+        const behaviorMatch = scrubbed.match(/Behavior:\s*([\s\S]*?)(?:\n\nImpact:|$)/);
+        const impactMatch = scrubbed.match(/Impact:\s*([\s\S]*?)$/);
+        
+        const situation = situationMatch?.[1]?.trim() || '';
+        const behavior = behaviorMatch?.[1]?.trim() || '';
+        const impact = impactMatch?.[1]?.trim() || '';
+        
+        const situationCoarse = coarsenSituation(situation);
+        const createdAtDay = new Date().toISOString().slice(0, 10);
+
+        // Submit feedback with SCRUBBED content
+        try {
+          await storage.createFeedbackItem({
+            threadId: thread.id,
+            topicId: topic.id,
+            orgId,
+            slackUserId: user.id,
+            content: null,
+            behavior,
+            impact,
+            situationCoarse,
+            submitterHash,
+            createdAtDay,
+            status: 'pending',
+            moderatorId: null,
+            moderatedAt: null,
+          });
+
+          // Update participant count
+          const participants = await storage.getUniqueParticipants(thread.id);
+          await storage.updateThreadParticipantCount(thread.id, participants.length);
+
+          if (participants.length >= thread.kThreshold && thread.status === 'collecting') {
+            await storage.updateThreadStatus(thread.id, 'ready');
+            console.log(`Thread ${thread.id} reached k-anonymity threshold (${participants.length}/${thread.kThreshold})`);
+          }
+
+          // Optional: post to channel (feature flag)
+          const shouldPostToChannel = process.env.FEATURE_POST_TO_CHANNEL === "1";
+          if (shouldPostToChannel && thread.slackChannelId) {
+            const client = new WebClient(slackTeam.accessToken);
+            try {
+              await client.chat.postMessage({
+                channel: thread.slackChannelId,
+                blocks: [
+                  { type: "header", text: { type: "plain_text", text: `New anonymous feedback: ${topicName}` } },
+                  { type: "section", text: { type: "mrkdwn", text: `> ${rewritten}` } },
+                  { type: "context", elements: [{ type: "mrkdwn", text: `Quotes appear only when ≥ *k=${k}* teammates contribute similar feedback.` }] },
+                ],
+              });
+              console.log(`[MODAL] Posted feedback to channel ${thread.slackChannelId}`);
+            } catch (err) {
+              console.error('[MODAL] Failed to post to channel:', err);
+            }
+          }
+
+          // Send contribution receipt
+          sendContributionReceipt(slackTeam.accessToken, user.id, topic.id, topic.name)
+            .catch(err => console.error('Failed to send receipt:', err));
+
+          // Success - close modal stack
+          return res.json({
+            response_action: 'clear',
+          });
+
+        } catch (error: any) {
+          if (error.code === '23505') {
+            return res.json({
+              response_action: 'errors',
+              errors: {
+                general: 'You have already submitted feedback to this topic.',
+              },
+            });
+          }
+          throw error;
+        }
+      }
+
+      // LEGACY: Handle old feedback_modal for backward compatibility (topic suggestions)
       const metadata = JSON.parse(view.private_metadata);
       const { topicId, orgId } = metadata;
-      console.log(`[MODAL] TopicId: ${topicId}, OrgId: ${orgId}`);
+      console.log(`[MODAL] Legacy modal - TopicId: ${topicId}, OrgId: ${orgId}`);
 
       // Check seat cap before accepting feedback
       const seatCapStatus = await getSeatCapStatus(orgId);
