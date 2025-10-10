@@ -808,3 +808,13 @@ export default function AnonSimulatorPage() {
     </TooltipProvider>
   );
 }
+Notes for your team
+Brand fit: Uses your Tailwind/shadcn stack; copy is short, readable, and confidence-building.
+
+No flicker: Debounced + hysteresis multi-label themes with “why” terms shown.
+
+Proof of privacy: Strong scrub (including Slack formats) with visible redactions.
+
+Guidance, not just gating: Anonymity risk meter explains how to be safer.
+
+Zero compute: Fully client-side; no network traffic.

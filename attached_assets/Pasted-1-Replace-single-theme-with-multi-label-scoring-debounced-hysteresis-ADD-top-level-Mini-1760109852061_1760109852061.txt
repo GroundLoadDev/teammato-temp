@@ -1,0 +1,206 @@
+1) Replace single theme with multi-label scoring (debounced + hysteresis)
+
+ADD (top-level):
+
+// Minimal theme vocabulary (expand as needed)
+const THEME_VOCAB: Record<string, Array<[string, number]>> = {
+  "Meetings": [["meeting",1],["meetings",1],["calendar",1],["standup",1.2],["too long",1.5],["agenda",1]],
+  "Process": [["process",1],["policy",1],["workflow",1],["handoff",1.2],["ticket",1],["SLA",1.2]],
+  "Tooling": [["tool",1],["tools",1],["jira",1.3],["slack",1],["build",1],["deployment",1.2],["ci",1.2]],
+  "Culture": [["culture",1],["respect",1.2],["blame",1.2],["psych safety",1.5],["inclusive",1.2]],
+  "Team Health": [["burnout",1.5],["overworked",1.4],["hiring",1.1],["attrition",1.3]],
+  "Documentation": [["docs",1.3],["documentation",1.2],["readme",1],["confluence",1.2]],
+  "Quality": [["bug",1.2],["bugs",1.2],["incident",1.3],["rollback",1.2],["outage",1.2]],
+  "Roadmap": [["roadmap",1.4],["priority",1.1],["strategy",1.1],["timeline",1.1]],
+};
+
+// Simple tokenizer
+function tokens(s: string): string[] {
+  return s.toLowerCase()
+    .replace(/[`~!@#$%^&*()_+={}[\\]|;:'\",.<>/?]/g, " ")
+    .replace(/\\s+/g, " ")
+    .trim()
+    .split(" ")
+    .filter(Boolean);
+}
+
+// Score themes with bigram bonus
+function scoreThemes(text: string) {
+  const tks = tokens(text);
+  const joined = tks.join(" ");
+  const scores: Record<string, {score:number, hits:string[]}> = {};
+  for (const [theme, pairs] of Object.entries(THEME_VOCAB)) {
+    let s = 0; const hits:string[] = [];
+    for (const [term, w] of pairs) {
+      const isBigram = term.includes(" ");
+      const hit = isBigram ? joined.includes(term) : tks.includes(term);
+      if (hit) { s += w * (isBigram ? 1.3 : 1); hits.push(term); }
+    }
+    scores[theme] = { score: s, hits };
+  }
+  // sort + keep top 3 with min evidence (≥2 hits or score ≥1.5)
+  return Object.entries(scores)
+    .map(([k,v]) => ({ theme: k, ...v }))
+    .filter(v => v.hits.length >= 2 || v.score >= 1.5)
+    .sort((a,b) => b.score - a.score)
+    .slice(0,3);
+}
+
+
+REPLACE (derived theme)
+
+// BEFORE
+const theme = useMemo(() => themeFor(scrubbed || combinedMessage || "_"), [scrubbed, combinedMessage]);
+
+// AFTER (debounced + hysteresis)
+const [themeTop, setThemeTop] = useState<Array<{theme:string, score:number, hits:string[]}>>([]);
+const [rawInput, setRawInput] = useState("");
+
+useEffect(() => { setRawInput(scrubbed || combinedMessage || ""); }, [scrubbed, combinedMessage]);
+
+useEffect(() => {
+  const h = setTimeout(() => {
+    const next = scoreThemes(rawInput);
+    // hysteresis: only update if order/leading score changed meaningfully
+    const changed =
+      themeTop.length !== next.length ||
+      themeTop.some((t, i) => !next[i] || t.theme !== next[i].theme || Math.abs(t.score - next[i].score) > 0.5);
+    if (changed) setThemeTop(next);
+  }, 600); // debounce
+  return () => clearTimeout(h);
+}, [rawInput, themeTop]);
+
+
+UPDATE UI (where theme was shown)
+Show chips for top 3 with “why”:
+
+{/* Replace single theme badge */}
+<div className="flex flex-wrap gap-2">
+  {themeTop.length === 0 ? (
+    <Badge variant="outline">No theme yet</Badge>
+  ) : themeTop.map(t => (
+    <Tooltip key={t.theme}>
+      <TooltipTrigger asChild>
+        <Badge variant="secondary">{t.theme} · {Math.round(t.score*10)}</Badge>
+      </TooltipTrigger>
+      <TooltipContent>Matches: {t.hits.slice(0,5).join(", ")}</TooltipContent>
+    </Tooltip>
+  ))}
+</div>
+
+
+2) Strengthen Scrub (Slack syntax + obfuscations + Luhn)
+
+REPLACE scrubPII()
+
+function scrubPII(text: string) {
+  if (!text) return "";
+  let t = text;
+
+  // Normalize obfuscations
+  t = t.replace(/\\[(at|dot)\\]/gi, (m)=> m.toLowerCase()==="[at]" ? "@" : ".")
+       .replace(/\\s+at\\s+/gi, "@")
+       .replace(/\\s+dot\\s+/gi, ".");
+
+  // Slack mentions
+  t = t.replace(/<@U[A-Z0-9]+>/g, "[@redacted]");
+  t = t.replace(/<#C[A-Z0-9]+\\|?[^>]*>/g, "[channel]");
+  t = t.replace(/<!subteam\\^S[A-Z0-9]+\\|?[^>]*>/g, "[@group]");
+
+  // Emails
+  t = t.replace(/[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}/gi, "[email]");
+
+  // @handles (non-Slack)
+  t = t.replace(/(^|\\s)@([A-Za-z0-9_\\.\\-]+)/g, "$1[@redacted]");
+
+  // Phones (broad)
+  t = t.replace(/\\+?\\d[\\d\\s().-]{7,}\\d/g, "[phone]");
+
+  // Potential credit cards (Luhn)
+  t = t.replace(/\\b(?:\\d[ -]*?){13,19}\\b/g, (m) => luhnCheck(m) ? "[card]" : m);
+
+  // 6–10 digit IDs
+  t = t.replace(/\\b\\d{6,10}\\b/g, "[id]");
+
+  // URLs
+  t = t.replace(/https?:\\/\\/\\S+/gi, "[link]");
+
+  // IPv4
+  t = t.replace(/\\b(\\d{1,3}\\.){3}\\d{1,3}\\b/g, "[ip]");
+
+  return t;
+}
+
+function luhnCheck(s: string) {
+  const digits = s.replace(/\\D/g, "");
+  let sum = 0, dbl = false;
+  for (let i = digits.length - 1; i >= 0; i--) {
+    let d = parseInt(digits[i], 10);
+    if (dbl) { d *= 2; if (d > 9) d -= 9; }
+    sum += d; dbl = !dbl;
+  }
+  return sum % 10 === 0;
+}
+
+
+ADD a “Show redactions” toggle and highlight
+Wrap replacements with <mark> in the demo view (not in the stored value) for visibility:
+
+function highlightRedactions(raw: string, scrubbed: string) {
+  // naive diff: highlight bracketed tokens as chips
+  return scrubbed.replace(/\\[(email|phone|id|link|card|ip|@redacted|channel|@group)\\]/g,
+    (m) => `<mark class="px-1 rounded bg-emerald-50 text-emerald-700">${m}</mark>`);
+}
+
+
+Use dangerouslySetInnerHTML only in the demo block to render highlights safely (no user HTML).
+
+3) Add an anonymity risk meter (client-only)
+
+ADD:
+
+function riskScore(text: string) {
+  const hasProper = /\\b([A-Z][a-z]+\\s){1,3}[A-Z][a-z]+\\b/.test(text); // crude proper names
+  const hasTime = /(mon|tue|wed|thu|fri|sat|sun)|\\b\\d{1,2}:\\d{2}\\b/i.test(text);
+  const digits = (text.match(/\\d/g) || []).length;
+  const long = text.length > 400 ? 1 : 0;
+  const rareBigrams = (text.match(/\\b(?:psych safety|postmortem|retro)\\b/gi) || []).length;
+
+  let s = 0;
+  if (hasProper) s += 2;
+  if (hasTime) s += 1;
+  s += Math.min(2, digits / 6);
+  s += long * 1;
+  s += rareBigrams * 1.5;
+
+  return Math.min(10, s); // 0–10
+}
+
+const risk = useMemo(() => riskScore(scrubbed || combinedMessage || ""), [scrubbed, combinedMessage]);
+const riskLabel = risk < 3 ? "Low" : risk < 6 ? "Medium" : "High";
+const tip = risk >= 6
+  ? "Remove names/dates or exact numbers."
+  : risk >= 3
+  ? "Trim specifics; keep the gist."
+  : "Good: general enough to protect you.";
+
+
+UI (next to k-meter):
+
+<div className="text-xs text-slate-500">Anonymity risk</div>
+<div className="flex items-center justify-between">
+  <Badge variant={risk < 3 ? "secondary" : risk < 6 ? "outline" : "destructive"}>
+    {riskLabel}
+  </Badge>
+  <span className="text-sm text-slate-600">{tip}</span>
+</div>
+
+Why this will feel much better
+
+The themes reflect the words and don’t jitter; seeing top-3 with “why” builds trust.
+
+The scrub visibly does work, including Slack-ish inputs people actually use.
+
+The risk meter turns the demo into guidance: “If I tweak my wording, I’m safer.”
+
+All still client-only, so $0 ongoing cost.
