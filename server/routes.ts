@@ -2135,6 +2135,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper function to build and publish App Home view
+  async function publishAppHomeView(
+    userId: string, 
+    teamId: string, 
+    orgId: string, 
+    accessToken: string,
+    errorMessage?: string
+  ) {
+    const client = new WebClient(accessToken);
+    
+    // Get active topics for this org
+    const topics = await storage.getActiveTopics(orgId);
+    
+    // Build blocks for App Home
+    const blocks: any[] = [
+      {
+        type: 'header',
+        text: {
+          type: 'plain_text',
+          text: 'Teammato - Anonymous Feedback',
+        }
+      }
+    ];
+    
+    // Add error message if provided
+    if (errorMessage) {
+      blocks.push({
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*Notice:* ${errorMessage}`,
+        }
+      });
+    }
+    
+    blocks.push(
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: '*Submit anonymous feedback to active topics below.*\n\nYour identity is protected by k-anonymity. Feedback is only revealed when enough participants contribute.',
+        }
+      },
+      {
+        type: 'divider'
+      }
+    );
+    
+    if (topics.length === 0) {
+      blocks.push({
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: '*No active topics right now.*\n\nCheck back later or ask your admin to create a feedback topic.',
+        }
+      });
+    } else {
+      blocks.push({
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: '*Active Topics:*',
+        }
+      });
+      
+      // Add each topic as a section with button
+      for (const topic of topics) {
+        const daysLeft = topic.expiresAt 
+          ? Math.ceil((new Date(topic.expiresAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+          : null;
+        
+        const expiryText = daysLeft !== null && daysLeft >= 0
+          ? `Closes in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`
+          : topic.expiresAt ? 'Closed' : 'Open-ended';
+        
+        blocks.push({
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `*${topic.name}*\n${topic.description || ''}\n_${expiryText}_`,
+          },
+          accessory: {
+            type: 'button',
+            text: {
+              type: 'plain_text',
+              text: 'Submit Feedback',
+            },
+            value: topic.slug,
+            action_id: `submit_feedback_${topic.id}`,
+          }
+        });
+      }
+    }
+    
+    // Add help section
+    blocks.push(
+      {
+        type: 'divider'
+      },
+      {
+        type: 'context',
+        elements: [
+          {
+            type: 'mrkdwn',
+            text: '*Quick Start:* Use `/teammato <topic>` to submit feedback from anywhere in Slack.',
+          }
+        ]
+      }
+    );
+    
+    // Publish the view
+    await client.views.publish({
+      user_id: userId,
+      view: {
+        type: 'home',
+        blocks,
+      }
+    });
+    
+    console.log(`[App Home] Published view for user ${userId} in team ${teamId}${errorMessage ? ' with error message' : ''}`);
+  }
+
   // Slack Events API - Handle events like app_uninstalled
   app.post('/api/slack/events', async (req, res) => {
     try {
@@ -2185,104 +2307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               return;
             }
             
-            const client = new WebClient(slackTeam.accessToken);
-            
-            // Get active topics for this org
-            const topics = await storage.getActiveTopics(slackTeam.orgId);
-            
-            // Build blocks for App Home
-            const blocks: any[] = [
-              {
-                type: 'header',
-                text: {
-                  type: 'plain_text',
-                  text: 'Teammato - Anonymous Feedback',
-                }
-              },
-              {
-                type: 'section',
-                text: {
-                  type: 'mrkdwn',
-                  text: '*Submit anonymous feedback to active topics below.*\n\nYour identity is protected by k-anonymity. Feedback is only revealed when enough participants contribute.',
-                }
-              },
-              {
-                type: 'divider'
-              }
-            ];
-            
-            if (topics.length === 0) {
-              blocks.push({
-                type: 'section',
-                text: {
-                  type: 'mrkdwn',
-                  text: '*No active topics right now.*\n\nCheck back later or ask your admin to create a feedback topic.',
-                }
-              });
-            } else {
-              blocks.push({
-                type: 'section',
-                text: {
-                  type: 'mrkdwn',
-                  text: '*Active Topics:*',
-                }
-              });
-              
-              // Add each topic as a section with button
-              for (const topic of topics) {
-                const daysLeft = topic.expiresAt 
-                  ? Math.ceil((new Date(topic.expiresAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-                  : null;
-                
-                const expiryText = daysLeft !== null && daysLeft >= 0
-                  ? `Closes in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`
-                  : topic.expiresAt ? 'Closed' : 'Open-ended';
-                
-                blocks.push({
-                  type: 'section',
-                  text: {
-                    type: 'mrkdwn',
-                    text: `*${topic.name}*\n${topic.description || ''}\n_${expiryText}_`,
-                  },
-                  accessory: {
-                    type: 'button',
-                    text: {
-                      type: 'plain_text',
-                      text: 'Submit Feedback',
-                    },
-                    value: topic.slug,
-                    action_id: `submit_feedback_${topic.id}`,
-                  }
-                });
-              }
-            }
-            
-            // Add help section
-            blocks.push(
-              {
-                type: 'divider'
-              },
-              {
-                type: 'context',
-                elements: [
-                  {
-                    type: 'mrkdwn',
-                    text: '*Quick Start:* Use `/teammato <topic>` to submit feedback from anywhere in Slack.',
-                  }
-                ]
-              }
-            );
-            
-            // Publish the view
-            await client.views.publish({
-              user_id: user,
-              view: {
-                type: 'home',
-                blocks,
-              }
-            });
-            
-            console.log(`[App Home] Published view for user ${user} in team ${teamId}`);
+            await publishAppHomeView(user, teamId, slackTeam.orgId, slackTeam.accessToken);
           } catch (error) {
             console.error('[App Home] Error publishing home view:', error);
           }
@@ -2408,101 +2433,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const topicId = action.action_id.replace('submit_feedback_', '');
           const topicSlug = action.value; // The slug is stored in the button value
           
-          try {
-            // Get the Slack team and org
-            const slackTeam = await storage.getSlackTeamByTeamId(team.id);
-            if (!slackTeam) {
-              return res.json({
-                text: '❌ Slack workspace not connected. Please contact your admin.',
-              });
-            }
-            
-            const orgId = slackTeam.orgId;
-            
-            // Get the topic
-            const topic = await storage.getTopic(topicId, orgId);
-            if (!topic || !topic.isActive) {
-              return res.json({
-                text: `❌ This topic is no longer active.`,
-              });
-            }
-            
-            // Check if topic has expired
-            if (topic.expiresAt && new Date(topic.expiresAt) < new Date()) {
-              return res.json({
-                text: `❌ Topic "${topic.name}" has closed.`,
-              });
-            }
-            
-            // Anti-gamification checks
-            // Check if user is the topic creator
-            if (topic.ownerId) {
-              const userRecord = await storage.getUserBySlackId(user.id, orgId);
-              if (userRecord && userRecord.id === topic.ownerId) {
-                return res.json({
-                  text: `*You created this topic and cannot submit feedback to it.*\n\nThis protects the integrity of anonymous feedback. Ask a colleague to submit instead.`,
-                });
+          // Acknowledge the button click immediately
+          res.status(200).send();
+          
+          // Process asynchronously to avoid timeout
+          (async () => {
+            try {
+              // Get the Slack team and org
+              const slackTeam = await storage.getSlackTeamByTeamId(team.id);
+              if (!slackTeam) {
+                console.error('[App Home] No Slack team found, cannot publish error view');
+                return;
               }
-            }
-            
-            // Check if user already submitted
-            const hasSubmitted = await storage.hasUserSubmittedToTopic(topic.id, user.id, orgId);
-            if (hasSubmitted) {
-              return res.json({
-                text: `*You've already submitted feedback to this topic.*\n\nMultiple submissions are blocked to protect k-anonymity.`,
-              });
-            }
-            
-            // Get trigger_id from the action payload
-            const triggerId = payload.trigger_id;
-            if (!triggerId) {
-              return res.json({
-                text: '❌ Failed to open feedback form. Please try the `/teammato ${topicSlug}` command instead.',
-              });
-            }
-            
-            // Fetch topic owner info
-            let ownerName: string | undefined;
-            if (topic.ownerId) {
-              const owner = await storage.getUser(topic.ownerId);
-              if (owner) {
-                try {
-                  const client = new WebClient(slackTeam.accessToken);
-                  const userInfo = await client.users.info({ user: owner.slackUserId || '' });
-                  if (userInfo.user) {
-                    ownerName = (userInfo.user as any).real_name || (userInfo.user as any).name;
-                  }
-                } catch (err) {
-                  ownerName = owner.email || undefined;
+              
+              const orgId = slackTeam.orgId;
+              
+              // Get the topic
+              const topic = await storage.getTopic(topicId, orgId);
+              if (!topic || !topic.isActive) {
+                await publishAppHomeView(
+                  user.id,
+                  team.id,
+                  orgId,
+                  slackTeam.accessToken,
+                  '*This topic is no longer active.*'
+                );
+                return;
+              }
+              
+              // Check if topic has expired
+              if (topic.expiresAt && new Date(topic.expiresAt) < new Date()) {
+                await publishAppHomeView(
+                  user.id,
+                  team.id,
+                  orgId,
+                  slackTeam.accessToken,
+                  `*Topic "${topic.name}" has closed.*`
+                );
+                return;
+              }
+              
+              // Anti-gamification checks
+              // Check if user is the topic creator
+              if (topic.ownerId) {
+                const userRecord = await storage.getUserBySlackId(user.id, orgId);
+                if (userRecord && userRecord.id === topic.ownerId) {
+                  await publishAppHomeView(
+                    user.id,
+                    team.id,
+                    orgId,
+                    slackTeam.accessToken,
+                    '*You created this topic and cannot submit feedback to it.*\n\nThis protects the integrity of anonymous feedback. Ask a colleague to submit instead.'
+                  );
+                  return;
                 }
               }
+              
+              // Check if user already submitted
+              const hasSubmitted = await storage.hasUserSubmittedToTopic(topic.id, user.id, orgId);
+              if (hasSubmitted) {
+                await publishAppHomeView(
+                  user.id,
+                  team.id,
+                  orgId,
+                  slackTeam.accessToken,
+                  '*You\'ve already submitted feedback to this topic.*\n\nMultiple submissions are blocked to protect k-anonymity.'
+                );
+                return;
+              }
+              
+              // Get trigger_id from the action payload
+              const triggerId = payload.trigger_id;
+              if (!triggerId) {
+                await publishAppHomeView(
+                  user.id,
+                  team.id,
+                  orgId,
+                  slackTeam.accessToken,
+                  `*Failed to open feedback form.* Please try the \`/teammato ${topicSlug}\` command instead.`
+                );
+                return;
+              }
+              
+              // Fetch topic owner info
+              let ownerName: string | undefined;
+              if (topic.ownerId) {
+                const owner = await storage.getUser(topic.ownerId);
+                if (owner) {
+                  try {
+                    const client = new WebClient(slackTeam.accessToken);
+                    const userInfo = await client.users.info({ user: owner.slackUserId || '' });
+                    if (userInfo.user) {
+                      ownerName = (userInfo.user as any).real_name || (userInfo.user as any).name;
+                    }
+                  } catch (err) {
+                    ownerName = owner.email || undefined;
+                  }
+                }
+              }
+              
+              // Build and open modal
+              const client = new WebClient(slackTeam.accessToken);
+              const modal = buildFeedbackModal(topic, {
+                topicId: topic.id,
+                topicSlug: topic.slug,
+                orgId,
+                prefillBehavior: undefined,
+              }, {
+                showTopicSuggestions: false,
+                ownerName,
+              });
+              
+              await client.views.open({
+                trigger_id: triggerId,
+                view: modal as any,
+              });
+              
+              console.log(`[App Home] Opened feedback modal for topic ${topic.slug}`);
+            } catch (error: any) {
+              console.error('[App Home] Error opening modal from App Home:', error);
+              // Try to show error in App Home
+              try {
+                const slackTeam = await storage.getSlackTeamByTeamId(team.id);
+                if (slackTeam) {
+                  await publishAppHomeView(
+                    user.id,
+                    team.id,
+                    slackTeam.orgId,
+                    slackTeam.accessToken,
+                    '*Failed to open feedback form.* Please try the `/teammato` command instead.'
+                  );
+                }
+              } catch (innerError) {
+                console.error('[App Home] Failed to show error message:', innerError);
+              }
             }
-            
-            // Build and open modal
-            const client = new WebClient(slackTeam.accessToken);
-            const modal = buildFeedbackModal(topic, {
-              topicId: topic.id,
-              topicSlug: topic.slug,
-              orgId,
-              prefillBehavior: undefined,
-            }, {
-              showTopicSuggestions: false,
-              ownerName,
-            });
-            
-            await client.views.open({
-              trigger_id: triggerId,
-              view: modal as any,
-            });
-            
-            // Acknowledge the action
-            return res.status(200).send();
-          } catch (error: any) {
-            console.error('[App Home] Error opening modal from App Home:', error);
-            return res.json({
-              text: '❌ Failed to open feedback form. Please try the `/teammato` command instead.',
-            });
-          }
+          })();
+          
+          return;
         }
         
         // Unknown action
