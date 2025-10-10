@@ -38,9 +38,8 @@ export default function PostInstall() {
 
   const startTrialMutation = useMutation({
     mutationFn: async () => {
-      const result = await apiRequest('POST', '/api/billing/checkout', { 
-        priceLookupKey: 'cap_250_m',
-        chargeToday: false 
+      const result = await apiRequest('POST', '/api/billing/checkout/ensure', { 
+        priceLookupKey: 'cap_250_m'
       });
       return await result.json() as { url: string };
     },
@@ -108,7 +107,7 @@ export default function PostInstall() {
   const isUnpaid = org?.billingStatus === 'unpaid';
   const isPaused = org?.billingStatus === 'paused';
   
-  const needsSubscription = !org?.billingStatus || org.billingStatus === 'incomplete';
+  const needsSubscription = !org?.billingStatus || org.billingStatus === 'incomplete' || org.billingStatus === 'installed_no_checkout';
 
   if (needsSubscription) {
     return (

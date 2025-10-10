@@ -123,8 +123,8 @@ export default function Billing() {
   }, [refetch, isOwner, billing]);
 
   const checkoutMutation = useMutation({
-    mutationFn: async ({ priceLookupKey, chargeToday }: { priceLookupKey: string; chargeToday?: boolean }) => {
-      const result = await apiRequest('POST', '/api/billing/checkout', { priceLookupKey, chargeToday });
+    mutationFn: async ({ priceLookupKey }: { priceLookupKey: string }) => {
+      const result = await apiRequest('POST', '/api/billing/checkout/ensure', { priceLookupKey });
       return await result.json() as { url: string };
     },
     onSuccess: (data) => {
@@ -279,7 +279,7 @@ export default function Billing() {
       changePlanMutation.mutate({ priceLookupKey: lookupKey });
     } else {
       // New subscriber: use Checkout (first subscription)
-      checkoutMutation.mutate({ priceLookupKey: lookupKey, chargeToday });
+      checkoutMutation.mutate({ priceLookupKey: lookupKey });
     }
   };
 
@@ -298,6 +298,31 @@ export default function Billing() {
           <Lock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
           <AlertDescription className="text-blue-800 dark:text-blue-200">
             Billing changes can only be made by organization owners. Contact your owner to upgrade or modify your subscription.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* No Subscription CTA */}
+      {!billing.hasSubscription && isOwner && (
+        <Alert className="bg-primary/10 border-primary/20" data-testid="alert-no-subscription">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <AlertDescription className="flex items-center justify-between flex-wrap gap-3">
+            <span className="text-foreground">
+              Start your 14-day free trial to unlock anonymous feedback for your team.
+            </span>
+            <Button 
+              size="sm"
+              onClick={() => {
+                const defaultPlan = billing.prices.find(p => p.cap === 250);
+                if (defaultPlan) {
+                  checkoutMutation.mutate({ priceLookupKey: defaultPlan.monthlyLookup });
+                }
+              }}
+              disabled={checkoutMutation.isPending}
+              data-testid="button-start-trial-banner"
+            >
+              {checkoutMutation.isPending ? 'Starting...' : 'Start Free Trial'}
+            </Button>
           </AlertDescription>
         </Alert>
       )}
