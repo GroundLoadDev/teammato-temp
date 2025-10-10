@@ -21,6 +21,7 @@ import DPA from "@/pages/public/DPA";
 import HowItWorks from "@/pages/public/HowItWorks";
 import Status from "@/pages/public/Status";
 import Sample from "@/pages/Sample";
+import Simulator from "@/pages/public/Simulator";
 
 // Auth pages
 import PostInstall from "@/pages/PostInstall";
@@ -64,6 +65,7 @@ function Router() {
       <Route path="/how-it-works" component={HowItWorks} />
       <Route path="/status" component={Status} />
       <Route path="/sample" component={Sample} />
+      <Route path="/simulator" component={Simulator} />
 
       {/* Auth pages */}
       <Route path="/post-install" component={PostInstall} />
