@@ -86,18 +86,29 @@ function themeFor(text: string) {
 export default function Simulator() {
   // Form inputs
   const [name, setName] = useState("");
-  const [message, setMessage] = useState("");
+  const [situation, setSituation] = useState("");
+  const [behavior, setBehavior] = useState("");
+  const [impact, setImpact] = useState("");
   const [simulatedSignals, setSimulatedSignals] = useState(3); // signals in the same theme
   const [k, setK] = useState(5);
   const [privacyMode, setPrivacyMode] = useState(true);
   const [step, setStep] = useState<0 | 1 | 2 | 3 | 4>(0); // 0 slack, 1 scrub, 2 encrypt, 3 cluster, 4 digest
 
-  const handle = useMemo(() => pseudoHandle(name), [name]);
-  const scrubbed = useMemo(() => scrubPII(message), [message]);
-  const cipher = useMemo(() => fakeCipherPreview(scrubbed || message), [scrubbed, message]);
-  const theme = useMemo(() => themeFor(scrubbed || message || "_"), [scrubbed, message]);
+  // Compose SBI into one body for the rest of the pipeline
+  const combinedMessage = useMemo(() => {
+    const parts: string[] = [];
+    if (situation.trim()) parts.push(`Situation: ${situation.trim()}`);
+    if (behavior.trim())  parts.push(`Behavior: ${behavior.trim()}`);
+    if (impact.trim())    parts.push(`Impact: ${impact.trim()}`);
+    return parts.join("\n\n");
+  }, [situation, behavior, impact]);
 
-  const eligible = simulatedSignals >= k && (scrubbed || message).length > 0;
+  const handle = useMemo(() => pseudoHandle(name), [name]);
+  const scrubbed = useMemo(() => scrubPII(combinedMessage), [combinedMessage]);
+  const cipher = useMemo(() => fakeCipherPreview(scrubbed || combinedMessage), [scrubbed, combinedMessage]);
+  const theme = useMemo(() => themeFor(scrubbed || combinedMessage || "_"), [scrubbed, combinedMessage]);
+
+  const eligible = simulatedSignals >= k && (scrubbed || combinedMessage).length > 0;
 
   // Accessible announcements
   useEffect(() => {
@@ -163,19 +174,41 @@ export default function Simulator() {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="text-sm text-slate-600">Your feedback</label>
-                    <Textarea
-                      aria-label="Your feedback"
-                      placeholder="What's one thing we should improve?"
-                      rows={5}
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                    />
+                  <div className="grid gap-3">
+                    <div>
+                      <label className="text-sm text-slate-600">Situation</label>
+                      <Textarea
+                        aria-label="Situation"
+                        placeholder="Brief context. What's going on?"
+                        rows={3}
+                        value={situation}
+                        onChange={(e) => setSituation(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-slate-600">Behavior</label>
+                      <Textarea
+                        aria-label="Behavior"
+                        placeholder="What did you observe? Be specific."
+                        rows={3}
+                        value={behavior}
+                        onChange={(e) => setBehavior(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-slate-600">Impact</label>
+                      <Textarea
+                        aria-label="Impact"
+                        placeholder="Why does it matter? Who/what is affected?"
+                        rows={3}
+                        value={impact}
+                        onChange={(e) => setImpact(e.target.value)}
+                      />
+                    </div>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3">
-                    <Button size="lg" onClick={() => setStep(1)} disabled={!message.trim()}>
+                    <Button size="lg" onClick={() => setStep(1)} disabled={!combinedMessage.trim()}>
                       Simulate <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                     <div className="text-sm text-slate-500">We'll walk you through each protection layer.</div>
@@ -269,14 +302,14 @@ export default function Simulator() {
                             <div className="text-xs text-slate-500 mb-1">You type</div>
                             <div className="rounded-lg border p-3 bg-white">
                               <div className="text-sm text-slate-500">@{name || "your-name"}</div>
-                              <div className="mt-2 text-slate-800 whitespace-pre-wrap">{message || "(your feedback)"}</div>
+                              <div className="mt-2 text-slate-800 whitespace-pre-wrap">{combinedMessage || "(your SBI feedback)"}</div>
                             </div>
                           </div>
                           <div>
                             <div className="text-xs text-slate-500 mb-1">What we receive</div>
                             <div className="rounded-lg border p-3 bg-white">
                               <div className="text-sm text-slate-500">identity: <span className="font-mono">(not sent)</span></div>
-                              <div className="mt-2 text-slate-800 whitespace-pre-wrap">{message ? message : "(message body only)"}</div>
+                              <div className="mt-2 text-slate-800 whitespace-pre-wrap">{combinedMessage ? combinedMessage : "(message body only)"}</div>
                             </div>
                           </div>
                         </div>
@@ -301,7 +334,7 @@ export default function Simulator() {
                         <div className="grid md:grid-cols-2 gap-4">
                           <div>
                             <div className="text-xs text-slate-500 mb-1">Before</div>
-                            <div className="rounded-lg border p-3 bg-white text-slate-800 whitespace-pre-wrap">{message || "(your feedback)"}</div>
+                            <div className="rounded-lg border p-3 bg-white text-slate-800 whitespace-pre-wrap">{combinedMessage || "(your SBI feedback)"}</div>
                           </div>
                           <div>
                             <div className="text-xs text-slate-500 mb-1">After</div>
@@ -329,7 +362,7 @@ export default function Simulator() {
                         <div className="grid md:grid-cols-2 gap-4">
                           <div>
                             <div className="text-xs text-slate-500 mb-1">Input to encrypt</div>
-                            <div className="rounded-lg border p-3 bg-white text-slate-800 whitespace-pre-wrap">{(scrubbed || message) || "(scrubbed text)"}</div>
+                            <div className="rounded-lg border p-3 bg-white text-slate-800 whitespace-pre-wrap">{(scrubbed || combinedMessage) || "(scrubbed text)"}</div>
                           </div>
                           <div>
                             <div className="text-xs text-slate-500 mb-1">Stored preview (demo)</div>

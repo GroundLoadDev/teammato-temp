@@ -1,0 +1,189 @@
+1) State: replace message with situation/behavior/impact + combinedMessage
+
+BEFORE
+
+// Form inputs
+const [name, setName] = useState("");
+const [message, setMessage] = useState("");
+const [simulatedSignals, setSimulatedSignals] = useState(3);
+const [k, setK] = useState(5);
+
+
+AFTER
+
+// Form inputs
+const [name, setName] = useState("");
+const [situation, setSituation] = useState("");
+const [behavior, setBehavior] = useState("");
+const [impact, setImpact] = useState("");
+const [simulatedSignals, setSimulatedSignals] = useState(3);
+const [k, setK] = useState(5);
+
+// Compose SBI into one body for the rest of the pipeline
+const combinedMessage = useMemo(() => {
+  const parts: string[] = [];
+  if (situation.trim()) parts.push(`Situation: ${situation.trim()}`);
+  if (behavior.trim())  parts.push(`Behavior: ${behavior.trim()}`);
+  if (impact.trim())    parts.push(`Impact: ${impact.trim()}`);
+  return parts.join("\n\n");
+}, [situation, behavior, impact]);
+
+2) Derived values: point scrub/encrypt/cluster/eligibility to combinedMessage
+
+BEFORE
+
+const handle = useMemo(() => pseudoHandle(name), [name]);
+const scrubbed = useMemo(() => scrubPII(message), [message]);
+const cipher = useMemo(() => fakeCipherPreview(scrubbed || message), [scrubbed, message]);
+const theme = useMemo(() => themeFor(scrubbed || message || "_"), [scrubbed, message]);
+const eligible = simulatedSignals >= k && (scrubbed || message).length > 0;
+
+
+AFTER
+
+const handle = useMemo(() => pseudoHandle(name), [name]);
+const scrubbed = useMemo(() => scrubPII(combinedMessage), [combinedMessage]);
+const cipher = useMemo(() => fakeCipherPreview(scrubbed || combinedMessage), [scrubbed, combinedMessage]);
+const theme = useMemo(() => themeFor(scrubbed || combinedMessage || "_"), [scrubbed, combinedMessage]);
+const eligible = simulatedSignals >= k && (scrubbed || combinedMessage).length > 0;
+
+3) Input card: swap single textarea for S / B / I fields; update Simulate button
+
+BEFORE (inside “Try it yourself” card)
+
+<div>
+  <label className="text-sm text-slate-600">Your feedback</label>
+  <Textarea
+    aria-label="Your feedback"
+    placeholder="What’s one thing we should improve?"
+    rows={5}
+    value={message}
+    onChange={(e) => setMessage(e.target.value)}
+  />
+</div>
+
+<div className="flex flex-wrap items-center gap-3">
+  <Button size="lg" onClick={() => setStep(1)} disabled={!message.trim()}>
+    Simulate <ArrowRight className="ml-2 h-4 w-4" />
+  </Button>
+  <div className="text-sm text-slate-500">We’ll walk you through each protection layer.</div>
+</div>
+
+
+AFTER
+
+<div className="grid gap-3">
+  <div>
+    <label className="text-sm text-slate-600">Situation</label>
+    <Textarea
+      aria-label="Situation"
+      placeholder="Brief context. What’s going on?"
+      rows={3}
+      value={situation}
+      onChange={(e) => setSituation(e.target.value)}
+    />
+  </div>
+  <div>
+    <label className="text-sm text-slate-600">Behavior</label>
+    <Textarea
+      aria-label="Behavior"
+      placeholder="What did you observe? Be specific."
+      rows={3}
+      value={behavior}
+      onChange={(e) => setBehavior(e.target.value)}
+    />
+  </div>
+  <div>
+    <label className="text-sm text-slate-600">Impact</label>
+    <Textarea
+      aria-label="Impact"
+      placeholder="Why does it matter? Who/what is affected?"
+      rows={3}
+      value={impact}
+      onChange={(e) => setImpact(e.target.value)}
+    />
+  </div>
+</div>
+
+<div className="flex flex-wrap items-center gap-3">
+  <Button size="lg" onClick={() => setStep(1)} disabled={!combinedMessage.trim()}>
+    Simulate <ArrowRight className="ml-2 h-4 w-4" />
+  </Button>
+  <div className="text-sm text-slate-500">We’ll walk you through each protection layer.</div>
+</div>
+
+4) Replace message references in step panels with combinedMessage
+
+A) Step 0 (Slack) panel
+
+BEFORE
+
+<div className="text-sm text-slate-500">@{name || "your-name"}</div>
+<div className="mt-2 text-slate-800 whitespace-pre-wrap">{message || "(your feedback)"}</div>
+...
+<div className="mt-2 text-slate-800 whitespace-pre-wrap">{message ? message : "(message body only)"}</div>
+
+
+AFTER
+
+<div className="text-sm text-slate-500">@{name || "your-name"}</div>
+<div className="mt-2 text-slate-800 whitespace-pre-wrap">{combinedMessage || "(your SBI feedback)"}</div>
+...
+<div className="mt-2 text-slate-800 whitespace-pre-wrap">{combinedMessage ? combinedMessage : "(message body only)"}</div>
+
+
+B) Step 1 (Scrub) panel
+
+BEFORE
+
+<div className="rounded-lg border p-3 bg-white text-slate-800 whitespace-pre-wrap">{message || "(your feedback)"}</div>
+...
+<div className="rounded-lg border p-3 bg-white text-slate-800 whitespace-pre-wrap">{scrubbed || "(scrubbed preview)"}</div>
+
+
+AFTER
+
+<div className="rounded-lg border p-3 bg-white text-slate-800 whitespace-pre-wrap">{combinedMessage || "(your SBI feedback)"}</div>
+...
+<div className="rounded-lg border p-3 bg-white text-slate-800 whitespace-pre-wrap">{scrubbed || "(scrubbed preview)"}</div>
+
+
+C) Step 2 (Encrypt) panel
+
+BEFORE
+
+<div className="rounded-lg border p-3 bg-white text-slate-800 whitespace-pre-wrap">{(scrubbed || message) || "(scrubbed text)"}</div>
+
+
+AFTER
+
+<div className="rounded-lg border p-3 bg-white text-slate-800 whitespace-pre-wrap">{(scrubbed || combinedMessage) || "(scrubbed text)"}</div>
+
+
+D) Step 4 (Digest) panel – quote block
+
+BEFORE
+
+{eligible ? (
+  <blockquote className="text-slate-800 italic whitespace-pre-wrap">{scrubbed}</blockquote>
+) : (
+  <div className="text-slate-600">Held back to protect anonymity (need ≥ k signals).</div>
+)}
+
+
+AFTER
+
+{eligible ? (
+  <blockquote className="text-slate-800 italic whitespace-pre-wrap">{scrubbed}</blockquote>
+) : (
+  <div className="text-slate-600">Held back to protect anonymity (need ≥ k signals).</div>
+)}
+
+
+(No change to the JSX structure here; scrubbed already derives from combinedMessage after step 2.)
+
+5) Button disable logic in other places (just verify)
+
+Any place that previously checked message.trim() should now check combinedMessage.trim().
+
+That’s it. This keeps the rest of the simulator intact while making the inputs SBI-aligned and preserving your anonymity story.
