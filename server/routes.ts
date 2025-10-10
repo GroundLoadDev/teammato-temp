@@ -3246,6 +3246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let orgId: string;
       let user;
+      let userAlreadyExisted = false;
 
       if (existingTeam) {
         // Reinstall: update access token
@@ -3254,6 +3255,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Get or create user
         let existingUser = await storage.getUserBySlackId(authed_user.id, existingTeam.orgId);
+        userAlreadyExisted = existingUser !== null;
         
         if (!existingUser && installerEmail) {
           // New user in existing org - create as admin
@@ -3358,8 +3360,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             }
             
-            // Reinstall: Go to post-install to handle subscription check
-            res.redirect(`/post-install`);
+            // Existing team - check if user already existed
+            if (userAlreadyExisted) {
+              // User sign-in: redirect to dashboard
+              return res.redirect('/admin/dashboard');
+            } else {
+              // New user in existing org (reinstall): check subscription status
+              return res.redirect('/post-install');
+            }
           });
         });
       } else {
