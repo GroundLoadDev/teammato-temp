@@ -1,0 +1,65 @@
+✅ Keep these client fixes (your plan)
+
+PostInstall: treat installed_no_checkout as needing subscription.
+
+Billing page:
+
+Only show “Current plan” when hasSubscription === true.
+
+For installed_no_checkout, show Start trial CTA.
+
+Stripe cancel/back: send users to /post-install (not /admin) so they see the gate again.
+
+🛡️ Add these server-side guards (critical)
+
+Block duplicate subs & enforce pathing
+
+In /api/billing/checkout: if org has subscription (or Stripe says they do), return 409 SUB_EXISTS (don’t create a new sub).
+
+In /api/billing/change-plan: if no subscription, return 400 NO_SUB (must start trial first).
+
+Source-of-truth resolver (handles webhook lag)
+
+Before deciding “checkout vs change-plan”, call Stripe to see if a sub already exists for the customer (heal DB if webhooks lag).
+
+I.e., implement the resolveOrgSubscriptionState(...) helper we discussed.
+
+Idempotent “ensure checkout” endpoint
+
+New POST /api/billing/checkout/ensure: if there’s an open Checkout Session, reuse it; else create one and store checkoutSessionId + checkoutStatus='open'.
+
+Use this from Post-install, Billing, and the Slack CTA so the user always has a working “Resume trial” link after backing out of Stripe.
+
+Webhook state
+
+On checkout.session.completed: set checkoutStatus='completed' only.
+
+On customer.subscription.created/updated: set billingStatus to trialing/active and persist stripeSubscriptionId.
+
+Never label “trial” client-side without that webhook state.
+
+Admin access rule (read-only)
+
+For installed_no_checkout and checkout_pending, keep Admin read-only with a banner + “Start/Resume trial” (calls /checkout/ensure).
+
+Writes are already gated (good).
+
+🧭 Routing sanity (tiny but important)
+
+/pricing → if logged-in org has a subscription, route to /admin/billing (or call change-plan); do not start OAuth/Checkout.
+
+Slack blocked action CTA → deep link to /admin/billing?startTrial=1, which immediately calls /checkout/ensure.
+
+🧪 Minimal QA (Test mode)
+
+Fresh install → Post-install → Start trial → click Stripe back → lands on /post-install with Resume trial → opens same Checkout.
+
+Complete Checkout → Admin shows trialing; plan change uses change-plan (proration).
+
+While webhooks are slow, /billing/status still shows hasSubscription via Stripe lookup (no race).
+
+From /pricing while subscribed → no OAuth/Checkout; lands in Admin Billing.
+
+Forcibly POST /api/billing/checkout when subscribed → 409 SUB_EXISTS.
+
+If Replit implements both the UI changes you proposed and the server pieces above (resolver + ensure-checkout + guards), the “abandoned checkout” trap and the free 250-seat exploit both go away, and the flow stays resilient even when webhooks are slow.

@@ -35,6 +35,8 @@ export const orgs = pgTable("orgs", {
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
   stripePriceId: text("stripe_price_id"),
+  checkoutSessionId: text("checkout_session_id"),
+  checkoutStatus: text("checkout_status"), // 'open' | 'completed' | 'expired'
   billingStatus: text("billing_status").default('trialing'),
   seatCap: integer("seat_cap").default(250),
   billingPeriod: text("billing_period").default('monthly'),
