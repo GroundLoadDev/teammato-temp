@@ -161,7 +161,7 @@ function SafetyRow() {
           ))}
         </div>
         <p className="mt-4 text-sm text-muted-foreground">
-          Need the longer version? See <a className="underline underline-offset-4" href="/trust" data-testid="link-trust">Trust &amp; Security</a>.
+          Need the longer version? See <a className="underline underline-offset-4" href="/trust" data-testid="link-trust">Trust &amp; Security</a>. Want to see it in action? <a className="underline underline-offset-4" href="/simulator" data-testid="link-simulator">Try our interactive simulator</a>.
         </p>
       </div>
     </section>
