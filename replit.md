@@ -6,26 +6,35 @@ Teammato is an enterprise-grade, Slack-first SaaS platform for anonymous feedbac
 ### User Preferences
 I prefer iterative development and clear, concise explanations. Ask before making major changes to the architecture or core functionalities. Ensure all new features align with the privacy-first principle.
 
-### Recent Changes (October 8, 2025)
+### Recent Changes (October 11, 2025)
 
-#### Privacy & Anti-Gamification Enhancements
+#### Simulator Integration & Navigation
+- **Footer Navigation Update**: Replaced "Docs" link with "Anonymous Simulator" linking to /simulator in Resources section
+- **Simulator Page Layout**: Added Header and Footer components to Simulator page for consistent site navigation (removed custom footer)
+- **Cross-Page CTAs**: Integrated simulator mentions across marketing pages:
+  - Trust page: CTA card after K-anonymity section with "Try the Simulator" button
+  - How It Works page: Inline link in Privacy Poster section ("try our interactive simulator")
+  - Features page: Inline link in Safety Row section ("Try our interactive simulator")
+- All simulator links tested and verified working across navigation flows
+
+#### Privacy & Anti-Gamification Enhancements (October 8, 2025)
 - **K-Threshold Enforcement**: K-threshold now enforces a minimum of 5 and cannot be edited after topic creation to prevent anonymity bypass attacks
 - **Collection Window Lock**: windowDays field is non-editable after topic creation to prevent gaming feedback timing
 - **Tooltips Added**: Explanatory tooltips on locked fields explain privacy protection rationale
 
-#### Topic Suggestion Tracking
+#### Topic Suggestion Tracking (October 8, 2025)
 - **Schema Enhancement**: Added `suggestionId` field to topics table to track which topics originated from user suggestions
 - **Display Updates**: Topic cards now show "Suggested by: {email}" and "Approved by: {email}" for suggested topics
 - **Visual Badge**: "Suggested" badge displays on topic cards that originated from suggestions
 
-#### K-Threshold Progress Display
+#### K-Threshold Progress Display (October 8, 2025)
 - **Color-Coded Progress**: Visual indicator shows participant count vs k-threshold with color coding:
   - Red: <50% of threshold
   - Yellow: ≥50% and <100% of threshold
   - Green: ≥100% of threshold (ready for release)
 - **Days Remaining**: Topic cards display countdown of days remaining in collection window
 
-#### Slash Command Improvements
+#### Slash Command Improvements (October 8, 2025)
 - **Case-Insensitive Matching**: Topic slug matching in Slack commands now case-insensitive (prevents lookup failures)
 - **Enhanced Help**: Updated `/teammato help` command with comprehensive instructions including privacy tips, suggest command, and case-insensitivity examples
 
