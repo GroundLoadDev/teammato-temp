@@ -13,7 +13,7 @@ const nav = {
     { label: "Contact", href: "/contact" },
   ],
   resources: [
-    { label: "Docs", href: "/docs" },
+    { label: "Anonymous Simulator", href: "/simulator" },
     { label: "Trust & Security", href: "/trust" },
     { label: "Status", href: "/status" },
   ],
