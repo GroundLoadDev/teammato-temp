@@ -20,12 +20,65 @@ export function buildInputModalA(opts: {
   topicId: string;
   orgId: string;
   prefill?: { situation?: string; behavior?: string; impact?: string };
+  ownerEmail?: string;
+  daysRemaining?: number;
+  participantCount?: number;
+  kThreshold?: number;
 }) {
   const pm = JSON.stringify({
     orgId: opts.orgId,
     topicId: opts.topicId,
     topicName: opts.topicName,
   });
+
+  // Build metadata text
+  let metadataText = '';
+  if (opts.ownerEmail) {
+    metadataText += `Created by: ${opts.ownerEmail}`;
+  }
+  if (opts.daysRemaining !== undefined) {
+    if (metadataText) metadataText += ' • ';
+    metadataText += `${opts.daysRemaining} day${opts.daysRemaining === 1 ? '' : 's'} remaining`;
+  }
+  if (opts.participantCount !== undefined && opts.kThreshold !== undefined) {
+    if (metadataText) metadataText += ' • ';
+    metadataText += `${opts.participantCount}/${opts.kThreshold} participants needed`;
+  }
+
+  const blocks: any[] = [
+    { type: "section", text: { type: "mrkdwn", text: `*Topic:* ${opts.topicName}` } },
+  ];
+
+  if (metadataText) {
+    blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: metadataText }] });
+  }
+
+  blocks.push(
+    { type: "divider" },
+    {
+      type: "input",
+      block_id: "situation_b",
+      element: { type: "plain_text_input", action_id: "situation", multiline: true, max_length: 300, initial_value: opts.prefill?.situation ?? "" },
+      label: { type: "plain_text", text: "Situation (optional)" },
+      hint: { type: "plain_text", text: "If safe, when/where (e.g., 'Sprint demo, week 38'). We coarsen details before release." },
+      optional: true,
+    },
+    {
+      type: "input",
+      block_id: "behavior_b",
+      element: { type: "plain_text_input", action_id: "behavior", multiline: true, max_length: 800, initial_value: opts.prefill?.behavior ?? "" },
+      label: { type: "plain_text", text: "Behavior (required)" },
+      hint: { type: "plain_text", text: "What specifically occurred? Observable actions only." },
+    },
+    {
+      type: "input",
+      block_id: "impact_b",
+      element: { type: "plain_text_input", action_id: "impact", multiline: true, max_length: 500, initial_value: opts.prefill?.impact ?? "" },
+      label: { type: "plain_text", text: "Impact (required)" },
+      hint: { type: "plain_text", text: "How did this affect work or people?" },
+    },
+    { type: "context", elements: [{ type: "mrkdwn", text: "No names/emails/IDs/links. We'll scrub what we find." }] }
+  );
 
   return {
     type: "modal",
@@ -34,30 +87,7 @@ export function buildInputModalA(opts: {
     title: { type: "plain_text", text: "Share Feedback" },
     submit: { type: "plain_text", text: "Review" },
     close: { type: "plain_text", text: "Cancel" },
-    blocks: [
-      { type: "section", text: { type: "mrkdwn", text: `*Topic:* ${opts.topicName}` } },
-      { type: "divider" },
-      {
-        type: "input",
-        block_id: "situation_b",
-        element: { type: "plain_text_input", action_id: "situation", multiline: true, max_length: 300, initial_value: opts.prefill?.situation ?? "" },
-        label: { type: "plain_text", text: "Situation (optional)" },
-        optional: true,
-      },
-      {
-        type: "input",
-        block_id: "behavior_b",
-        element: { type: "plain_text_input", action_id: "behavior", multiline: true, max_length: 800, initial_value: opts.prefill?.behavior ?? "" },
-        label: { type: "plain_text", text: "Behavior (required)" },
-      },
-      {
-        type: "input",
-        block_id: "impact_b",
-        element: { type: "plain_text_input", action_id: "impact", multiline: true, max_length: 500, initial_value: opts.prefill?.impact ?? "" },
-        label: { type: "plain_text", text: "Impact (required)" },
-      },
-      { type: "context", elements: [{ type: "mrkdwn", text: "No names/emails/IDs/links. We'll scrub what we find." }] },
-    ],
+    blocks,
   };
 }
 
@@ -101,11 +131,6 @@ export function buildReviewModalB(opts: {
     blocks: [
       { type: "section", text: { type: "mrkdwn", text: `*Topic:* ${opts.topicName}` } },
       { type: "divider" },
-      { type: "section", text: { type: "mrkdwn", text: "*You wrote (S/B/I)*" } },
-      {
-        type: "section",
-        text: { type: "mrkdwn", text: "```" + (opts.beforeText || "(empty)") + "```" },
-      },
       { type: "section", text: { type: "mrkdwn", text: "*After scrubbing*" } },
       {
         type: "section",

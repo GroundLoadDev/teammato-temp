@@ -2074,23 +2074,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Fetch topic owner info if available
-      let ownerName: string | undefined;
+      let ownerEmail: string | undefined;
       if (topic.ownerId) {
         const owner = await storage.getUser(topic.ownerId);
         if (owner) {
-          // Try to get Slack user info for a friendly name
-          try {
-            const client = new WebClient(slackTeam.accessToken);
-            const userInfo = await client.users.info({ user: owner.slackUserId || '' });
-            if (userInfo.user) {
-              ownerName = (userInfo.user as any).real_name || (userInfo.user as any).name;
-            }
-          } catch (err) {
-            // Fallback to email if Slack lookup fails
-            ownerName = owner.email || undefined;
-          }
+          ownerEmail = owner.email || undefined;
         }
       }
+
+      // Calculate days remaining
+      let daysRemaining: number | undefined;
+      if (topic.windowEnd) {
+        const msRemaining = new Date(topic.windowEnd).getTime() - new Date().getTime();
+        daysRemaining = Math.max(0, Math.ceil(msRemaining / (1000 * 60 * 60 * 24)));
+      }
+
+      // Get participant count (how many have already submitted)
+      const participantCount = await storage.getTopicParticipantCount(topic.id, orgId);
 
       // Build and open Modal A (two-step review flow)
       const client = new WebClient(slackTeam.accessToken);
@@ -2101,6 +2101,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         prefill: {
           behavior: isGeneralFeedback ? freeText : (prefillText || undefined),
         },
+        ownerEmail,
+        daysRemaining,
+        participantCount,
+        kThreshold: topic.kThreshold,
       });
 
       try {
@@ -2547,21 +2551,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
               
               // Fetch topic owner info
-              let ownerName: string | undefined;
+              let ownerEmail: string | undefined;
               if (topic.ownerId) {
                 const owner = await storage.getUser(topic.ownerId);
                 if (owner) {
-                  try {
-                    const client = new WebClient(slackTeam.accessToken);
-                    const userInfo = await client.users.info({ user: owner.slackUserId || '' });
-                    if (userInfo.user) {
-                      ownerName = (userInfo.user as any).real_name || (userInfo.user as any).name;
-                    }
-                  } catch (err) {
-                    ownerName = owner.email || undefined;
-                  }
+                  ownerEmail = owner.email || undefined;
                 }
               }
+
+              // Calculate days remaining
+              let daysRemaining: number | undefined;
+              if (topic.windowEnd) {
+                const msRemaining = new Date(topic.windowEnd).getTime() - new Date().getTime();
+                daysRemaining = Math.max(0, Math.ceil(msRemaining / (1000 * 60 * 60 * 24)));
+              }
+
+              // Get participant count
+              const participantCount = await storage.getTopicParticipantCount(topic.id, orgId);
               
               // Build and open Modal A (two-step review flow)
               const client = new WebClient(slackTeam.accessToken);
@@ -2570,6 +2576,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 topicId: topic.id,
                 orgId,
                 prefill: {},
+                ownerEmail,
+                daysRemaining,
+                participantCount,
+                kThreshold: topic.kThreshold,
               });
               
               await client.views.open({
