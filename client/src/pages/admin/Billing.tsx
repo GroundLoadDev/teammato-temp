@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
@@ -67,6 +68,8 @@ export default function Billing() {
   });
   
   const isOwner = authData?.user?.role === 'owner';
+  const isAdmin = authData?.user?.role === 'admin';
+  const isModerator = authData?.user?.role === 'moderator';
 
   // Polling function to wait for subscription sync after checkout
   const waitForSubscription = async () => {
@@ -497,7 +500,7 @@ export default function Billing() {
       </Card>
 
       {/* Plan Selection */}
-      <div>
+      <div id="pricing-section">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-semibold">Available Plans</h2>
           <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
@@ -637,6 +640,85 @@ export default function Billing() {
                 ))}
               </TableBody>
             </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Subscription Cancellation Section - Only for owners and admins, hidden when canceled */}
+      {!isCanceled && !isModerator && (isOwner || isAdmin) && billing.hasSubscription && (
+        <Card className="border-destructive/20" data-testid="card-subscription-cancellation">
+          <CardHeader>
+            <CardTitle className="text-destructive">Subscription Cancellation</CardTitle>
+            <CardDescription>Cancel your subscription and manage your account</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
+              <p className="text-sm text-muted-foreground mb-4">
+                Cancelling your subscription will end your access at the end of the current billing period. 
+                All feedback data will be retained and you can reactivate anytime.
+              </p>
+              {isOwner ? (
+                <Button 
+                  variant="destructive"
+                  onClick={() => portalMutation.mutate()}
+                  disabled={portalMutation.isPending}
+                  data-testid="button-cancel-subscription"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  {portalMutation.isPending ? 'Opening portal...' : 'Cancel Subscription'}
+                </Button>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="inline-block">
+                      <Button 
+                        variant="destructive"
+                        disabled
+                        data-testid="button-cancel-subscription-disabled"
+                      >
+                        <Lock className="w-4 h-4 mr-2" />
+                        Cancel Subscription
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Only organization owners can cancel subscriptions</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Reactivation Section - Only shown when subscription is canceled */}
+      {isCanceled && (
+        <Card className="border-orange-200 dark:border-orange-900" data-testid="card-reactivate-subscription">
+          <CardHeader>
+            <CardTitle className="text-orange-600 dark:text-orange-400">Subscription Cancelled</CardTitle>
+            <CardDescription>
+              {billing.cancelsAt 
+                ? `Your subscription will end on ${new Date(billing.cancelsAt).toLocaleDateString()}. Reactivate to continue service.`
+                : 'Your subscription has been cancelled. Reactivate to continue service.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900 rounded-lg p-4">
+              <p className="text-sm text-muted-foreground mb-4">
+                Select a new plan below to reactivate your subscription and continue using anonymous feedback.
+              </p>
+              <Button 
+                variant="default"
+                onClick={() => {
+                  const pricingSection = document.getElementById('pricing-section');
+                  pricingSection?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                data-testid="button-reactivate-subscription"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Choose a Plan
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
