@@ -182,6 +182,19 @@ function KAnon() {
           </div>
         </div>
       </div>
+      <div className="mt-8 text-center">
+        <p className="text-sm text-muted-foreground mb-3">
+          Want to see how privacy protection works in practice?
+        </p>
+        <a
+          href="/simulator"
+          className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm hover:bg-muted"
+          data-testid="link-simulator"
+        >
+          <Shield className="h-4 w-4" />
+          Try the Anonymous Simulator
+        </a>
+      </div>
     </section>
   );
 }
