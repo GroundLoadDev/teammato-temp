@@ -1,5 +1,6 @@
 // Content filtering utilities for privacy protection
 import crypto from 'crypto';
+import { nanoid } from 'nanoid';
 
 export interface FilterResult {
   isValid: boolean;
@@ -94,10 +95,10 @@ export function validateSBI(situation: string, behavior: string, impact: string)
 
 // Generate contribution receipt hash
 export function generateReceiptHash(userId: string, topicId: string, timestamp: number): string {
-  // Create a simple but unique hash for the receipt
-  const hashInput = `${userId}-${topicId}-${timestamp}`;
-  const hash = Buffer.from(hashInput).toString('base64').substring(0, 8).toUpperCase();
-  return `#${hash}`;
+  // Use nanoid for guaranteed unique receipts
+  // nanoid generates URL-safe unique IDs (A-Za-z0-9_-)
+  const receiptId = nanoid(8); // 8 characters, URL-safe
+  return `#${receiptId.toUpperCase()}`;
 }
 
 // Generate submitter hash for deduplication and rate-limiting
