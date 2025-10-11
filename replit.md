@@ -8,6 +8,18 @@ I prefer iterative development and clear, concise explanations. Ask before makin
 
 ### Recent Changes (October 11, 2025)
 
+#### Billing Trial Flow Fixes
+- **New Schedule Plan Endpoint**: Added `/api/billing/schedule-change` endpoint for trial users to select a plan without ending trial early
+- **Fixed Plan Selection Logic**: Updated `handleConfirmUpgrade` to correctly route based on trial state and "Skip trial" checkbox:
+  - Trial + "Skip trial" checked → Stripe Checkout (ends trial, charges immediately)
+  - Trial + "Skip trial" unchecked → Schedule plan change (stays on trial, plan takes effect after trial)
+  - Active subscription → Update with proration (existing behavior)
+  - No subscription → Stripe Checkout (new subscriber)
+- **Contextual Success Messages**: Different toast messages for trial plan selection vs active subscription changes
+- **Dynamic Button Text**: Button text updates based on action ("Continue to Checkout", "Confirm Plan Selection", or "Confirm Change")
+- **Banner Refresh Fix**: Added query cache invalidation to ensure billing banner updates immediately without page refresh
+- **Reset State**: `chargeToday` checkbox resets when modal opens to avoid stale state
+
 #### Simulator Integration & Navigation
 - **Footer Navigation Update**: Replaced "Docs" link with "Anonymous Simulator" linking to /simulator in Resources section
 - **Simulator Page Layout**: Added Header and Footer components to Simulator page for consistent site navigation (removed custom footer)
