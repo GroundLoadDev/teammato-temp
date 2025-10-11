@@ -15,6 +15,8 @@ import {
   Shield, EyeOff, Hash, ArrowRight, Sparkles, Quote, BarChart3, Terminal, LockKeyhole,
   Share2, Users
 } from "lucide-react";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 /** =============================
  *  UTILITIES (client-only)
@@ -341,8 +343,11 @@ export default function AnonSimulatorPage() {
   }, [step]);
 
   return (
-    <TooltipProvider>
-      <div className="min-h-screen bg-gradient-to-b from-white to-slate-50">
+    <>
+      <Header authorizeUrl="/api/slack/install" signinUrl="/api/slack/install" transparent={false} />
+      <main id="main">
+        <TooltipProvider>
+          <div className="min-h-screen bg-gradient-to-b from-white to-slate-50">
         {/* Hero */}
         <section className="px-5 sm:px-8 pt-10 pb-6">
           <div className="max-w-6xl mx-auto flex flex-col gap-8 md:gap-10">
@@ -791,20 +796,10 @@ export default function AnonSimulatorPage() {
           </div>
         </section>
 
-        {/* Footer */}
-        <footer className="px-5 sm:px-8 pb-10">
-          <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <p className="text-sm text-slate-500">
-              This page is a client-side simulation for demonstration. In production, encryption occurs server-side; identity remains in Slack; quotes appear only ≥ k.
-            </p>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="rounded-full">Accessible</Badge>
-              <Badge variant="outline" className="rounded-full">Client-side</Badge>
-              <Badge variant="outline" className="rounded-full">Zero-compute</Badge>
-            </div>
-          </div>
-        </footer>
       </div>
-    </TooltipProvider>
+        </TooltipProvider>
+      </main>
+      <Footer />
+    </>
   );
 }
