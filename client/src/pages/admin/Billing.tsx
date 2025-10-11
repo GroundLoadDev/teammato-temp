@@ -524,70 +524,78 @@ export default function Billing() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-4">
-          {billing.prices.map((plan) => {
-            const price = billingPeriod === 'monthly' ? plan.monthly : plan.annual;
-            const perMonth = billingPeriod === 'annual' ? Math.round(plan.annual / 12) : plan.monthly;
-            const isCurrentPlan = !isTrialing && plan.cap === billing.seatCap && billing.period === billingPeriod;
-            const isPopular = plan.cap === 500;
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[180px]">Seats</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead className="w-[200px] text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {billing.prices.map((plan) => {
+                  const price = billingPeriod === 'monthly' ? plan.monthly : plan.annual;
+                  const perMonth = billingPeriod === 'annual' ? Math.round(plan.annual / 12) : plan.monthly;
+                  const isCurrentPlan = !isTrialing && plan.cap === billing.seatCap && billing.period === billingPeriod;
+                  
+                  // Determine button text based on comparison to current plan
+                  let buttonText = 'Select Plan';
+                  if (isCurrentPlan) {
+                    buttonText = 'Current Plan';
+                  } else if (isTrialing && plan.cap === billing.seatCap) {
+                    buttonText = 'Subscribe';
+                  } else if (plan.cap > billing.seatCap) {
+                    buttonText = 'Upgrade';
+                  } else if (plan.cap < billing.seatCap) {
+                    buttonText = 'Downgrade';
+                  }
 
-            return (
-              <Card 
-                key={plan.cap}
-                className={isPopular ? 'border-primary shadow-lg' : ''}
-                data-testid={`card-plan-${plan.cap}`}
-              >
-                <CardHeader className="pb-4">
-                  {isPopular && (
-                    <Badge className="w-fit mb-2" data-testid="badge-popular">Popular</Badge>
-                  )}
-                  <CardTitle className="text-lg">{plan.cap.toLocaleString()} Seats</CardTitle>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-bold">${price.toLocaleString()}</span>
-                    <span className="text-muted-foreground text-sm">/{billingPeriod === 'monthly' ? 'mo' : 'yr'}</span>
-                  </div>
-                  {billingPeriod === 'annual' && (
-                    <p className="text-xs text-muted-foreground">${perMonth}/mo billed annually</p>
-                  )}
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <ul className="space-y-2 mb-4 text-sm">
-                    <li className="flex items-start gap-2">
-                      <Users className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
-                      <span>Up to {plan.cap.toLocaleString()} members</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <TrendingUp className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
-                      <span>Unlimited feedback topics</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Shield className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
-                      <span>K-anonymity protection</span>
-                    </li>
-                  </ul>
-                  {isCurrentPlan ? (
-                    <Button variant="outline" className="w-full" disabled data-testid={`button-current-${plan.cap}`}>
-                      Current Plan
-                    </Button>
-                  ) : (
-                    <Button 
-                      variant={isPopular ? 'default' : 'outline'}
-                      className="w-full"
-                      onClick={() => handleSelectPlan(plan.cap)}
-                      disabled={!isOwner || isPolling}
-                      data-testid={`button-select-${plan.cap}`}
+                  return (
+                    <TableRow 
+                      key={plan.cap}
+                      className={isCurrentPlan ? 'bg-muted/50' : ''}
+                      data-testid={`row-plan-${plan.cap}`}
                     >
-                      {!isOwner && <Lock className="w-4 h-4 mr-2" />}
-                      {isPolling ? 'Confirming subscription...' : 
-                       isTrialing && plan.cap === billing.seatCap ? 'Subscribe' : 
-                       plan.cap > billing.seatCap ? 'Upgrade' : 'Switch Plan'}
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <span>{plan.cap.toLocaleString()} seats</span>
+                          {isCurrentPlan && (
+                            <Badge variant="secondary" data-testid={`badge-current-${plan.cap}`}>Current</Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-lg font-semibold">${price.toLocaleString()}</span>
+                            <span className="text-sm text-muted-foreground">/{billingPeriod === 'monthly' ? 'mo' : 'yr'}</span>
+                          </div>
+                          {billingPeriod === 'annual' && (
+                            <span className="text-xs text-muted-foreground">${perMonth}/mo billed annually</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant={isCurrentPlan ? 'outline' : 'default'}
+                          size="sm"
+                          onClick={() => handleSelectPlan(plan.cap)}
+                          disabled={isCurrentPlan || !isOwner || isPolling}
+                          data-testid={`button-select-${plan.cap}`}
+                        >
+                          {!isOwner && !isCurrentPlan && <Lock className="w-4 h-4 mr-2" />}
+                          {isPolling ? 'Confirming...' : buttonText}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Invoice History */}
