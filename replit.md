@@ -8,6 +8,18 @@ I prefer iterative development and clear, concise explanations. Ask before makin
 
 ### Recent Changes (October 11, 2025)
 
+#### Billing Plan Selector Redesign
+- **Compact Table Layout**: Replaced grid cards with streamlined table showing all plans in single view
+- **Removed Clutter**: Eliminated "popular" badge, special borders, and feature lists (all plans have identical features)
+- **Current Plan Indicator**: "Current" badge and subtle background highlight on active plan row
+- **Contextual Actions**: Button text adapts based on seat comparison:
+  - "Current Plan" (disabled) for active plan
+  - "Subscribe" for trial users on their trial tier
+  - "Upgrade" for higher seat tiers
+  - "Downgrade" for lower seat tiers
+  - "Select Plan" as fallback
+- **Preserved Functionality**: All trial logic, checkout flow, RBAC controls, and billing period toggle work identically
+
 #### Subscription Cancellation with RBAC
 - **Cancellation Section**: Added "Subscription Cancellation" section in Billing page with role-based controls:
   - **Owners**: See active "Cancel Subscription" button that opens Stripe Customer Portal
