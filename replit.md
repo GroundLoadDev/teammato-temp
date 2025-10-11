@@ -8,6 +8,18 @@ I prefer iterative development and clear, concise explanations. Ask before makin
 
 ### Recent Changes (October 11, 2025)
 
+#### Subscription Cancellation with RBAC
+- **Cancellation Section**: Added "Subscription Cancellation" section in Billing page with role-based controls:
+  - **Owners**: See active "Cancel Subscription" button that opens Stripe Customer Portal
+  - **Admins**: See disabled button with lock icon and tooltip explaining only owners can cancel
+  - **Moderators/Viewers**: Section completely hidden (no access)
+- **Post-Cancellation UI**: When subscription is cancelled:
+  - Cancellation section hidden, replaced with "Reactivation Section"
+  - Shows cancellation end date if available
+  - "Choose a Plan" button scrolls to pricing section for easy reactivation
+- **Integration**: Leverages existing Stripe Customer Portal and webhook handling for cancellation
+- **All interactive elements**: Proper data-testid attributes for testing
+
 #### Billing Trial Flow Fixes
 - **New Schedule Plan Endpoint**: Added `/api/billing/schedule-change` endpoint for trial users to select a plan without ending trial early
 - **Fixed Plan Selection Logic**: Updated `handleConfirmUpgrade` to correctly route based on trial state and "Skip trial" checkbox:
