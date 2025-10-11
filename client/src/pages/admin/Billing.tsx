@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 
@@ -181,6 +181,7 @@ export default function Billing() {
         description: "Your subscription has been updated with proration applied.",
       });
       setShowUpgradeModal(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/billing/status'] });
       refetch();
     },
     onError: (error: any) => {
@@ -195,6 +196,39 @@ export default function Billing() {
       } else if (errorMessage.includes('subscription') || errorMessage.includes('checkout')) {
         title = "No active subscription";
         description = "Please start a subscription first.";
+      }
+      
+      toast({
+        variant: "destructive",
+        title,
+        description,
+      });
+    },
+  });
+
+  const schedulePlanMutation = useMutation({
+    mutationFn: async ({ priceLookupKey }: { priceLookupKey: string }) => {
+      const result = await apiRequest('POST', '/api/billing/schedule-change', { priceLookupKey });
+      return await result.json() as { subscriptionId: string; status: string };
+    },
+    onSuccess: () => {
+      toast({
+        title: "Plan selected",
+        description: "You have selected a different plan. This is the plan that will be used when your subscription begins after the trial is complete.",
+      });
+      setShowUpgradeModal(false);
+      queryClient.invalidateQueries({ queryKey: ['/api/billing/status'] });
+      refetch();
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.message || '';
+      
+      let title = "Plan selection failed";
+      let description = "Unable to select your plan. Please try again.";
+      
+      if (errorMessage.includes('usage') || errorMessage.includes('downgrade')) {
+        title = "Cannot downgrade";
+        description = "You cannot downgrade below your current usage. Please reduce your audience size first.";
       }
       
       toast({
@@ -263,6 +297,7 @@ export default function Billing() {
 
   const handleSelectPlan = (cap: number) => {
     setSelectedPlan(cap);
+    setChargeToday(false); // Reset checkbox when opening modal
     setShowUpgradeModal(true);
   };
 
@@ -273,12 +308,18 @@ export default function Billing() {
     
     const lookupKey = billingPeriod === 'monthly' ? plan.monthlyLookup : plan.annualLookup;
     
-    // Route based on subscription state
-    if (billing.hasSubscription) {
-      // Existing subscriber: update subscription with proration
+    // Route based on trial state and user preferences
+    if (isTrialing && chargeToday) {
+      // User wants to skip trial and pay now - use Checkout with immediate charge
+      checkoutMutation.mutate({ priceLookupKey: lookupKey });
+    } else if (billing.hasSubscription && !isTrialing) {
+      // Active paid subscriber - update with proration
       changePlanMutation.mutate({ priceLookupKey: lookupKey });
+    } else if (isTrialing && !chargeToday) {
+      // User is trialing and wants to stay on trial - schedule plan change for after trial
+      schedulePlanMutation.mutate({ priceLookupKey: lookupKey });
     } else {
-      // New subscriber: use Checkout (first subscription)
+      // New subscriber (no subscription) - use Checkout
       checkoutMutation.mutate({ priceLookupKey: lookupKey });
     }
   };
@@ -689,10 +730,14 @@ export default function Billing() {
             </Button>
             <Button 
               onClick={handleConfirmUpgrade}
-              disabled={checkoutMutation.isPending}
+              disabled={checkoutMutation.isPending || changePlanMutation.isPending || schedulePlanMutation.isPending}
               data-testid="button-confirm-upgrade"
             >
-              {checkoutMutation.isPending ? 'Processing...' : 'Continue to Checkout'}
+              {(checkoutMutation.isPending || changePlanMutation.isPending || schedulePlanMutation.isPending) ? 'Processing...' : 
+                isTrialing && chargeToday ? 'Continue to Checkout' :
+                isTrialing && !chargeToday ? 'Confirm Plan Selection' :
+                !isTrialing && billing.hasSubscription ? 'Confirm Change' :
+                'Continue to Checkout'}
             </Button>
           </DialogFooter>
         </DialogContent>

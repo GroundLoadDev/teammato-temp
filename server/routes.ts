@@ -899,6 +899,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Billing API - Schedule Plan Change (for trial users selecting a plan without skipping trial)
+  app.post('/api/billing/schedule-change', requireRole('owner'), async (req, res) => {
+    try {
+      if (!stripe) {
+        return res.status(503).json({ error: 'Stripe not configured' });
+      }
+
+      const orgId = req.session.orgId!;
+      const org = await storage.getOrg(orgId);
+      
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+
+      // Resolve subscription state (handles webhook lag)
+      const { hasSubscription, subId } = await resolveOrgSubscriptionState(stripe, storage, org);
+      if (!hasSubscription) {
+        return res.status(400).json({
+          error: 'NO_SUB',
+          message: 'No active subscription. Use /api/billing/checkout to start one.'
+        });
+      }
+
+      const { priceLookupKey } = req.body;
+      if (!priceLookupKey) {
+        return res.status(400).json({ error: 'priceLookupKey required' });
+      }
+
+      // Extract seat cap from lookup key for downgrade validation
+      const capMatch = priceLookupKey.match(/cap_(\d+)_/);
+      const newSeatCap = capMatch ? parseInt(capMatch[1], 10) : null;
+      
+      // Validate downgrade against current usage
+      if (newSeatCap && newSeatCap < (org.seatCap || 250)) {
+        const usage = await storage.getOrgUsage(orgId);
+        const eligibleCount = usage?.eligibleCount || 0;
+        
+        if (eligibleCount > newSeatCap) {
+          return res.status(400).json({ 
+            error: 'Cannot downgrade below current usage',
+            message: `You currently have ${eligibleCount} eligible members, but the plan you selected supports only ${newSeatCap}. Please reduce your audience size or select a higher tier.`,
+            eligibleCount,
+            newSeatCap,
+          });
+        }
+      }
+
+      // Resolve target price from lookup key
+      const prices = await stripe.prices.list({
+        lookup_keys: [priceLookupKey],
+        expand: ['data.product'],
+      });
+
+      const newPrice = prices.data?.[0];
+      if (!newPrice) {
+        return res.status(400).json({ error: 'Invalid price lookup key' });
+      }
+
+      // Fetch current subscription & primary item
+      const sub = await stripe.subscriptions.retrieve(subId!, {
+        expand: ['items']
+      });
+      
+      const item = sub.items.data?.[0];
+      if (!item) {
+        return res.status(400).json({ error: 'Subscription has no items' });
+      }
+
+      // Update the item price WITHOUT proration - will take effect after trial ends
+      const updated = await stripe.subscriptions.update(sub.id, {
+        items: [{ id: item.id, price: newPrice.id }],
+        proration_behavior: 'none',
+        metadata: { org_id: orgId }
+      });
+
+      // Track plan selection event
+      await storage.trackEvent({
+        orgId,
+        eventType: 'plan_scheduled',
+        userId: req.session.userId || null,
+        metadata: { 
+          priceLookupKey, 
+          oldSeatCap: org.seatCap,
+          newSeatCap,
+          subscriptionId: updated.id 
+        },
+      });
+
+      res.json({ subscriptionId: updated.id, status: updated.status });
+    } catch (error) {
+      console.error('Schedule change error:', error);
+      res.status(500).json({ error: 'Failed to schedule plan change' });
+    }
+  });
+
   // Billing API - Create Portal Session (Owner only)
   app.post('/api/billing/portal', requireRole('owner'), async (req, res) => {
     try {
