@@ -11,7 +11,10 @@ I prefer iterative development and clear, concise explanations. Ask before makin
 #### Billing Plan Selector Redesign
 - **Compact Table Layout**: Replaced grid cards with streamlined table showing all plans in single view
 - **Removed Clutter**: Eliminated "popular" badge, special borders, and feature lists (all plans have identical features)
-- **Current Plan Indicator**: "Current" badge and subtle background highlight on active plan row
+- **Visual Plan Indicators**: 
+  - Active plan row highlighted with left border (border-l-4 border-l-primary) and background (bg-muted/50)
+  - "Current" badge displays for active (non-trial) subscriptions
+  - "Trial" badge displays when user is on trial (automatically removed when trial ends)
 - **Contextual Actions**: Button text adapts based on seat comparison:
   - "Current Plan" (disabled) for active plan
   - "Subscribe" for trial users on their trial tier

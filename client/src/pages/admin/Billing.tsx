@@ -539,12 +539,14 @@ export default function Billing() {
                   const price = billingPeriod === 'monthly' ? plan.monthly : plan.annual;
                   const perMonth = billingPeriod === 'annual' ? Math.round(plan.annual / 12) : plan.monthly;
                   const isCurrentPlan = !isTrialing && plan.cap === billing.seatCap && billing.period === billingPeriod;
+                  const isTrialPlan = isTrialing && plan.cap === billing.seatCap;
+                  const isActivePlan = isCurrentPlan || isTrialPlan;
                   
                   // Determine button text based on comparison to current plan
                   let buttonText = 'Select Plan';
                   if (isCurrentPlan) {
                     buttonText = 'Current Plan';
-                  } else if (isTrialing && plan.cap === billing.seatCap) {
+                  } else if (isTrialPlan) {
                     buttonText = 'Subscribe';
                   } else if (plan.cap > billing.seatCap) {
                     buttonText = 'Upgrade';
@@ -555,7 +557,7 @@ export default function Billing() {
                   return (
                     <TableRow 
                       key={plan.cap}
-                      className={isCurrentPlan ? 'bg-muted/50' : ''}
+                      className={isActivePlan ? 'bg-muted/50 border-l-4 border-l-primary' : ''}
                       data-testid={`row-plan-${plan.cap}`}
                     >
                       <TableCell className="font-medium">
@@ -563,6 +565,9 @@ export default function Billing() {
                           <span>{plan.cap.toLocaleString()} seats</span>
                           {isCurrentPlan && (
                             <Badge variant="secondary" data-testid={`badge-current-${plan.cap}`}>Current</Badge>
+                          )}
+                          {isTrialPlan && (
+                            <Badge variant="default" data-testid={`badge-trial-${plan.cap}`}>Trial</Badge>
                           )}
                         </div>
                       </TableCell>
