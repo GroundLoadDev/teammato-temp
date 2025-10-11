@@ -1,6 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import type { User } from "@shared/schema";
 import crypto from "crypto";
 import { z } from "zod";
 import "./types"; // Load session type extensions
@@ -2286,9 +2287,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
           try {
             const slackTeam = await storage.getSlackTeamByTeamId(teamId);
             if (slackTeam) {
-              // Mark org as disconnected by removing Slack team access token
+              const orgId = slackTeam.orgId;
+              
+              // 1. Mark org as disconnected by removing Slack team access token
               await storage.updateSlackTeamToken(teamId, '');
-              console.log(`[Slack Events] App uninstalled from team ${teamId}, org ${slackTeam.orgId}`);
+              
+              // 2. Disable daily digests
+              const slackSettings = await storage.getSlackSettings(orgId);
+              if (slackSettings) {
+                await storage.upsertSlackSettings({
+                  orgId,
+                  digestEnabled: false,
+                  digestChannel: slackSettings.digestChannel, // Preserve channel for potential reinstall
+                });
+                console.log(`[Slack Events] Disabled digests for org ${orgId}`);
+              }
+              
+              // 3. Create audit log entry
+              // Find an owner or admin user to attribute this system event to
+              const orgUsers = await storage.getOrgUsers(orgId);
+              const ownerUser = orgUsers.find((u: User) => u.role === 'owner') || orgUsers.find((u: User) => u.role === 'admin') || orgUsers[0];
+              
+              if (ownerUser) {
+                await storage.createModerationAudit({
+                  orgId,
+                  targetType: 'slack_integration',
+                  targetId: slackTeam.id,
+                  action: 'app_uninstalled',
+                  reason: `Slack app uninstalled from team ${teamId}`,
+                  adminUserId: ownerUser.id,
+                  previousStatus: 'active',
+                  newStatus: 'disconnected',
+                });
+                console.log(`[Slack Events] Created audit log for app uninstall`);
+              }
+              
+              console.log(`[Slack Events] App uninstalled from team ${teamId}, org ${orgId}`);
             }
           } catch (error) {
             console.error('[Slack Events] Error handling app_uninstalled:', error);
