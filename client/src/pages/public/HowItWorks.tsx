@@ -232,7 +232,7 @@ function PrivacyPoster({ mode }: { mode: "human" | "tech" }) {
           ))}
         </div>
         <p className="mt-4 text-xs text-muted-foreground">
-          Learn more on our <a className="underline underline-offset-4" href="/trust">Trust &amp; Security</a> page.
+          Learn more on our <a className="underline underline-offset-4" href="/trust">Trust &amp; Security</a> page, or <a className="underline underline-offset-4" href="/simulator">try our interactive simulator</a> to see anonymity in action.
         </p>
       </div>
     </section>
