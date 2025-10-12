@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { AlertTriangle, Shield } from "lucide-react";
+import { Shield } from "lucide-react";
 
 export default function Retention() {
   return (
@@ -27,11 +27,24 @@ export default function Retention() {
                   <SelectItem value="180">180 days</SelectItem>
                   <SelectItem value="365">365 days (1 year)</SelectItem>
                   <SelectItem value="730">730 days (2 years)</SelectItem>
-                  <SelectItem value="never">Never (retain forever)</SelectItem>
+                  <SelectItem value="1095">1095 days (3 years)</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-sm text-muted-foreground mt-2">
                 Data older than this period will be permanently deleted
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Need something longer than 3 years?{' '}
+                <a 
+                  href="/contact" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-primary hover:underline"
+                  data-testid="link-contact-retention"
+                >
+                  Contact us
+                </a>
+                .
               </p>
             </div>
 
