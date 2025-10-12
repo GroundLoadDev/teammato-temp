@@ -8,6 +8,24 @@ I prefer iterative development and clear, concise explanations. Ask before makin
 
 ### Recent Changes (October 12, 2025)
 
+#### Onboarding Progress & Slack Commands Expansion
+- **7-Step Progress Tracking**: Get Started page now tracks all 7 onboarding steps with completion detection:
+  1. Slack Connected (API check)
+  2. Digest Channel Selected (API check)
+  3. First Topic Created (API check)
+  4. First Feedback Received (API check)
+  5. First Moderation Action (localStorage flag)
+  6. Invite Moderator (checks users.length > 1)
+  7. Review Analytics (localStorage flag set when Analytics page visited)
+- **Progress Counter**: Shows "X/7 completed" badge in section header
+- **Auto-Hide Section**: Entire Getting Started section hides when all 7 steps complete (with localStorage persistence)
+- **Expanded Slack Commands**: "How to Use Teammato in Slack" section expanded from 2 to 4 comprehensive cards:
+  - General Feedback: `/teammato` with Dialog explanation
+  - Topic-Specific Feedback: `/teammato <topic-slug>` with examples
+  - Suggest Topic: `/teammato suggest` with usage instructions
+  - Get Help: `/teammato help` with privacy tips
+- **Interactive Cards**: Each command card clickable, opens Dialog with detailed explanation, examples, and copy-to-clipboard functionality
+
 #### Pricing Slider Update
 - **Extended Tier Range**: Slider now goes from 50 to 100,000 seats (previously capped at 5,000)
 - **New Tiers Added**: Added 10k ($599/mo), 25k ($999/mo), 50k ($1,499/mo), and 100k ($2,499/mo) pricing tiers
