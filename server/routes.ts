@@ -13,6 +13,7 @@ import { logSlackEvent } from "./utils/logScrubber";
 import { roundTimestampToDay } from "./utils/timestampRounding";
 import { prepQuoteForDigest } from "./utils/quotePrep";
 import { addNoiseToParticipantCount } from "./utils/differentialPrivacy";
+import { sendWithJitter } from "./utils/timingJitter";
 import { WebClient } from '@slack/web-api';
 import adminKeysRouter from "./routes/admin-keys";
 import themesRouter from "./routes/themes";
@@ -2972,9 +2973,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
 
-          // Send contribution receipt
-          sendContributionReceipt(slackTeam.accessToken, user.id, topic.id, topic.name)
-            .catch(err => console.error('Failed to send receipt:', err));
+          // Send contribution receipt with jitter to prevent timing correlation
+          sendWithJitter(() => 
+            sendContributionReceipt(slackTeam.accessToken, user.id, topic.id, topic.name)
+          );
 
           // Success - close modal stack
           return res.json({
@@ -3272,9 +3274,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Thread ${thread.id} reached k-anonymity threshold (${participants.length}/${thread.kThreshold})`);
         }
 
-        // Send contribution receipt
-        sendContributionReceipt(slackTeam.accessToken, user.id, topic.id, topic.name)
-          .catch(err => console.error('Failed to send receipt:', err));
+        // Send contribution receipt with jitter to prevent timing correlation
+        sendWithJitter(() => 
+          sendContributionReceipt(slackTeam.accessToken, user.id, topic.id, topic.name)
+        );
 
         // Success - close modal
         return res.json({
@@ -3541,11 +3544,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (status === 'actioned' && actionNotes && topic.slackChannelId) {
         const slackTeam = await storage.getSlackTeamByOrgId(orgId);
         if (slackTeam) {
-          // Post to Slack but don't fail the update if Slack fails
-          postActionNotesToChannel(slackTeam.accessToken, topic.slackChannelId, topic.name, actionNotes)
-            .catch(err => {
-              console.error('Failed to post action notes to Slack (continuing):', err);
-            });
+          // Post to Slack with jitter but don't fail the update if Slack fails
+          sendWithJitter(() => 
+            postActionNotesToChannel(slackTeam.accessToken, topic.slackChannelId, topic.name, actionNotes)
+          );
         }
       }
       
