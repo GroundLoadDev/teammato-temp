@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Download, TrendingUp, Users, MessageSquare, Hash } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 
 interface TopicActivity {
   topicId: string;
@@ -44,6 +45,11 @@ export default function Analytics() {
 
   const maxActivity = topicActivity?.reduce((max, t) => Math.max(max, t.itemCount), 0) || 1;
   const maxTrendValue = weeklyTrend?.reduce((max, t) => Math.max(max, t.count), 0) || 1;
+
+  // Mark analytics as visited for onboarding completion
+  useEffect(() => {
+    localStorage.setItem('teammato_analytics_visited', 'true');
+  }, []);
 
   return (
     <div className="p-8">

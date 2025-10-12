@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   CheckCircle2, Circle, MessageSquare, FileText, Tag, CheckCheck, 
   Slack, ArrowRight, Info, Download, History, AlertTriangle, Clock,
-  Send, ChevronRight, Copy, TrendingUp, Users, Sparkles, X
+  Send, ChevronRight, Copy, TrendingUp, Users, Sparkles, X, HelpCircle, Lightbulb
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,11 +54,18 @@ interface FeedbackThread {
   createdAt: string;
 }
 
+interface User {
+  id: string;
+  email: string;
+  role: string;
+}
+
 export default function GetStarted() {
   const { toast } = useToast();
   const [copiedCommand, setCopiedCommand] = useState<string | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
   const [showMilestone, setShowMilestone] = useState<string | null>(null);
+  const [showSlackDialog, setShowSlackDialog] = useState<string | null>(null);
 
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ['/api/dashboard/stats'],
@@ -80,6 +87,10 @@ export default function GetStarted() {
     queryKey: ['/api/dashboard/recent-threads'],
   });
 
+  const { data: users, isLoading: usersLoading } = useQuery<User[]>({
+    queryKey: ['/api/users'],
+  });
+
   const sendDigestMutation = useMutation({
     mutationFn: async () => apiRequest('POST', '/api/slack/digest-preview', {}),
     onSuccess: () => {
@@ -95,6 +106,25 @@ export default function GetStarted() {
     setCopiedCommand(cmd);
     setTimeout(() => setCopiedCommand(null), 2000);
   };
+
+  // Calculate onboarding completion
+  const onboardingSteps = {
+    slackConnected: slackStatus?.connected || false,
+    digestChannel: !!slackSettings?.digestChannel,
+    topicsCreated: (stats?.totalTopics || 0) > 0,
+    testSubmitted: (stats?.totalFeedbackItems || 0) > 0,
+    digestEnabled: slackSettings?.digestEnabled || false,
+    moderatorInvited: (users?.length || 0) > 1,
+    analyticsVisited: !!localStorage.getItem('teammato_analytics_visited'),
+  };
+
+  const completedSteps = Object.values(onboardingSteps).filter(Boolean).length;
+  const totalSteps = Object.keys(onboardingSteps).length;
+  const onboardingComplete = completedSteps === totalSteps;
+
+  // Check if user has manually dismissed onboarding
+  const hasManuallyDismissed = localStorage.getItem('teammato_onboarding_dismissed') === 'true';
+  const shouldShowOnboarding = !onboardingComplete && !hasManuallyDismissed;
 
   // First-run detection and milestone tracking
   useEffect(() => {
@@ -405,201 +435,239 @@ export default function GetStarted() {
       )}
 
       {/* Stateful Post-Install Checklist */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Getting Started</h2>
-        <div className="max-w-3xl space-y-3">
-          {/* Step 1: Slack Connected */}
-          <Card className={slackStatus?.connected ? 'border-emerald-200 dark:border-emerald-900' : ''}>
-            <CardContent className="p-4 flex items-center gap-4">
-              {slackStatus?.connected ? (
-                <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" data-testid="icon-step-1-done" />
-              ) : (
-                <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
-              )}
-              <div className="flex-1">
-                <h3 className="font-semibold">Slack connected</h3>
-                <p className="text-sm text-muted-foreground">
-                  {slackStatus?.connected ? 'Your workspace is linked' : 'Connect your Slack workspace'}
-                </p>
-              </div>
-              {slackStatus?.connected ? (
-                <Link href="/admin/slack-settings">
-                  <Button size="sm" variant="ghost">Settings</Button>
-                </Link>
-              ) : (
-                <Button size="sm">Connect</Button>
-              )}
-            </CardContent>
-          </Card>
+      {shouldShowOnboarding && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Getting Started</h2>
+            <Badge variant="secondary" data-testid="badge-onboarding-progress">
+              {completedSteps}/{totalSteps} completed
+            </Badge>
+          </div>
+          <div className="max-w-3xl space-y-3">
+            {/* Step 1: Slack Connected */}
+            <Card className={slackStatus?.connected ? 'border-emerald-200 dark:border-emerald-900' : ''}>
+              <CardContent className="p-4 flex items-center gap-4">
+                {slackStatus?.connected ? (
+                  <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" data-testid="icon-step-1-done" />
+                ) : (
+                  <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
+                )}
+                <div className="flex-1">
+                  <h3 className="font-semibold">Slack connected</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {slackStatus?.connected ? 'Your workspace is linked' : 'Connect your Slack workspace'}
+                  </p>
+                </div>
+                {slackStatus?.connected ? (
+                  <Link href="/admin/slack-settings">
+                    <Button size="sm" variant="ghost">Settings</Button>
+                  </Link>
+                ) : (
+                  <Button size="sm">Connect</Button>
+                )}
+              </CardContent>
+            </Card>
 
-          {/* Step 2: Pick digest channel */}
-          <Card className={slackSettings?.digestChannel ? 'border-emerald-200 dark:border-emerald-900' : ''}>
+            {/* Step 2: Pick digest channel */}
+            <Card className={slackSettings?.digestChannel ? 'border-emerald-200 dark:border-emerald-900' : ''}>
             <CardContent className="p-4 flex items-center gap-4">
               {slackSettings?.digestChannel ? (
                 <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" data-testid="icon-step-2-done" />
-              ) : (
-                <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
-              )}
-              <div className="flex-1">
-                <h3 className="font-semibold flex items-center gap-2">
-                  Pick digest channel
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="w-3.5 h-3.5 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-xs">
-                        <p className="text-xs">Daily digests summarize new feedback and send to your chosen channel, keeping everyone informed without spamming.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {slackSettings?.digestChannel ? `Configured: ${slackSettings.digestChannel}` : 'Set where daily digests are sent'}
-                </p>
-              </div>
-              <Link href="/admin/slack-settings">
-                <Button size="sm" variant={slackSettings?.digestChannel ? 'ghost' : 'default'}>
-                  {slackSettings?.digestChannel ? 'Change' : 'Setup'}
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
+                ) : (
+                  <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
+                )}
+                <div className="flex-1">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    Pick digest channel
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-3.5 h-3.5 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="text-xs">Daily digests summarize new feedback and send to your chosen channel, keeping everyone informed without spamming.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {slackSettings?.digestChannel ? `Configured: ${slackSettings.digestChannel}` : 'Set where daily digests are sent'}
+                  </p>
+                </div>
+                <Link href="/admin/slack-settings">
+                  <Button size="sm" variant={slackSettings?.digestChannel ? 'ghost' : 'default'}>
+                    {slackSettings?.digestChannel ? 'Change' : 'Setup'}
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
 
-          {/* Step 3: Seed topics */}
-          <Card className={(stats?.totalTopics || 0) > 0 ? 'border-emerald-200 dark:border-emerald-900' : ''}>
-            <CardContent className="p-4 flex items-center gap-4">
-              {(stats?.totalTopics || 0) > 0 ? (
-                <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" data-testid="icon-step-3-done" />
-              ) : (
-                <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
-              )}
-              <div className="flex-1">
-                <h3 className="font-semibold">Seed topics (1-3)</h3>
-                <p className="text-sm text-muted-foreground">
-                  {(stats?.totalTopics || 0) > 0 ? `${stats?.totalTopics} topics created` : 'Create feedback categories to organize responses'}
-                </p>
-              </div>
-              <Link href="/admin/topics">
-                <Button size="sm" variant={(stats?.totalTopics || 0) > 0 ? 'ghost' : 'default'}>
-                  {(stats?.totalTopics || 0) > 0 ? 'Manage' : 'Create topics'}
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
+            {/* Step 3: Seed topics */}
+            <Card className={(stats?.totalTopics || 0) > 0 ? 'border-emerald-200 dark:border-emerald-900' : ''}>
+              <CardContent className="p-4 flex items-center gap-4">
+                {(stats?.totalTopics || 0) > 0 ? (
+                  <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" data-testid="icon-step-3-done" />
+                ) : (
+                  <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
+                )}
+                <div className="flex-1">
+                  <h3 className="font-semibold">Seed topics (1-3)</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {(stats?.totalTopics || 0) > 0 ? `${stats?.totalTopics} topics created` : 'Create feedback categories to organize responses'}
+                  </p>
+                </div>
+                <Link href="/admin/topics">
+                  <Button size="sm" variant={(stats?.totalTopics || 0) > 0 ? 'ghost' : 'default'}>
+                    {(stats?.totalTopics || 0) > 0 ? 'Manage' : 'Create topics'}
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
 
-          {/* Step 4: Submit test */}
-          <Card className={(stats?.totalFeedbackItems || 0) > 0 ? 'border-emerald-200 dark:border-emerald-900' : ''}>
-            <CardContent className="p-4 flex items-center gap-4">
-              {(stats?.totalFeedbackItems || 0) > 0 ? (
-                <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" data-testid="icon-step-4-done" />
-              ) : (
-                <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
-              )}
-              <div className="flex-1">
-                <h3 className="font-semibold">Submit a test via /teammato</h3>
-                <p className="text-sm text-muted-foreground">
-                  {(stats?.totalFeedbackItems || 0) > 0 ? 'Test submitted successfully' : 'Try the feedback flow in Slack'}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+            {/* Step 4: Submit test */}
+            <Card className={(stats?.totalFeedbackItems || 0) > 0 ? 'border-emerald-200 dark:border-emerald-900' : ''}>
+              <CardContent className="p-4 flex items-center gap-4">
+                {(stats?.totalFeedbackItems || 0) > 0 ? (
+                  <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" data-testid="icon-step-4-done" />
+                ) : (
+                  <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
+                )}
+                <div className="flex-1">
+                  <h3 className="font-semibold">Submit a test via /teammato</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {(stats?.totalFeedbackItems || 0) > 0 ? 'Test submitted successfully' : 'Try the feedback flow in Slack'}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Step 5: Schedule digest */}
-          <Card className={slackSettings?.digestEnabled ? 'border-emerald-200 dark:border-emerald-900' : ''}>
-            <CardContent className="p-4 flex items-center gap-4">
-              {slackSettings?.digestEnabled ? (
-                <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" data-testid="icon-step-5-done" />
-              ) : (
-                <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
-              )}
-              <div className="flex-1">
-                <h3 className="font-semibold">Schedule digest</h3>
-                <p className="text-sm text-muted-foreground">
-                  {slackSettings?.digestEnabled ? 'Daily digest enabled' : 'Enable automated daily summaries'}
-                </p>
-              </div>
-              <Link href="/admin/slack-settings">
-                <Button size="sm" variant={slackSettings?.digestEnabled ? 'ghost' : 'default'}>
-                  {slackSettings?.digestEnabled ? 'Configure' : 'Enable'}
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
+            {/* Step 5: Schedule digest */}
+            <Card className={slackSettings?.digestEnabled ? 'border-emerald-200 dark:border-emerald-900' : ''}>
+              <CardContent className="p-4 flex items-center gap-4">
+                {slackSettings?.digestEnabled ? (
+                  <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" data-testid="icon-step-5-done" />
+                ) : (
+                  <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
+                )}
+                <div className="flex-1">
+                  <h3 className="font-semibold">Schedule digest</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {slackSettings?.digestEnabled ? 'Daily digest enabled' : 'Enable automated daily summaries'}
+                  </p>
+                </div>
+                <Link href="/admin/slack-settings">
+                  <Button size="sm" variant={slackSettings?.digestEnabled ? 'ghost' : 'default'}>
+                    {slackSettings?.digestEnabled ? 'Configure' : 'Enable'}
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
 
-          {/* Step 6: Invite moderator */}
-          <Card>
-            <CardContent className="p-4 flex items-center gap-4">
-              <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
-              <div className="flex-1">
-                <h3 className="font-semibold">Invite a moderator</h3>
-                <p className="text-sm text-muted-foreground">Add team members to help review feedback</p>
-              </div>
-              <Link href="/admin/users">
-                <Button size="sm" variant="default">Invite</Button>
-              </Link>
-            </CardContent>
-          </Card>
+            {/* Step 6: Invite moderator */}
+            <Card className={onboardingSteps.moderatorInvited ? 'border-emerald-200 dark:border-emerald-900' : ''}>
+              <CardContent className="p-4 flex items-center gap-4">
+                {onboardingSteps.moderatorInvited ? (
+                  <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" data-testid="icon-step-6-done" />
+                ) : (
+                  <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
+                )}
+                <div className="flex-1">
+                  <h3 className="font-semibold">Invite a moderator</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {onboardingSteps.moderatorInvited ? 'Team members invited' : 'Add team members to help review feedback'}
+                  </p>
+                </div>
+                <Link href="/admin/users">
+                  <Button size="sm" variant={onboardingSteps.moderatorInvited ? 'ghost' : 'default'}>Invite</Button>
+                </Link>
+              </CardContent>
+            </Card>
 
-          {/* Step 7: Review analytics */}
-          <Card>
-            <CardContent className="p-4 flex items-center gap-4">
-              <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
-              <div className="flex-1">
-                <h3 className="font-semibold">Review analytics</h3>
-                <p className="text-sm text-muted-foreground">Explore privacy-preserving insights</p>
-              </div>
-              <Link href="/admin/analytics">
-                <Button size="sm" variant="default">View analytics</Button>
-              </Link>
-            </CardContent>
-          </Card>
+            {/* Step 7: Review analytics */}
+            <Card className={onboardingSteps.analyticsVisited ? 'border-emerald-200 dark:border-emerald-900' : ''}>
+              <CardContent className="p-4 flex items-center gap-4">
+                {onboardingSteps.analyticsVisited ? (
+                  <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" data-testid="icon-step-7-done" />
+                ) : (
+                  <Circle className="w-6 h-6 text-muted-foreground flex-shrink-0" />
+                )}
+                <div className="flex-1">
+                  <h3 className="font-semibold">Review analytics</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {onboardingSteps.analyticsVisited ? 'Analytics reviewed' : 'Explore privacy-preserving insights'}
+                  </p>
+                </div>
+                <Link href="/admin/analytics">
+                  <Button size="sm" variant={onboardingSteps.analyticsVisited ? 'ghost' : 'default'}>View analytics</Button>
+                </Link>
+              </CardContent>
+            </Card>
         </div>
-      </div>
+        </div>
+      )}
 
-      {/* Inline Slack Tips */}
+      {/* Slack Commands Guide */}
       <Card data-testid="card-slack-tips">
         <CardHeader>
           <CardTitle className="text-lg">How to use Teammato in Slack</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid gap-3 md:grid-cols-2">
-            <div className="p-3 rounded-lg bg-muted">
-              <p className="text-sm text-muted-foreground mb-2">Submit feedback</p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 px-2 py-1.5 rounded bg-background text-xs font-mono">/teammato Your feedback here</code>
-                <Button 
-                  size="sm" 
-                  variant="ghost"
-                  onClick={() => copyCommand('/teammato Your feedback here')}
-                  data-testid="button-copy-command-1"
-                >
-                  {copiedCommand === '/teammato Your feedback here' ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  ) : (
-                    <Copy className="w-4 h-4" />
-                  )}
-                </Button>
+            {/* General Feedback */}
+            <button
+              onClick={() => setShowSlackDialog('general')}
+              className="p-3 rounded-lg bg-muted hover-elevate text-left transition-all"
+              data-testid="button-slack-general"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <MessageSquare className="w-4 h-4 text-primary" />
+                <p className="text-sm font-medium">General Feedback</p>
               </div>
-            </div>
-            <div className="p-3 rounded-lg bg-muted">
-              <p className="text-sm text-muted-foreground mb-2">Get help</p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 px-2 py-1.5 rounded bg-background text-xs font-mono">/teammato help</code>
-                <Button 
-                  size="sm" 
-                  variant="ghost"
-                  onClick={() => copyCommand('/teammato help')}
-                  data-testid="button-copy-command-2"
-                >
-                  {copiedCommand === '/teammato help' ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  ) : (
-                    <Copy className="w-4 h-4" />
-                  )}
-                </Button>
+              <code className="block px-2 py-1.5 rounded bg-background text-xs font-mono mb-2">/teammato Your feedback</code>
+              <p className="text-xs text-muted-foreground">Click to learn more →</p>
+            </button>
+
+            {/* Topic-specific */}
+            <button
+              onClick={() => setShowSlackDialog('topic')}
+              className="p-3 rounded-lg bg-muted hover-elevate text-left transition-all"
+              data-testid="button-slack-topic"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Tag className="w-4 h-4 text-primary" />
+                <p className="text-sm font-medium">Topic Feedback</p>
               </div>
-            </div>
+              <code className="block px-2 py-1.5 rounded bg-background text-xs font-mono mb-2">/teammato [slug] message</code>
+              <p className="text-xs text-muted-foreground">Click to learn more →</p>
+            </button>
+
+            {/* Suggest */}
+            <button
+              onClick={() => setShowSlackDialog('suggest')}
+              className="p-3 rounded-lg bg-muted hover-elevate text-left transition-all"
+              data-testid="button-slack-suggest"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Lightbulb className="w-4 h-4 text-primary" />
+                <p className="text-sm font-medium">Suggest Topic</p>
+              </div>
+              <code className="block px-2 py-1.5 rounded bg-background text-xs font-mono mb-2">/teammato suggest "Topic"</code>
+              <p className="text-xs text-muted-foreground">Click to learn more →</p>
+            </button>
+
+            {/* Help */}
+            <button
+              onClick={() => setShowSlackDialog('help')}
+              className="p-3 rounded-lg bg-muted hover-elevate text-left transition-all"
+              data-testid="button-slack-help"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <HelpCircle className="w-4 h-4 text-primary" />
+                <p className="text-sm font-medium">Get Help</p>
+              </div>
+              <code className="block px-2 py-1.5 rounded bg-background text-xs font-mono mb-2">/teammato help</code>
+              <p className="text-xs text-muted-foreground">Click to learn more →</p>
+            </button>
           </div>
         </CardContent>
       </Card>
@@ -755,6 +823,172 @@ export default function GetStarted() {
                 View Feedback
               </Button>
             </Link>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Slack Command Dialogs */}
+      <Dialog open={showSlackDialog === 'general'} onOpenChange={() => setShowSlackDialog(null)}>
+        <DialogContent className="sm:max-w-lg" data-testid="dialog-slack-general">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-primary" />
+              General Feedback
+            </DialogTitle>
+            <DialogDescription className="pt-4 space-y-3">
+              <p>Submit anonymous feedback on any topic without specifying a category.</p>
+              
+              <div className="rounded-lg bg-muted p-3">
+                <p className="text-sm font-medium mb-2">Command:</p>
+                <code className="block px-3 py-2 rounded bg-background text-sm font-mono">/teammato Your feedback message here</code>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium mb-2">Examples:</p>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li>• <code className="px-1 py-0.5 rounded bg-muted text-xs">/teammato The parking situation needs attention</code></li>
+                  <li>• <code className="px-1 py-0.5 rounded bg-muted text-xs">/teammato Love the new office hours policy</code></li>
+                </ul>
+              </div>
+
+              <div className="pt-3 border-t">
+                <p className="text-sm font-medium mb-2">Privacy Tips:</p>
+                <ul className="space-y-1 text-xs text-muted-foreground">
+                  <li>• Avoid names, dates, or specific identifiers</li>
+                  <li>• Use general language to maintain anonymity</li>
+                  <li>• Feedback is encrypted and requires 5+ participants to be visible</li>
+                </ul>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => copyCommand('/teammato ')}>Copy Command</Button>
+            <Button onClick={() => setShowSlackDialog(null)}>Got it</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showSlackDialog === 'topic'} onOpenChange={() => setShowSlackDialog(null)}>
+        <DialogContent className="sm:max-w-lg" data-testid="dialog-slack-topic">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Tag className="w-5 h-5 text-primary" />
+              Topic-Specific Feedback
+            </DialogTitle>
+            <DialogDescription className="pt-4 space-y-3">
+              <p>Submit feedback to a specific topic using its slug (short identifier).</p>
+              
+              <div className="rounded-lg bg-muted p-3">
+                <p className="text-sm font-medium mb-2">Command:</p>
+                <code className="block px-3 py-2 rounded bg-background text-sm font-mono">/teammato [topic-slug] Your feedback</code>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium mb-2">Examples:</p>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li>• <code className="px-1 py-0.5 rounded bg-muted text-xs">/teammato benefits The dental plan needs improvement</code></li>
+                  <li>• <code className="px-1 py-0.5 rounded bg-muted text-xs">/teammato remote-work More flexible hours would help</code></li>
+                </ul>
+              </div>
+
+              <div className="pt-3 border-t">
+                <p className="text-sm font-medium mb-2">Finding Topic Slugs:</p>
+                <ul className="space-y-1 text-xs text-muted-foreground">
+                  <li>• Topic slugs are shown in the Topics page</li>
+                  <li>• Slugs are case-insensitive (BENEFITS = benefits)</li>
+                  <li>• If slug doesn't match a topic, feedback goes to General</li>
+                </ul>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Link href="/admin/topics">
+              <Button variant="outline" onClick={() => setShowSlackDialog(null)}>View Topics</Button>
+            </Link>
+            <Button onClick={() => setShowSlackDialog(null)}>Got it</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showSlackDialog === 'suggest'} onOpenChange={() => setShowSlackDialog(null)}>
+        <DialogContent className="sm:max-w-lg" data-testid="dialog-slack-suggest">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lightbulb className="w-5 h-5 text-primary" />
+              Suggest a Topic
+            </DialogTitle>
+            <DialogDescription className="pt-4 space-y-3">
+              <p>Suggest a new feedback topic for admins to consider creating.</p>
+              
+              <div className="rounded-lg bg-muted p-3">
+                <p className="text-sm font-medium mb-2">Command:</p>
+                <code className="block px-3 py-2 rounded bg-background text-sm font-mono">/teammato suggest "Topic Name"</code>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium mb-2">Examples:</p>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li>• <code className="px-1 py-0.5 rounded bg-muted text-xs">/teammato suggest "Remote Work Policy"</code></li>
+                  <li>• <code className="px-1 py-0.5 rounded bg-muted text-xs">/teammato suggest "Employee Wellness Programs"</code></li>
+                </ul>
+              </div>
+
+              <div className="pt-3 border-t">
+                <p className="text-sm font-medium mb-2">What Happens Next:</p>
+                <ul className="space-y-1 text-xs text-muted-foreground">
+                  <li>• Admins review all suggestions in the admin dashboard</li>
+                  <li>• If approved, the topic becomes available for feedback</li>
+                  <li>• Your identity as the suggester is visible to admins only</li>
+                </ul>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => copyCommand('/teammato suggest "')}>Copy Command</Button>
+            <Button onClick={() => setShowSlackDialog(null)}>Got it</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showSlackDialog === 'help'} onOpenChange={() => setShowSlackDialog(null)}>
+        <DialogContent className="sm:max-w-lg" data-testid="dialog-slack-help">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HelpCircle className="w-5 h-5 text-primary" />
+              Get Help
+            </DialogTitle>
+            <DialogDescription className="pt-4 space-y-3">
+              <p>View all available Teammato commands directly in Slack.</p>
+              
+              <div className="rounded-lg bg-muted p-3">
+                <p className="text-sm font-medium mb-2">Command:</p>
+                <code className="block px-3 py-2 rounded bg-background text-sm font-mono">/teammato help</code>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium mb-2">What You'll See:</p>
+                <ul className="space-y-1 text-sm text-muted-foreground">
+                  <li>• All available Teammato commands</li>
+                  <li>• Quick examples and usage tips</li>
+                  <li>• Privacy best practices</li>
+                  <li>• Links to documentation</li>
+                </ul>
+              </div>
+
+              <div className="pt-3 border-t">
+                <p className="text-sm font-medium mb-2">All Available Commands:</p>
+                <ul className="space-y-1 text-xs font-mono text-muted-foreground">
+                  <li>• <code className="px-1 py-0.5 rounded bg-muted">/teammato [message]</code> - Submit general feedback</li>
+                  <li>• <code className="px-1 py-0.5 rounded bg-muted">/teammato [slug] [message]</code> - Submit to topic</li>
+                  <li>• <code className="px-1 py-0.5 rounded bg-muted">/teammato suggest "name"</code> - Suggest topic</li>
+                  <li>• <code className="px-1 py-0.5 rounded bg-muted">/teammato help</code> - Show help</li>
+                </ul>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => copyCommand('/teammato help')}>Copy Command</Button>
+            <Button onClick={() => setShowSlackDialog(null)}>Got it</Button>
           </div>
         </DialogContent>
       </Dialog>
