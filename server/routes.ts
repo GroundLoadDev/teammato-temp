@@ -12,6 +12,7 @@ import { scrubPIIForReview, highlightRedactions } from "./utils/scrub";
 import { logSlackEvent } from "./utils/logScrubber";
 import { roundTimestampToDay } from "./utils/timestampRounding";
 import { prepQuoteForDigest } from "./utils/quotePrep";
+import { addNoiseToParticipantCount } from "./utils/differentialPrivacy";
 import { WebClient } from '@slack/web-api';
 import adminKeysRouter from "./routes/admin-keys";
 import themesRouter from "./routes/themes";
@@ -1161,7 +1162,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const orgId = req.session.orgId!;
       const count = await storage.getUniqueParticipantCount(orgId);
-      res.json({ count });
+      const noisedCount = addNoiseToParticipantCount(count);
+      res.json({ count: noisedCount });
     } catch (error) {
       console.error('Participant count error:', error);
       res.status(500).json({ error: 'Failed to fetch participant count' });
@@ -1180,6 +1182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const activity = await storage.getTopicActivity(orgId);
       const participantCount = await storage.getUniqueParticipantCount(orgId);
+      const noisedParticipantCount = addNoiseToParticipantCount(participantCount);
       
       let data = '';
       if (format === 'csv') {
@@ -1188,10 +1191,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const topicName = (item.topicName || 'Unnamed').replace(/"/g, '""');
           data += `"${topicName}",${item.threadCount || 0},${item.itemCount || 0}\n`;
         });
-        data += `\nTotal Participants,${participantCount}\n`;
+        data += `\nTotal Participants,${noisedParticipantCount}\n`;
         data += `Time Range,${timeRange}\n`;
       } else if (format === 'json') {
-        data = JSON.stringify({ activity, participantCount, timeRange, exportedAt: new Date().toISOString() }, null, 2);
+        data = JSON.stringify({ activity, participantCount: noisedParticipantCount, timeRange, exportedAt: new Date().toISOString() }, null, 2);
       }
       
       res.json({ data });
@@ -1212,7 +1215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         topicId: thread.topicId,
         status: thread.status,
         createdAt: roundTimestampToDay(thread.createdAt),
-        participantCount: thread.participantCount || 0,
+        participantCount: addNoiseToParticipantCount(thread.participantCount || 0),
         renderState: thread.renderState, // Include render_state for transparency
       }));
       
@@ -2187,6 +2190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get participant count (how many have already submitted)
       const participantCount = await storage.getTopicParticipantCount(topic.id, orgId);
+      const noisedParticipantCount = addNoiseToParticipantCount(participantCount);
 
       // Build and open Modal A (two-step review flow)
       const client = new WebClient(slackTeam.accessToken);
@@ -2199,7 +2203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         ownerEmail,
         daysRemaining,
-        participantCount,
+        participantCount: noisedParticipantCount,
         kThreshold: topic.kThreshold,
       });
 
@@ -2697,6 +2701,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
               // Get participant count
               const participantCount = await storage.getTopicParticipantCount(topic.id, orgId);
+              const noisedParticipantCount = addNoiseToParticipantCount(participantCount);
               
               // Build and open Modal A (two-step review flow)
               const client = new WebClient(slackTeam.accessToken);
@@ -2707,7 +2712,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 prefill: {},
                 ownerEmail,
                 daysRemaining,
-                participantCount,
+                participantCount: noisedParticipantCount,
                 kThreshold: topic.kThreshold,
               });
               
@@ -3321,6 +3326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ownerEmail = owner?.email || null;
             }
             const participantCount = await storage.getTopicParticipantCount(topic.id, orgId);
+            const noisedParticipantCount = addNoiseToParticipantCount(participantCount);
             
             let suggesterEmail = null;
             let approvedByEmail = null;
@@ -3337,7 +3343,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return {
               ...topic,
               ownerEmail,
-              participantCount,
+              participantCount: noisedParticipantCount,
               suggesterEmail,
               approvedByEmail,
             };
