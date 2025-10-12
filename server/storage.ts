@@ -238,6 +238,13 @@ export class PgStorage implements IStorage {
       .where(eq(users.orgId, orgId))
       .orderBy(desc(users.createdAt));
   }
+
+  async getOrgUserCount(orgId: string): Promise<number> {
+    const result = await db.select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .where(eq(users.orgId, orgId));
+    return result[0]?.count || 0;
+  }
   
   async updateUser(userId: string, updates: Partial<InsertUser>): Promise<User | undefined> {
     const result = await db.update(users)

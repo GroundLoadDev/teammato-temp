@@ -2837,6 +2837,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
+        // Minimum population check for k-anonymity
+        const userCount = await storage.getOrgUserCount(orgId);
+        if (userCount < 10) {
+          return res.json({
+            response_action: 'errors',
+            errors: {
+              general: `Your workspace needs at least 10 active users to submit feedback. Currently: ${userCount}`,
+            },
+          });
+        }
+
         // Get topic
         const topic = await storage.getTopic(topicId, orgId);
         if (!topic || !topic.isActive) {
@@ -3011,6 +3022,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           errors: {
             behavior_block: {
               behavior_input: 'Your Slack workspace is not connected.',
+            },
+          },
+        });
+      }
+
+      // Minimum population check for k-anonymity
+      const userCount = await storage.getOrgUserCount(orgId);
+      if (userCount < 10) {
+        return res.json({
+          response_action: 'errors',
+          errors: {
+            behavior_block: {
+              behavior_input: `Your workspace needs at least 10 active users to submit feedback. Currently: ${userCount}`,
             },
           },
         });
@@ -3392,7 +3416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (kThresholdValue < 5) {
         return res.status(400).json({ error: 'K-threshold must be at least 5 for anonymity protection' });
       }
-      
+
       // Calculate expiresAt based on windowDays
       const windowDaysValue = windowDays !== undefined ? parseInt(windowDays) : 21;
       const expiresAt = new Date();
@@ -3410,8 +3434,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expiresAt,
         ownerId: userId,
       });
+
+      // Check minimum population and add warning if needed
+      const userCount = await storage.getOrgUserCount(orgId);
+      const response: any = topic;
+      if (userCount < 10) {
+        response.warning = `Topic created successfully. Note: Your workspace needs at least 10 active users before submissions are accepted. Currently: ${userCount} users.`;
+      }
       
-      res.json(topic);
+      res.json(response);
     } catch (error: any) {
       console.error('Create topic error:', error);
       
