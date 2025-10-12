@@ -8,6 +8,12 @@ I prefer iterative development and clear, concise explanations. Ask before makin
 
 ### Recent Changes (October 12, 2025)
 
+#### Pricing Slider Update
+- **Extended Tier Range**: Slider now goes from 50 to 100,000 seats (previously capped at 5,000)
+- **New Tiers Added**: Added 10k ($599/mo), 25k ($999/mo), 50k ($1,499/mo), and 100k ($2,499/mo) pricing tiers
+- **Improved UX**: Adjusted step size to 50 for smoother navigation across wider range
+- **Number Formatting**: Current seat count displays with comma separators for readability
+
 #### Audit Log Date Filter
 - **Working Date Range Filter**: Fixed non-functional calendar button, now opens date range picker
 - **Date Range Selection**: Users can select date ranges to filter audit log entries
