@@ -101,10 +101,10 @@ export function generateReceiptHash(userId: string, topicId: string, timestamp: 
   return `#${receiptId.toUpperCase()}`;
 }
 
-// Generate submitter hash for deduplication and rate-limiting
-export function generateSubmitterHash(userId: string, orgId: string): string {
+// Generate submitter hash for deduplication - per-thread unique to prevent cross-topic correlation
+export function generateSubmitterHash(userId: string, orgId: string, threadId: string): string {
   const secret = process.env.SESSION_SECRET || 'default-secret';
-  const data = `${userId}:${orgId}:${new Date().toISOString().slice(0, 10)}`;
+  const data = `${userId}:${orgId}:${threadId}`;
   return crypto.createHmac('sha256', secret)
     .update(data)
     .digest('hex');

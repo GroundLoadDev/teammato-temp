@@ -2899,7 +2899,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Generate submitter hash and coarsen situation (extract from scrubbed)
-        const submitterHash = generateSubmitterHash(user.id, orgId);
+        const submitterHash = generateSubmitterHash(user.id, orgId, thread.id);
         const situationMatch = scrubbed.match(/Situation:\s*([\s\S]*?)(?:\n\nBehavior:|$)/);
         const behaviorMatch = scrubbed.match(/Behavior:\s*([\s\S]*?)(?:\n\nImpact:|$)/);
         const impactMatch = scrubbed.match(/Impact:\s*([\s\S]*?)$/);
@@ -3213,7 +3213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Generate submitter hash and coarsen situation
-      const submitterHash = generateSubmitterHash(user.id, orgId);
+      const submitterHash = generateSubmitterHash(user.id, orgId, thread.id);
       const situationCoarse = coarsenSituation(situation);
       const createdAtDay = new Date().toISOString().slice(0, 10);
 
