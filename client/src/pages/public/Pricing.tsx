@@ -67,6 +67,7 @@ export default function PricingPage() {
         <SeatSizer seats={seats} setSeats={setSeats} recommended={recommended} term={term} />
         <PlansChooser term={term} />
         <FeatureParity />
+        <AudienceSegmentation />
         <BillingExplainer />
         <PricingFAQ />
       </main>
@@ -429,6 +430,151 @@ function FeatureParity() {
             <div key={item} className="rounded-2xl border bg-background p-4 text-sm" data-testid={`text-feature-${i}`}>{item}</div>
           ))}
         </div>
+      </div>
+    </section>
+  );
+}
+
+function AudienceSegmentation() {
+  const [selectedMode, setSelectedMode] = useState<"workspace" | "usergroup" | "channels" | "exclude">("workspace");
+
+  const modes = [
+    {
+      id: "workspace" as const,
+      title: "Workspace",
+      subtitle: "Count all active human members",
+      icon: (
+        <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <rect x="3" y="3" width="18" height="18" rx="2" />
+          <path d="M3 9h18M9 21V9" />
+        </svg>
+      ),
+      example: "1,000 workspace members = 1,000 billable seats",
+      description: "Simple and straightforward. Your entire Slack workspace counts toward your seat cap.",
+    },
+    {
+      id: "usergroup" as const,
+      title: "Slack User Group",
+      subtitle: "Count only group members",
+      icon: (
+        <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <circle cx="9" cy="7" r="3" />
+          <circle cx="15" cy="11" r="3" />
+          <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
+          <path d="M12 17v4M16 19h6" />
+        </svg>
+      ),
+      example: "@feedback-enabled with 250 members = 250 billable seats",
+      description: "Perfect for limiting access to specific teams. Only members of your chosen user group count.",
+    },
+    {
+      id: "channels" as const,
+      title: "Selected Channels",
+      subtitle: "Count unique members across channels",
+      icon: (
+        <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          <path d="M8 10h.01M12 10h.01M16 10h.01" />
+        </svg>
+      ),
+      example: "#engineering + #product = 180 unique members = 180 billable seats",
+      description: "Target specific channels. We count each unique person across your selected channels only once.",
+    },
+    {
+      id: "exclude" as const,
+      title: "Exclude Guests",
+      subtitle: "Don't count guest users",
+      icon: (
+        <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M9 9l6 6M15 9l-6 6" />
+        </svg>
+      ),
+      example: "1,000 members - 50 guests = 950 billable seats",
+      description: "Automatically exclude single and multi-channel guests from your seat count.",
+    },
+  ];
+
+  const currentMode = modes.find(m => m.id === selectedMode) || modes[0];
+
+  return (
+    <section className="mx-auto max-w-6xl px-6 py-10">
+      <div className="text-center">
+        <h3 className="text-2xl font-semibold" data-testid="text-audience-title">Pay only for who you need</h3>
+        <p className="mx-auto mt-2 max-w-2xl text-muted-foreground" data-testid="text-audience-subtitle">
+          Control your seat count by choosing exactly which Slack members should access Teammato. Your billable seats adjust automatically.
+        </p>
+      </div>
+
+      <div className="mt-8 grid gap-6 md:grid-cols-2">
+        <div className="space-y-3">
+          {modes.map((mode) => (
+            <button
+              key={mode.id}
+              onClick={() => setSelectedMode(mode.id)}
+              className={[
+                "group w-full rounded-2xl border p-4 text-left transition-all hover-elevate active-elevate-2",
+                selectedMode === mode.id
+                  ? "border-emerald-600 bg-emerald-600/5"
+                  : "border-border bg-background"
+              ].join(" ")}
+              data-testid={`button-audience-${mode.id}`}
+            >
+              <div className="flex items-start gap-3">
+                <div className={[
+                  "shrink-0 rounded-lg p-2 transition-colors",
+                  selectedMode === mode.id
+                    ? "bg-emerald-600 text-white"
+                    : "bg-muted text-foreground"
+                ].join(" ")}>
+                  {mode.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-medium" data-testid={`text-audience-${mode.id}-title`}>{mode.title}</div>
+                    {selectedMode === mode.id && (
+                      <div className="shrink-0 h-2 w-2 rounded-full bg-emerald-600" data-testid={`indicator-audience-${mode.id}`} />
+                    )}
+                  </div>
+                  <div className="mt-0.5 text-sm text-muted-foreground" data-testid={`text-audience-${mode.id}-subtitle`}>{mode.subtitle}</div>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <div className="rounded-3xl border bg-gradient-to-br from-emerald-50 to-background p-6 dark:from-emerald-950/20">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-emerald-600/10 px-3 py-1 text-sm text-emerald-600">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+            {currentMode.title}
+          </div>
+          
+          <h4 className="text-lg font-semibold" data-testid="text-audience-example-title">{currentMode.description}</h4>
+          
+          <div className="mt-4 rounded-2xl bg-background/60 p-4 backdrop-blur-sm">
+            <div className="text-sm text-muted-foreground">Example calculation:</div>
+            <div className="mt-2 font-mono text-sm font-medium" data-testid="text-audience-example">{currentMode.example}</div>
+          </div>
+
+          <div className="mt-6 space-y-2 text-sm text-muted-foreground">
+            <div className="flex items-start gap-2">
+              <span className="text-emerald-600 shrink-0">✓</span>
+              <span>Configure anytime in admin settings</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-emerald-600 shrink-0">✓</span>
+              <span>Seat count updates automatically</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-emerald-600 shrink-0">✓</span>
+              <span>No manual tracking required</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-2xl border bg-muted/40 p-4 text-center text-sm text-muted-foreground">
+        <span className="font-medium text-foreground">Pro tip:</span> Start with "Workspace" during your trial, then narrow your audience to optimize costs as you scale.
       </div>
     </section>
   );

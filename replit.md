@@ -7,6 +7,7 @@ Teammato is an enterprise-grade, Slack-first SaaS platform for anonymous feedbac
 - **Privacy Documentation Complete**: Updated Privacy.tsx and Trust.tsx with comprehensive anonymity implementation details including k+2 buffer protection, 5-30s timing jitter, differential privacy (ε=0.5), per-thread hashing, 10-user minimum population enforcement, timestamp rounding, and encryption monitoring.
 - **Anonymity Remediation (11/14 tasks)**: Implemented enterprise-grade privacy protections validated by architect review. Remaining 3 tasks deferred due to cost/complexity considerations.
 - **Encryption Monitoring**: Added structured logging and metrics endpoint (/api/dashboard/encryption-metrics) for tracking encryption operations.
+- **Pricing Page Enhancement**: Added interactive "Pay only for who you need" section showcasing audience segmentation capabilities (Workspace, User Group, Selected Channels, Exclude Guests) with live examples and calculations to help potential customers understand billing optimization options.
 
 ### User Preferences
 I prefer iterative development and clear, concise explanations. Ask before making major changes to the architecture or core functionalities. Ensure all new features align with the privacy-first principle.
