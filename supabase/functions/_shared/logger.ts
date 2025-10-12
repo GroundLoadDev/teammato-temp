@@ -19,8 +19,12 @@ export function createEdgeLogger(functionName: string) {
     if (typeof data === 'object' && data !== null) {
       const redacted: any = {};
       for (const key in data) {
-        // Redact sensitive fields
-        if (['content', 'body', 'title', 'email', 'name', 'ip', 'userAgent'].includes(key)) {
+        // Redact sensitive fields including Slack identifiers
+        if ([
+          'content', 'body', 'title', 'email', 'name', 'ip', 'userAgent',
+          'user_id', 'team_id', 'channel_id', 'slackUserId', 'teamId', 'channelId',
+          'bot_user_id', 'enterprise_id', 'authed_user'
+        ].includes(key)) {
           redacted[key] = '[REDACTED]';
         } else {
           redacted[key] = data[key];

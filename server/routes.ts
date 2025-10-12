@@ -9,6 +9,7 @@ import { filterAnonymousFeedback, generateSubmitterHash, coarsenSituation } from
 import { sendContributionReceipt, postActionNotesToChannel, sendInstallerWelcomeDM } from "./utils/slackMessaging";
 import { buildFeedbackModal, buildInputModalA, buildReviewModalB } from "./utils/slackModal";
 import { scrubPIIForReview, highlightRedactions } from "./utils/scrub";
+import { logSlackEvent } from "./utils/logScrubber";
 import { prepQuoteForDigest } from "./utils/quotePrep";
 import { WebClient } from '@slack/web-api';
 import adminKeysRouter from "./routes/admin-keys";
@@ -2479,7 +2480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Handle button actions (invitation acceptance, etc.)
       if (payload.type === 'block_actions') {
         const { user, team, actions } = payload;
-        console.log(`[MODAL] Button action: ${actions[0]?.action_id}, User: ${user.id}, Team: ${team.id}`);
+        logSlackEvent(`Button action: ${actions[0]?.action_id}`);
         
         const action = actions[0];
         
@@ -2549,7 +2550,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Mark invitation as accepted
             await storage.updateInvitationStatus(invitationId, 'accepted', invitation.orgId);
             
-            console.log(`[MODAL] User ${user.id} accepted invitation and created as ${invitation.role}`);
+            logSlackEvent(`User accepted invitation and created as ${invitation.role}`);
             
             return res.json({
               text: `✅ Welcome to Teammato! You now have *${invitation.role}* access. You can start using \`/teammato\` commands in Slack.`,
@@ -2748,7 +2749,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Handle modal view submissions
       const { user, view, team } = payload;
-      console.log(`[MODAL] User: ${user.id}, Team: ${team.id}, callback_id: ${view.callback_id}`);
+      logSlackEvent(`Modal view submission`, { callback_id: view.callback_id });
 
       // TWO-STEP MODAL FLOW
       // A) From Modal A (teammato_input) → push Review Modal B
@@ -3157,7 +3158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (topic.ownerId) {
         const userRecord = await storage.getUserBySlackId(user.id, orgId);
         if (userRecord && userRecord.id === topic.ownerId) {
-          console.log(`[MODAL] Blocked: User ${user.id} is the topic creator for topic ${topic.id}`);
+          console.log(`[MODAL] Blocked: User is the topic creator for topic ${topic.id}`);
           return res.json({
             response_action: 'errors',
             errors: {
@@ -3172,7 +3173,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if user already submitted to this topic (across all threads)
       const hasSubmitted = await storage.hasUserSubmittedToTopic(topic.id, user.id, orgId);
       if (hasSubmitted) {
-        console.log(`[MODAL] Blocked: User ${user.id} already submitted to topic ${topic.id}`);
+        console.log(`[MODAL] Blocked: User already submitted to topic ${topic.id}`);
         return res.json({
           response_action: 'errors',
           errors: {

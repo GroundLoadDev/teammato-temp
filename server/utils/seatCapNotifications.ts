@@ -69,7 +69,7 @@ export async function sendSeatCapNotifications(
             status,
             graceEndsAt?.toISOString()
           ).catch(err => {
-            console.error(`Failed to send Slack notification to user ${user.id}:`, err);
+            console.error(`Failed to send Slack notification:`, err);
           })
         );
       }
