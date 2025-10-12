@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import LegalDocument, { LegalSection } from "@/components/LegalDocument";
 
 const privacySections: LegalSection[] = [
@@ -255,6 +256,10 @@ const privacySections: LegalSection[] = [
 ];
 
 export default function Privacy() {
+  useEffect(() => {
+    document.title = "Privacy Policy — Teammato";
+  }, []);
+
   return (
     <LegalDocument
       title="Teammato Privacy Policy"

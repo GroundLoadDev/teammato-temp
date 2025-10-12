@@ -1,7 +1,12 @@
+import { useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
 export default function TrustPage() {
+  useEffect(() => {
+    document.title = "Trust & Security — Teammato";
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <Header authorizeUrl="/api/slack/install" signinUrl="/api/slack/install" transparent={false} />
