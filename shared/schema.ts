@@ -311,7 +311,7 @@ export const vThreads = pgView("v_threads", {
     t.moderation_status, t.moderation_notes, t.moderated_by, t.moderated_at,
     t.created_at,
     CASE 
-      WHEN t.participant_count >= t.k_threshold THEN 'visible'::text
+      WHEN t.participant_count >= t.k_threshold + 2 THEN 'visible'::text
       ELSE 'suppressed'::text
     END AS render_state
   FROM feedback_threads t
