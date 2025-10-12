@@ -1192,8 +1192,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       res.json({ success: true });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Digest preview error:', error);
+      
+      // Check for specific Slack errors
+      if (error?.data?.error === 'not_in_channel') {
+        return res.status(400).json({ 
+          error: 'Please invite the Teammato bot to this channel first. In Slack, type: /invite @Teammato' 
+        });
+      }
+      
       res.status(500).json({ error: 'Failed to send digest preview' });
     }
   });
