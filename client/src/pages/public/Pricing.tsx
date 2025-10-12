@@ -10,7 +10,11 @@ type BandKey =
   | "scale_500"
   | "scale_1000"
   | "scale_2500"
-  | "scale_5000";
+  | "scale_5000"
+  | "scale_10000"
+  | "scale_25000"
+  | "scale_50000"
+  | "scale_100000";
 
 type Band = {
   key: BandKey;
@@ -22,11 +26,15 @@ type Band = {
 };
 
 const BANDS: Band[] = [
-  { key: "pro_250",     name: "Pro",   cap: 250,  monthly: 99,  annual: 999,  blurb: "For most teams" },
-  { key: "scale_500",   name: "Scale", cap: 500,  monthly: 149, annual: 1490, blurb: "Bigger workspace" },
-  { key: "scale_1000",  name: "Scale", cap: 1000, monthly: 199, annual: 1990, blurb: "Growing fast" },
-  { key: "scale_2500",  name: "Scale", cap: 2500, monthly: 299, annual: 2990, blurb: "Large orgs" },
-  { key: "scale_5000",  name: "Scale", cap: 5000, monthly: 399, annual: 3990, blurb: "Very large orgs" },
+  { key: "pro_250",      name: "Pro",   cap: 250,    monthly: 99,   annual: 999,   blurb: "For most teams" },
+  { key: "scale_500",    name: "Scale", cap: 500,    monthly: 149,  annual: 1490,  blurb: "Bigger workspace" },
+  { key: "scale_1000",   name: "Scale", cap: 1000,   monthly: 199,  annual: 1990,  blurb: "Growing fast" },
+  { key: "scale_2500",   name: "Scale", cap: 2500,   monthly: 299,  annual: 2990,  blurb: "Large orgs" },
+  { key: "scale_5000",   name: "Scale", cap: 5000,   monthly: 399,  annual: 3990,  blurb: "Very large orgs" },
+  { key: "scale_10000",  name: "Scale", cap: 10000,  monthly: 599,  annual: 5990,  blurb: "Enterprise" },
+  { key: "scale_25000",  name: "Scale", cap: 25000,  monthly: 999,  annual: 9990,  blurb: "Large enterprise" },
+  { key: "scale_50000",  name: "Scale", cap: 50000,  monthly: 1499, annual: 14990, blurb: "Very large enterprise" },
+  { key: "scale_100000", name: "Scale", cap: 100000, monthly: 2499, annual: 24990, blurb: "Enterprise Grid" },
 ];
 
 function pickBandBySeats(seats: number): Band {
@@ -34,7 +42,11 @@ function pickBandBySeats(seats: number): Band {
   if (seats <= 500) return BANDS[1];
   if (seats <= 1000) return BANDS[2];
   if (seats <= 2500) return BANDS[3];
-  return BANDS[4];
+  if (seats <= 5000) return BANDS[4];
+  if (seats <= 10000) return BANDS[5];
+  if (seats <= 25000) return BANDS[6];
+  if (seats <= 50000) return BANDS[7];
+  return BANDS[8];
 }
 
 function formatUSD(n: number) {
