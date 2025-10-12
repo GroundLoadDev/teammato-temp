@@ -8,6 +8,12 @@ I prefer iterative development and clear, concise explanations. Ask before makin
 
 ### Recent Changes (October 12, 2025)
 
+#### Audit Log Date Filter
+- **Working Date Range Filter**: Fixed non-functional calendar button, now opens date range picker
+- **Date Range Selection**: Users can select date ranges to filter audit log entries
+- **Visual Feedback**: Calendar button changes to primary variant when date filter is active
+- **Clear Function**: Added clear button to remove date filter and show all entries
+
 #### Retention Page Updates
 - **Removed Storage Cost Warning**: Eliminated misleading warning about storage costs (users don't pay for storage)
 - **Updated Retention Periods**: Removed "Never (retain forever)" option, added 3-year maximum (1095 days)
