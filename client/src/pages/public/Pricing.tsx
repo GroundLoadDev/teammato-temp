@@ -55,7 +55,7 @@ function formatUSD(n: number) {
 
 export default function PricingPage() {
   const [term, setTerm] = useState<Term>("annual");
-  const [seats, setSeats] = useState(240);
+  const [seats, setSeats] = useState(500);
 
   const recommended = useMemo(() => pickBandBySeats(seats), [seats]);
 
@@ -160,8 +160,8 @@ function SeatSizer({
             <input
               type="range"
               min={50}
-              max={5000}
-              step={10}
+              max={100000}
+              step={50}
               value={seats}
               onChange={(e) => setSeats(parseInt(e.target.value, 10))}
               className="w-full accent-emerald-600"
@@ -170,8 +170,8 @@ function SeatSizer({
             />
             <div className="mt-2 flex items-center justify-between text-sm text-muted-foreground">
               <span data-testid="text-min-seats">50</span>
-              <span data-testid="text-current-seats">{seats} members</span>
-              <span data-testid="text-max-seats">5,000</span>
+              <span data-testid="text-current-seats">{seats.toLocaleString()} members</span>
+              <span data-testid="text-max-seats">100,000</span>
             </div>
           </div>
         </div>
