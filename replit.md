@@ -3,6 +3,11 @@
 ### Overview
 Teammato is an enterprise-grade, Slack-first SaaS platform for anonymous feedback within organizations. It ensures privacy through k-anonymity, per-organization encryption, and multi-tenant isolation. The platform aims to foster transparent feedback, boost employee engagement, and deliver actionable insights while protecting user anonymity. Key capabilities include time-boxed feedback campaigns, robust moderation, privacy-preserving analytics, and seamless Slack integration. The project includes a marketing website rebuild, a multi-phase Admin Dashboard redesign (billing, compliance, system health, audience config), and a CPU-based ML pipeline for automatic theme generation from feedback.
 
+### Recent Changes (October 2025)
+- **Privacy Documentation Complete**: Updated Privacy.tsx and Trust.tsx with comprehensive anonymity implementation details including k+2 buffer protection, 5-30s timing jitter, differential privacy (ε=0.5), per-thread hashing, 10-user minimum population enforcement, timestamp rounding, and encryption monitoring.
+- **Anonymity Remediation (11/14 tasks)**: Implemented enterprise-grade privacy protections validated by architect review. Remaining 3 tasks deferred due to cost/complexity considerations.
+- **Encryption Monitoring**: Added structured logging and metrics endpoint (/api/dashboard/encryption-metrics) for tracking encryption operations.
+
 ### User Preferences
 I prefer iterative development and clear, concise explanations. Ask before making major changes to the architecture or core functionalities. Ensure all new features align with the privacy-first principle.
 
