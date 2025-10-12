@@ -48,28 +48,38 @@ function AtAGlance() {
   const items = [
     {
       title: "Ciphertext at rest",
-      sub: "Ciphertext at rest with per-org 256-bit keys (XChaCha20-Poly1305 AEAD); message content never stored in plaintext.",
+      sub: "Per-org 256-bit keys (XChaCha20-Poly1305 AEAD); message content never stored in plaintext. Encryption is mandatory with monitoring.",
       icon: Lock,
     },
     {
-      title: "Multi-tenant isolation",
-      sub: "Row-level security (RLS) bounds queries by org_id.",
-      icon: Isolate,
-    },
-    {
-      title: "No PII in logs",
-      sub: "Content-free logs: no message text; tokens and identifiers redacted. Limited operational metadata only.",
+      title: "K+2 buffer protection",
+      sub: "Topics visible only at k+2 participants (not k) with differential privacy noise (ε=0.5) to prevent exact-k attribution.",
       icon: Shield,
     },
     {
+      title: "Timing attack defense",
+      sub: "All notifications delayed 5-30s random jitter. Per-thread hashing eliminates cross-topic correlation.",
+      icon: Clock,
+    },
+    {
+      title: "Population enforcement",
+      sub: "Minimum 10 active users required before feedback submission to prevent small-org re-identification.",
+      icon: Users,
+    },
+    {
+      title: "Multi-tenant isolation",
+      sub: "Row-level security (RLS) bounds queries by org_id. No cross-org data access.",
+      icon: Isolate,
+    },
+    {
       title: "Export safety",
-      sub: "Exports use k-safe views; no ciphertext; only summaries and metadata.",
+      sub: "Exports use k-safe views; timestamps rounded to day-level; only summaries and metadata.",
       icon: FileShield,
     },
   ];
   return (
     <section className="mx-auto max-w-6xl px-6 py-10">
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         {items.map((i) => (
           <div key={i.title} className="rounded-2xl border bg-background p-6" data-testid={`card-${i.title.toLowerCase().replace(/\s+/g, '-')}`}>
             <i.icon className="h-6 w-6 text-emerald-600" />
@@ -308,6 +318,25 @@ function FileShield(props: React.SVGProps<SVGSVGElement>) {
       <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9l-5-6z" stroke="currentColor" strokeWidth="1.5" />
       <path d="M14 3v6h6" stroke="currentColor" strokeWidth="1.5" />
       <path d="M12 12l3 2v2c0 2-2 3-3 3s-3-1-3-3v-2l3-2z" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function Clock(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" {...props}>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function Users(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" {...props}>
+      <circle cx="9" cy="7" r="3" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.85" stroke="currentColor" strokeWidth="1.5" />
     </svg>
   );
 }
