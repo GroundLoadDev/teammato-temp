@@ -424,6 +424,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Encryption monitoring metrics (owner/admin only)
+  app.get('/api/dashboard/encryption-metrics', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const { getEncryptionMetrics } = await import('./utils/encryptionMonitor');
+      const metrics = getEncryptionMetrics();
+      res.json(metrics);
+    } catch (error) {
+      console.error('Encryption metrics error:', error);
+      res.status(500).json({ error: 'Failed to fetch encryption metrics' });
+    }
+  });
+
   // Stripe Webhook - Must use raw body for signature verification
   app.post('/api/stripe/webhook', async (req, res) => {
     if (!stripe) {

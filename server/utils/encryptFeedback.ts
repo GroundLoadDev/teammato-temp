@@ -1,5 +1,6 @@
 import { cryptoReady, toBytes, aeadEnc, aeadDec, sha256Str } from "./encryption";
 import { ensureOrgDEK, loadOrgDEK } from "./keys";
+import { logEncryptionEvent } from "./encryptionMonitor";
 import sodium from "libsodium-wrappers";
 
 export interface EncryptedFields {
@@ -22,7 +23,12 @@ export async function encryptFeedbackFields(
   impact: string | null
 ): Promise<EncryptedFields> {
   if (!process.env.TM_MASTER_KEY_V1) {
-    console.error('[CRITICAL] TM_MASTER_KEY_V1 not configured - encryption is REQUIRED for production');
+    logEncryptionEvent({
+      type: 'KEY_MISSING',
+      orgId,
+      threadId,
+      error: 'TM_MASTER_KEY_V1 environment variable not configured'
+    });
     throw new Error('ENCRYPTION_KEY_MISSING: TM_MASTER_KEY_V1 environment variable must be configured');
   }
 
@@ -47,13 +53,24 @@ export async function encryptFeedbackFields(
     const result = aeadEnc(dek, toBytes(payloadJson), aad, nonce);
     const aadHash = Buffer.from(sha256Str(aadStr));
 
+    logEncryptionEvent({
+      type: 'ENCRYPTION_SUCCESS',
+      orgId,
+      threadId
+    });
+
     return {
       payloadCt: Buffer.from(result.ct),
       nonce: Buffer.from(nonce),
       aadHash,
     };
   } catch (error) {
-    console.error('[CRITICAL] Encryption failed:', error);
+    logEncryptionEvent({
+      type: 'ENCRYPTION_FAILED',
+      orgId,
+      threadId,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
     throw new Error(`ENCRYPTION_FAILED: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
@@ -70,6 +87,14 @@ export async function decryptFeedbackFields(
 }> {
   // Handle missing encryption data gracefully (legacy/unencrypted rows)
   if (!process.env.TM_MASTER_KEY_V1 || !nonce || !payloadCt) {
+    if (!process.env.TM_MASTER_KEY_V1) {
+      logEncryptionEvent({
+        type: 'KEY_MISSING',
+        orgId,
+        threadId,
+        error: 'TM_MASTER_KEY_V1 not configured for decryption'
+      });
+    }
     return {
       content: null,
       behavior: null,
@@ -89,13 +114,24 @@ export async function decryptFeedbackFields(
     const payloadJson = Buffer.from(decrypted).toString('utf8');
     const payload: FeedbackPayload = JSON.parse(payloadJson);
     
+    logEncryptionEvent({
+      type: 'DECRYPTION_SUCCESS',
+      orgId,
+      threadId
+    });
+
     return {
       content: payload.content,
       behavior: payload.behavior,
       impact: payload.impact
     };
   } catch (error) {
-    console.error('[DECRYPTION ERROR]', error);
+    logEncryptionEvent({
+      type: 'DECRYPTION_FAILED',
+      orgId,
+      threadId,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
     // Return nulls instead of throwing for legacy compatibility
     return {
       content: null,

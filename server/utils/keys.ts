@@ -1,5 +1,6 @@
 import sodium from "libsodium-wrappers";
 import { cryptoReady, wrapDEK, unwrapDEK } from "./encryption";
+import { logEncryptionEvent } from "./encryptionMonitor";
 import { db } from "../db";
 import { orgKeys } from "../../shared/schema";
 import { eq } from "drizzle-orm";
@@ -30,15 +31,26 @@ export async function ensureOrgDEK(orgId: string) {
   
   if (existing) return;
   
-  const dek = sodium.randombytes_buf(32);
-  const wrapped = wrapDEK(dek, orgId);
-  
-  await db.insert(orgKeys).values({
-    orgId,
-    wrappedDek: Buffer.from(wrapped)
-  });
-  
-  cachePut(orgId, dek);
+  try {
+    const dek = sodium.randombytes_buf(32);
+    const wrapped = wrapDEK(dek, orgId);
+    
+    await db.insert(orgKeys).values({
+      orgId,
+      wrappedDek: Buffer.from(wrapped)
+    });
+    
+    cachePut(orgId, dek);
+    
+    console.log(`[KEY GENERATION] New DEK generated for org ${orgId}`);
+  } catch (error) {
+    logEncryptionEvent({
+      type: 'DEK_GENERATION_FAILED',
+      orgId,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+    throw error;
+  }
 }
 
 export async function loadOrgDEK(orgId: string): Promise<Uint8Array> {
@@ -47,18 +59,34 @@ export async function loadOrgDEK(orgId: string): Promise<Uint8Array> {
   const cached = cacheGet(orgId);
   if (cached) return cached;
   
-  const row = await db.query.orgKeys.findFirst({
-    where: eq(orgKeys.orgId, orgId)
-  });
-  
-  if (!row) {
-    throw new Error(`org_keys missing for ${orgId}`);
+  try {
+    const row = await db.query.orgKeys.findFirst({
+      where: eq(orgKeys.orgId, orgId)
+    });
+    
+    if (!row) {
+      logEncryptionEvent({
+        type: 'KEY_LOAD_FAILED',
+        orgId,
+        error: `org_keys missing for org ${orgId}`
+      });
+      throw new Error(`org_keys missing for ${orgId}`);
+    }
+    
+    const wrapped: Buffer = row.wrappedDek as Buffer;
+    const dek = unwrapDEK(new Uint8Array(wrapped), orgId);
+    cachePut(orgId, dek);
+    return dek;
+  } catch (error) {
+    if (!(error instanceof Error && error.message.includes('org_keys missing'))) {
+      logEncryptionEvent({
+        type: 'KEY_LOAD_FAILED',
+        orgId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+    throw error;
   }
-  
-  const wrapped: Buffer = row.wrappedDek as Buffer;
-  const dek = unwrapDEK(new Uint8Array(wrapped), orgId);
-  cachePut(orgId, dek);
-  return dek;
 }
 
 export async function rewrapOrgDEK(orgId: string) {
