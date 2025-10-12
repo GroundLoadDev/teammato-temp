@@ -8,23 +8,18 @@ I prefer iterative development and clear, concise explanations. Ask before makin
 
 ### Recent Changes (October 12, 2025)
 
-#### Onboarding Progress & Slack Commands Expansion
-- **7-Step Progress Tracking**: Get Started page now tracks all 7 onboarding steps with completion detection:
-  1. Slack Connected (API check)
-  2. Digest Channel Selected (API check)
-  3. First Topic Created (API check)
-  4. First Feedback Received (API check)
-  5. First Moderation Action (localStorage flag)
-  6. Invite Moderator (checks users.length > 1)
-  7. Review Analytics (localStorage flag set when Analytics page visited)
-- **Progress Counter**: Shows "X/7 completed" badge in section header
-- **Auto-Hide Section**: Entire Getting Started section hides when all 7 steps complete (with localStorage persistence)
-- **Expanded Slack Commands**: "How to Use Teammato in Slack" section expanded from 2 to 4 comprehensive cards:
-  - General Feedback: `/teammato` with Dialog explanation
-  - Topic-Specific Feedback: `/teammato <topic-slug>` with examples
-  - Suggest Topic: `/teammato suggest` with usage instructions
-  - Get Help: `/teammato help` with privacy tips
-- **Interactive Cards**: Each command card clickable, opens Dialog with detailed explanation, examples, and copy-to-clipboard functionality
+#### Dashboard Slack Commands Enhancement
+- **Expanded Command Cards**: "How to Use Teammato in Slack" section on Dashboard now shows 4 comprehensive, clickable cards:
+  - **General Feedback**: `/teammato` - Opens two-step modal for anonymous feedback submission
+  - **Topic-Specific**: `/teammato <topic-slug>` - Submit to specific topic with examples (benefits, remote-work, company-culture)
+  - **Suggest Topic**: `/teammato suggest` - Propose new feedback topics for admin review
+  - **Get Help**: `/teammato help` - View all commands and privacy tips
+- **Interactive Dialogs**: Each card clickable, opens detailed Dialog with:
+  - Command syntax and examples
+  - Step-by-step usage instructions
+  - Privacy tips and k-anonymity explanations
+  - Copy-to-clipboard functionality for commands
+- **Comprehensive Explainers**: Dialogs cover topic slug case-insensitivity, suggestion workflow, k=5 threshold, encryption, and rotating hashes
 
 #### Pricing Slider Update
 - **Extended Tier Range**: Slider now goes from 50 to 100,000 seats (previously capped at 5,000)

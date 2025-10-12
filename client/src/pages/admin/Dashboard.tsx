@@ -59,6 +59,7 @@ export default function Dashboard() {
   const [copiedCommand, setCopiedCommand] = useState<string | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
   const [showMilestone, setShowMilestone] = useState<string | null>(null);
+  const [commandDialog, setCommandDialog] = useState<'general' | 'topic' | 'suggest' | 'help' | null>(null);
 
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ['/api/dashboard/stats'],
@@ -564,42 +565,65 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid gap-3 md:grid-cols-2">
-            <div className="p-3 rounded-lg bg-muted">
-              <p className="text-sm text-muted-foreground mb-2">Submit feedback</p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 px-2 py-1.5 rounded bg-background text-xs font-mono">/teammato Your feedback here</code>
-                <Button 
-                  size="sm" 
-                  variant="ghost"
-                  onClick={() => copyCommand('/teammato Your feedback here')}
-                  data-testid="button-copy-command-1"
-                >
-                  {copiedCommand === '/teammato Your feedback here' ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  ) : (
-                    <Copy className="w-4 h-4" />
-                  )}
-                </Button>
+            <Card 
+              className="p-4 cursor-pointer hover-elevate" 
+              onClick={() => setCommandDialog('general')}
+              data-testid="card-command-general"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <p className="font-medium mb-1">General Feedback</p>
+                  <code className="text-xs text-muted-foreground">/teammato</code>
+                  <p className="text-xs text-muted-foreground mt-2">Submit anonymous feedback via modal</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
               </div>
-            </div>
-            <div className="p-3 rounded-lg bg-muted">
-              <p className="text-sm text-muted-foreground mb-2">Get help</p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 px-2 py-1.5 rounded bg-background text-xs font-mono">/teammato help</code>
-                <Button 
-                  size="sm" 
-                  variant="ghost"
-                  onClick={() => copyCommand('/teammato help')}
-                  data-testid="button-copy-command-2"
-                >
-                  {copiedCommand === '/teammato help' ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  ) : (
-                    <Copy className="w-4 h-4" />
-                  )}
-                </Button>
+            </Card>
+
+            <Card 
+              className="p-4 cursor-pointer hover-elevate" 
+              onClick={() => setCommandDialog('topic')}
+              data-testid="card-command-topic"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <p className="font-medium mb-1">Topic-Specific Feedback</p>
+                  <code className="text-xs text-muted-foreground">/teammato &lt;topic-slug&gt;</code>
+                  <p className="text-xs text-muted-foreground mt-2">Submit to a specific topic</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
               </div>
-            </div>
+            </Card>
+
+            <Card 
+              className="p-4 cursor-pointer hover-elevate" 
+              onClick={() => setCommandDialog('suggest')}
+              data-testid="card-command-suggest"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <p className="font-medium mb-1">Suggest Topic</p>
+                  <code className="text-xs text-muted-foreground">/teammato suggest</code>
+                  <p className="text-xs text-muted-foreground mt-2">Propose a new feedback topic</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
+              </div>
+            </Card>
+
+            <Card 
+              className="p-4 cursor-pointer hover-elevate" 
+              onClick={() => setCommandDialog('help')}
+              data-testid="card-command-help"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <p className="font-medium mb-1">Get Help</p>
+                  <code className="text-xs text-muted-foreground">/teammato help</code>
+                  <p className="text-xs text-muted-foreground mt-2">View all commands and privacy tips</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
+              </div>
+            </Card>
           </div>
         </CardContent>
       </Card>
@@ -732,6 +756,185 @@ export default function Dashboard() {
             <Link href="/admin/feedback">
               <Button>View Feedback</Button>
             </Link>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Command Dialogs */}
+      <Dialog open={commandDialog === 'general'} onOpenChange={(open) => !open && setCommandDialog(null)}>
+        <DialogContent className="sm:max-w-lg" data-testid="dialog-command-general">
+          <DialogHeader>
+            <DialogTitle>General Feedback</DialogTitle>
+            <DialogDescription className="pt-4 space-y-4">
+              <div>
+                <p className="font-medium mb-2">Command:</p>
+                <code className="px-3 py-2 rounded bg-muted text-sm block">/teammato</code>
+              </div>
+              <div>
+                <p className="font-medium mb-2">How it works:</p>
+                <ol className="list-decimal pl-5 space-y-2 text-sm">
+                  <li>Type <code className="px-1 py-0.5 rounded bg-muted">/teammato</code> in any Slack channel</li>
+                  <li>A two-step modal opens for anonymous submission</li>
+                  <li>Step 1: Enter your feedback title (becomes thread title)</li>
+                  <li>Step 2: Add detailed feedback and optional topic selection</li>
+                  <li>Your feedback is encrypted, posted to the digest channel, and you receive a DM receipt</li>
+                </ol>
+              </div>
+              <div className="bg-muted/50 p-3 rounded-md">
+                <p className="text-xs text-muted-foreground">
+                  <strong>Privacy:</strong> Your identity is protected through k-anonymity (k=5). Feedback stays hidden until at least 5 people contribute.
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 justify-end pt-4">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                copyCommand('/teammato');
+                toast({ title: "Command copied!" });
+              }}
+              data-testid="button-copy-general"
+            >
+              <Copy className="w-4 h-4 mr-2" />
+              Copy Command
+            </Button>
+            <Button size="sm" onClick={() => setCommandDialog(null)}>Got it</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={commandDialog === 'topic'} onOpenChange={(open) => !open && setCommandDialog(null)}>
+        <DialogContent className="sm:max-w-lg" data-testid="dialog-command-topic">
+          <DialogHeader>
+            <DialogTitle>Topic-Specific Feedback</DialogTitle>
+            <DialogDescription className="pt-4 space-y-4">
+              <div>
+                <p className="font-medium mb-2">Command:</p>
+                <code className="px-3 py-2 rounded bg-muted text-sm block">/teammato &lt;topic-slug&gt;</code>
+              </div>
+              <div>
+                <p className="font-medium mb-2">Examples:</p>
+                <div className="space-y-2">
+                  <code className="px-3 py-2 rounded bg-muted text-sm block">/teammato benefits</code>
+                  <code className="px-3 py-2 rounded bg-muted text-sm block">/teammato remote-work</code>
+                  <code className="px-3 py-2 rounded bg-muted text-sm block">/teammato company-culture</code>
+                </div>
+              </div>
+              <div>
+                <p className="font-medium mb-2">How it works:</p>
+                <ul className="list-disc pl-5 space-y-1 text-sm">
+                  <li>Topic slugs are case-insensitive (BENEFITS = benefits)</li>
+                  <li>Opens modal pre-selected to that specific topic</li>
+                  <li>Streamlines feedback for focused discussions</li>
+                  <li>Find topic slugs in the Topics page</li>
+                </ul>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 justify-end pt-4">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                copyCommand('/teammato <topic-slug>');
+                toast({ title: "Command copied!" });
+              }}
+              data-testid="button-copy-topic"
+            >
+              <Copy className="w-4 h-4 mr-2" />
+              Copy Command
+            </Button>
+            <Button size="sm" onClick={() => setCommandDialog(null)}>Got it</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={commandDialog === 'suggest'} onOpenChange={(open) => !open && setCommandDialog(null)}>
+        <DialogContent className="sm:max-w-lg" data-testid="dialog-command-suggest">
+          <DialogHeader>
+            <DialogTitle>Suggest a Topic</DialogTitle>
+            <DialogDescription className="pt-4 space-y-4">
+              <div>
+                <p className="font-medium mb-2">Command:</p>
+                <code className="px-3 py-2 rounded bg-muted text-sm block">/teammato suggest</code>
+              </div>
+              <div>
+                <p className="font-medium mb-2">How it works:</p>
+                <ol className="list-decimal pl-5 space-y-2 text-sm">
+                  <li>Type <code className="px-1 py-0.5 rounded bg-muted">/teammato suggest</code> in Slack</li>
+                  <li>A modal opens for topic suggestion</li>
+                  <li>Enter topic name, slug, and description</li>
+                  <li>Admins/Owners review suggestions in the Topics page</li>
+                  <li>If approved, the topic becomes available for feedback</li>
+                </ol>
+              </div>
+              <div className="bg-muted/50 p-3 rounded-md">
+                <p className="text-xs text-muted-foreground">
+                  <strong>Tip:</strong> Suggestions are anonymous and tracked. Once approved, the topic shows who suggested and approved it.
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 justify-end pt-4">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                copyCommand('/teammato suggest');
+                toast({ title: "Command copied!" });
+              }}
+              data-testid="button-copy-suggest"
+            >
+              <Copy className="w-4 h-4 mr-2" />
+              Copy Command
+            </Button>
+            <Button size="sm" onClick={() => setCommandDialog(null)}>Got it</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={commandDialog === 'help'} onOpenChange={(open) => !open && setCommandDialog(null)}>
+        <DialogContent className="sm:max-w-lg" data-testid="dialog-command-help">
+          <DialogHeader>
+            <DialogTitle>Get Help</DialogTitle>
+            <DialogDescription className="pt-4 space-y-4">
+              <div>
+                <p className="font-medium mb-2">Command:</p>
+                <code className="px-3 py-2 rounded bg-muted text-sm block">/teammato help</code>
+              </div>
+              <div>
+                <p className="font-medium mb-2">What you'll see:</p>
+                <ul className="list-disc pl-5 space-y-1 text-sm">
+                  <li>Complete list of all available commands</li>
+                  <li>Privacy and anonymity tips</li>
+                  <li>K-anonymity explanation (k=5 threshold)</li>
+                  <li>How to use topic slugs (case-insensitive)</li>
+                  <li>Suggestion workflow details</li>
+                </ul>
+              </div>
+              <div className="bg-muted/50 p-3 rounded-md">
+                <p className="text-xs text-muted-foreground">
+                  <strong>Privacy reminder:</strong> Your feedback is anonymous. It's encrypted, uses rotating hashes, and remains hidden until 5+ unique contributors participate.
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 justify-end pt-4">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                copyCommand('/teammato help');
+                toast({ title: "Command copied!" });
+              }}
+              data-testid="button-copy-help"
+            >
+              <Copy className="w-4 h-4 mr-2" />
+              Copy Command
+            </Button>
+            <Button size="sm" onClick={() => setCommandDialog(null)}>Got it</Button>
           </div>
         </DialogContent>
       </Dialog>
