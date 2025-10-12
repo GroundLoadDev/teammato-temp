@@ -10,6 +10,7 @@ import { sendContributionReceipt, postActionNotesToChannel, sendInstallerWelcome
 import { buildFeedbackModal, buildInputModalA, buildReviewModalB } from "./utils/slackModal";
 import { scrubPIIForReview, highlightRedactions } from "./utils/scrub";
 import { logSlackEvent } from "./utils/logScrubber";
+import { roundTimestampToDay } from "./utils/timestampRounding";
 import { prepQuoteForDigest } from "./utils/quotePrep";
 import { WebClient } from '@slack/web-api';
 import adminKeysRouter from "./routes/admin-keys";
@@ -1210,7 +1211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: thread.id,
         topicId: thread.topicId,
         status: thread.status,
-        createdAt: thread.createdAt,
+        createdAt: roundTimestampToDay(thread.createdAt),
         participantCount: thread.participantCount || 0,
         renderState: thread.renderState, // Include render_state for transparency
       }));
@@ -1232,7 +1233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: comment.id,
         threadId: comment.threadId,
         status: comment.status,
-        createdAt: comment.createdAt,
+        createdAt: roundTimestampToDay(comment.createdAt),
         renderState: comment.renderState, // Include render_state for transparency
       }));
       
@@ -1270,7 +1271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let data = 'Timestamp,Action Type,Target Type,Target ID,Moderator ID,Reason\n';
       allAudit.forEach((log: any) => {
-        const timestamp = new Date(log.createdAt).toISOString();
+        const timestamp = roundTimestampToDay(log.createdAt) || 'Unknown';
         const reason = (log.reason || '').replace(/"/g, '""');
         data += `"${timestamp}","${log.actionType}","${log.targetType}","${log.targetId}","${log.moderatorId || 'N/A'}","${reason}"\n`;
       });
