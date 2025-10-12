@@ -1673,7 +1673,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const items = await storage.getFeedbackItemsByThread(thread.id);
       
-      // Sanitize items to remove PII (slackUserId) for moderators
+      // Sanitize items to remove PII (slackUserId) and correlation vectors (submitterHash) for moderators
       const sanitizedItems = items.map(item => ({
         id: item.id,
         threadId: item.threadId,
@@ -1683,7 +1683,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         behavior: item.behavior,
         impact: item.impact,
         situationCoarse: item.situationCoarse,
-        submitterHash: item.submitterHash,
         createdAtDay: item.createdAtDay,
         status: item.status,
         moderationStatus: item.moderationStatus,
@@ -1691,7 +1690,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         moderatorId: item.moderatorId,
         moderatedAt: item.moderatedAt,
         createdAt: item.createdAt,
-        // Explicitly exclude slackUserId, contentCt, behaviorCt, impactCt, nonce, aadHash
+        // Explicitly exclude slackUserId, submitterHash, contentCt, behaviorCt, impactCt, nonce, aadHash
       }));
       
       res.json({
@@ -1829,7 +1828,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         adminUserId: moderatorId,
       });
       
-      // Sanitize response to remove PII (slackUserId) for moderators
+      // Sanitize response to remove PII (slackUserId) and correlation vectors (submitterHash) for moderators
       const sanitizedItem = updatedItem ? {
         id: updatedItem.id,
         threadId: updatedItem.threadId,
@@ -1839,7 +1838,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         behavior: updatedItem.behavior,
         impact: updatedItem.impact,
         situationCoarse: updatedItem.situationCoarse,
-        submitterHash: updatedItem.submitterHash,
         createdAtDay: updatedItem.createdAtDay,
         status: updatedItem.status,
         moderationStatus: updatedItem.moderationStatus,
@@ -1847,7 +1845,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         moderatorId: updatedItem.moderatorId,
         moderatedAt: updatedItem.moderatedAt,
         createdAt: updatedItem.createdAt,
-        // Explicitly exclude slackUserId, contentCt, behaviorCt, impactCt, nonce, aadHash
+        // Explicitly exclude slackUserId, submitterHash, contentCt, behaviorCt, impactCt, nonce, aadHash
       } : null;
       
       res.json(sanitizedItem);
