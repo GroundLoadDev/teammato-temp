@@ -742,7 +742,10 @@ export class PgStorage implements IStorage {
         .where(eq(feedbackThreads.orgId, orgId)),
       db.select({ count: sqlOperator<number>`count(*)::int` })
         .from(topics)
-        .where(eq(topics.orgId, orgId)),
+        .where(and(
+          eq(topics.orgId, orgId),
+          eq(topics.isParent, false)
+        )),
       db.select({ count: sqlOperator<number>`count(*)::int` })
         .from(feedbackThreads)
         .where(and(
