@@ -21,15 +21,9 @@ export async function encryptFeedbackFields(
   behavior: string | null,
   impact: string | null
 ): Promise<EncryptedFields> {
-  // Temporary fallback: return nulls if encryption not configured
-  // This will be removed in task #2 (Remove plaintext fallback)
   if (!process.env.TM_MASTER_KEY_V1) {
-    console.warn('[SECURITY] TM_MASTER_KEY_V1 not configured - feedback stored unencrypted');
-    return {
-      payloadCt: null,
-      nonce: null,
-      aadHash: null,
-    };
+    console.error('[CRITICAL] TM_MASTER_KEY_V1 not configured - encryption is REQUIRED for production');
+    throw new Error('ENCRYPTION_KEY_MISSING: TM_MASTER_KEY_V1 environment variable must be configured');
   }
 
   try {
@@ -59,13 +53,8 @@ export async function encryptFeedbackFields(
       aadHash,
     };
   } catch (error) {
-    console.error('[ENCRYPTION ERROR]', error);
-    // Log error but don't throw - will be changed to throw in task #2
-    return {
-      payloadCt: null,
-      nonce: null,
-      aadHash: null,
-    };
+    console.error('[CRITICAL] Encryption failed:', error);
+    throw new Error(`ENCRYPTION_FAILED: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 

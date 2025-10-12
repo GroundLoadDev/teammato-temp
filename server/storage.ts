@@ -612,30 +612,22 @@ export class PgStorage implements IStorage {
   async createFeedbackItem(insertItem: InsertFeedbackItem): Promise<FeedbackItem> {
     let finalItem = { ...insertItem };
     
-    if (insertItem.threadId && process.env.TM_MASTER_KEY_V1) {
-      try {
-        const { encryptFeedbackFields } = await import('./utils/encryptFeedback');
-        const encrypted = await encryptFeedbackFields(
-          insertItem.orgId,
-          insertItem.threadId,
-          insertItem.content || null,
-          insertItem.behavior || null,
-          insertItem.impact || null
-        );
-        
-        // Only set encrypted fields if encryption succeeded
-        if (encrypted.payloadCt && encrypted.nonce) {
-          finalItem = {
-            ...insertItem,
-            payloadCt: encrypted.payloadCt,
-            nonce: encrypted.nonce,
-            aadHash: encrypted.aadHash,
-          };
-        }
-      } catch (error) {
-        console.error('[STORAGE] Encryption failed, storing plaintext:', error);
-        // Fall through to store plaintext (will be addressed in task #2)
-      }
+    if (insertItem.threadId) {
+      const { encryptFeedbackFields } = await import('./utils/encryptFeedback');
+      const encrypted = await encryptFeedbackFields(
+        insertItem.orgId,
+        insertItem.threadId,
+        insertItem.content || null,
+        insertItem.behavior || null,
+        insertItem.impact || null
+      );
+      
+      finalItem = {
+        ...insertItem,
+        payloadCt: encrypted.payloadCt,
+        nonce: encrypted.nonce,
+        aadHash: encrypted.aadHash,
+      };
     }
     
     const result = await db.insert(feedbackItems).values(finalItem).returning();
