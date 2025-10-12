@@ -14,9 +14,7 @@ type Post = {
   content: string | null;
   behavior: string | null;
   impact: string | null;
-  contentCt: Buffer | null;
-  behaviorCt: Buffer | null;
-  impactCt: Buffer | null;
+  payloadCt: Buffer | null;
   nonce: Buffer | null;
   createdAt: Date;
 };
@@ -85,13 +83,11 @@ export async function runTheming(
     let behavior = raw.behavior;
     let impact = raw.impact;
 
-    if (raw.contentCt || raw.behaviorCt || raw.impactCt) {
+    if (raw.payloadCt && raw.nonce) {
       const decrypted = await decryptFeedbackFields(
         raw.orgId,
         raw.threadId,
-        raw.contentCt,
-        raw.behaviorCt,
-        raw.impactCt,
+        raw.payloadCt,
         raw.nonce
       );
       content = decrypted.content || content;
@@ -107,9 +103,7 @@ export async function runTheming(
       content,
       behavior,
       impact,
-      contentCt: raw.contentCt,
-      behaviorCt: raw.behaviorCt,
-      impactCt: raw.impactCt,
+      payloadCt: raw.payloadCt,
       nonce: raw.nonce,
       createdAt: raw.createdAt,
     });

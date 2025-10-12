@@ -40,14 +40,12 @@ async function testIntegration() {
       "John interrupted the PM three times without raising hand",
       "Meeting ran 20 minutes over and team lost focus"
     );
-    console.log(`✓ Encrypted (nonce: ${encrypted1.nonce?.length} bytes)`);
+    console.log(`✓ Encrypted (nonce: ${encrypted1.nonce?.length} bytes, payload: ${encrypted1.payloadCt?.length} bytes)`);
     
     const decrypted1 = await decryptFeedbackFields(
       testOrgIdToUse,
       testThreadId,
-      encrypted1.contentCt,
-      encrypted1.behaviorCt,
-      encrypted1.impactCt,
+      encrypted1.payloadCt,
       encrypted1.nonce
     );
     console.log(`✓ Decrypted all fields`);
@@ -63,17 +61,15 @@ async function testIntegration() {
       "Team member checked phone during standup",
       null
     );
-    if (!encrypted2.behaviorCt || !encrypted2.nonce) {
+    if (!encrypted2.payloadCt || !encrypted2.nonce) {
       throw new Error("CRITICAL: Behavior field not encrypted when it's the only field!");
     }
-    console.log(`✓ Behavior encrypted (${encrypted2.behaviorCt.length} bytes)`);
+    console.log(`✓ Behavior encrypted (${encrypted2.payloadCt.length} bytes)`);
     
     const decrypted2 = await decryptFeedbackFields(
       testOrgIdToUse,
       testThreadId,
-      encrypted2.contentCt,
-      encrypted2.behaviorCt,
-      encrypted2.impactCt,
+      encrypted2.payloadCt,
       encrypted2.nonce
     );
     console.log(`✓ Behavior match: ${decrypted2.behavior === "Team member checked phone during standup" ? 'YES' : 'NO'}\n`);
@@ -86,17 +82,15 @@ async function testIntegration() {
       null,
       "Decreased team morale by 50%"
     );
-    if (!encrypted3.impactCt || !encrypted3.nonce) {
+    if (!encrypted3.payloadCt || !encrypted3.nonce) {
       throw new Error("CRITICAL: Impact field not encrypted when it's the only field!");
     }
-    console.log(`✓ Impact encrypted (${encrypted3.impactCt.length} bytes)`);
+    console.log(`✓ Impact encrypted (${encrypted3.payloadCt.length} bytes)`);
     
     const decrypted3 = await decryptFeedbackFields(
       testOrgIdToUse,
       testThreadId,
-      encrypted3.contentCt,
-      encrypted3.behaviorCt,
-      encrypted3.impactCt,
+      encrypted3.payloadCt,
       encrypted3.nonce
     );
     console.log(`✓ Impact match: ${decrypted3.impact === "Decreased team morale by 50%" ? 'YES' : 'NO'}\n`);
@@ -109,17 +103,15 @@ async function testIntegration() {
       null,
       null
     );
-    if (!encrypted4.contentCt || !encrypted4.nonce) {
+    if (!encrypted4.payloadCt || !encrypted4.nonce) {
       throw new Error("CRITICAL: Content field not encrypted when it's the only field!");
     }
-    console.log(`✓ Content encrypted (${encrypted4.contentCt.length} bytes)`);
+    console.log(`✓ Content encrypted (${encrypted4.payloadCt.length} bytes)`);
     
     const decrypted4 = await decryptFeedbackFields(
       testOrgIdToUse,
       testThreadId,
-      encrypted4.contentCt,
-      encrypted4.behaviorCt,
-      encrypted4.impactCt,
+      encrypted4.payloadCt,
       encrypted4.nonce
     );
     console.log(`✓ Content match: ${decrypted4.content === "Last Friday during team retrospective" ? 'YES' : 'NO'}\n`);
@@ -135,9 +127,7 @@ async function testIntegration() {
     const decrypted5 = await decryptFeedbackFields(
       testOrgIdToUse,
       testThreadId,
-      encrypted5.contentCt,
-      encrypted5.behaviorCt,
-      encrypted5.impactCt,
+      encrypted5.payloadCt,
       encrypted5.nonce
     );
     console.log(`✓ Behavior match: ${decrypted5.behavior === "Manager takes credit for team's work" ? 'YES' : 'NO'}`);
@@ -157,9 +147,7 @@ async function testIntegration() {
       await decryptFeedbackFields(
         testOrgIdToUse,
         wrongThreadId,
-        encrypted6.contentCt,
-        encrypted6.behaviorCt,
-        encrypted6.impactCt,
+        encrypted6.payloadCt,
         encrypted6.nonce
       );
       throw new Error("SECURITY FAILURE: AAD tampering was not detected!");
@@ -184,9 +172,7 @@ async function testIntegration() {
       await decryptFeedbackFields(
         testOrgIdToUse,
         testThreadId,
-        encrypted7.contentCt,
-        encrypted7.behaviorCt,
-        encrypted7.impactCt,
+        encrypted7.payloadCt,
         Buffer.from(wrongNonce)
       );
       throw new Error("SECURITY FAILURE: Nonce tampering was not detected!");
@@ -209,9 +195,7 @@ async function testIntegration() {
     const decrypted8 = await decryptFeedbackFields(
       testOrgIdToUse,
       testThreadId,
-      encrypted8.contentCt,
-      encrypted8.behaviorCt,
-      encrypted8.impactCt,
+      encrypted8.payloadCt,
       encrypted8.nonce
     );
     console.log(`✓ All fields null: ${!decrypted8.content && !decrypted8.behavior && !decrypted8.impact ? 'YES' : 'NO'}\n`);
@@ -219,7 +203,7 @@ async function testIntegration() {
     console.log("✅ All integration tests passed!");
     console.log("   - Single field encryption works ✓");
     console.log("   - Multiple field encryption works ✓");
-    console.log("   - Decryption works with same nonce for all fields ✓");
+    console.log("   - Single nonce per payload (AEAD security) ✓");
     console.log("   - AAD tampering detected ✓");
     console.log("   - Nonce tampering detected ✓");
 

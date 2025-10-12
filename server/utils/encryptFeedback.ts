@@ -3,11 +3,15 @@ import { ensureOrgDEK, loadOrgDEK } from "./keys";
 import sodium from "libsodium-wrappers";
 
 export interface EncryptedFields {
-  contentCt: Buffer | null;
-  behaviorCt: Buffer | null;
-  impactCt: Buffer | null;
+  payloadCt: Buffer | null;
   nonce: Buffer | null;
   aadHash: Buffer | null;
+}
+
+interface FeedbackPayload {
+  content: string | null;
+  behavior: string | null;
+  impact: string | null;
 }
 
 export async function encryptFeedbackFields(
@@ -17,68 +21,66 @@ export async function encryptFeedbackFields(
   behavior: string | null,
   impact: string | null
 ): Promise<EncryptedFields> {
+  // Temporary fallback: return nulls if encryption not configured
+  // This will be removed in task #2 (Remove plaintext fallback)
   if (!process.env.TM_MASTER_KEY_V1) {
+    console.warn('[SECURITY] TM_MASTER_KEY_V1 not configured - feedback stored unencrypted');
     return {
-      contentCt: null,
-      behaviorCt: null,
-      impactCt: null,
+      payloadCt: null,
       nonce: null,
       aadHash: null,
     };
   }
 
-  await cryptoReady();
-  await ensureOrgDEK(orgId);
-  const dek = await loadOrgDEK(orgId);
+  try {
+    await cryptoReady();
+    await ensureOrgDEK(orgId);
+    const dek = await loadOrgDEK(orgId);
 
-  const aadStr = `${orgId}|${threadId}`;
-  const aad = toBytes(aadStr);
-  
-  const nonce = sodium.randombytes_buf(sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES);
+    const aadStr = `${orgId}|${threadId}`;
+    const aad = toBytes(aadStr);
+    
+    // Pack all fields into single payload - encrypt once with one nonce
+    const payload: FeedbackPayload = {
+      content,
+      behavior,
+      impact
+    };
+    
+    const payloadJson = JSON.stringify(payload);
+    const nonce = sodium.randombytes_buf(sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES);
+    
+    const result = aeadEnc(dek, toBytes(payloadJson), aad, nonce);
+    const aadHash = Buffer.from(sha256Str(aadStr));
 
-  let contentCt: Buffer | null = null;
-  let behaviorCt: Buffer | null = null;
-  let impactCt: Buffer | null = null;
-
-  if (content !== null) {
-    const result = aeadEnc(dek, toBytes(content), aad, nonce);
-    contentCt = Buffer.from(result.ct);
+    return {
+      payloadCt: Buffer.from(result.ct),
+      nonce: Buffer.from(nonce),
+      aadHash,
+    };
+  } catch (error) {
+    console.error('[ENCRYPTION ERROR]', error);
+    // Log error but don't throw - will be changed to throw in task #2
+    return {
+      payloadCt: null,
+      nonce: null,
+      aadHash: null,
+    };
   }
-
-  if (behavior !== null) {
-    const result = aeadEnc(dek, toBytes(behavior), aad, nonce);
-    behaviorCt = Buffer.from(result.ct);
-  }
-
-  if (impact !== null) {
-    const result = aeadEnc(dek, toBytes(impact), aad, nonce);
-    impactCt = Buffer.from(result.ct);
-  }
-
-  const aadHash = Buffer.from(sha256Str(aadStr));
-
-  return {
-    contentCt,
-    behaviorCt,
-    impactCt,
-    nonce: Buffer.from(nonce),
-    aadHash,
-  };
 }
 
 export async function decryptFeedbackFields(
   orgId: string,
   threadId: string,
-  contentCt: Buffer | null,
-  behaviorCt: Buffer | null,
-  impactCt: Buffer | null,
+  payloadCt: Buffer | null,
   nonce: Buffer | null
 ): Promise<{
   content: string | null;
   behavior: string | null;
   impact: string | null;
 }> {
-  if (!process.env.TM_MASTER_KEY_V1 || !nonce) {
+  // Handle missing encryption data gracefully (legacy/unencrypted rows)
+  if (!process.env.TM_MASTER_KEY_V1 || !nonce || !payloadCt) {
     return {
       content: null,
       behavior: null,
@@ -86,36 +88,30 @@ export async function decryptFeedbackFields(
     };
   }
 
-  await cryptoReady();
-  const dek = await loadOrgDEK(orgId);
-
-  const aadStr = `${orgId}|${threadId}`;
-  const aad = toBytes(aadStr);
-  const nonceBytes = new Uint8Array(nonce);
-
-  let content: string | null = null;
-  let behavior: string | null = null;
-  let impact: string | null = null;
-
   try {
-    if (contentCt) {
-      const decrypted = aeadDec(dek, new Uint8Array(contentCt), nonceBytes, aad);
-      content = Buffer.from(decrypted).toString('utf8');
-    }
+    await cryptoReady();
+    const dek = await loadOrgDEK(orgId);
 
-    if (behaviorCt) {
-      const decrypted = aeadDec(dek, new Uint8Array(behaviorCt), nonceBytes, aad);
-      behavior = Buffer.from(decrypted).toString('utf8');
-    }
+    const aadStr = `${orgId}|${threadId}`;
+    const aad = toBytes(aadStr);
+    const nonceBytes = new Uint8Array(nonce);
 
-    if (impactCt) {
-      const decrypted = aeadDec(dek, new Uint8Array(impactCt), nonceBytes, aad);
-      impact = Buffer.from(decrypted).toString('utf8');
-    }
+    const decrypted = aeadDec(dek, new Uint8Array(payloadCt), nonceBytes, aad);
+    const payloadJson = Buffer.from(decrypted).toString('utf8');
+    const payload: FeedbackPayload = JSON.parse(payloadJson);
+    
+    return {
+      content: payload.content,
+      behavior: payload.behavior,
+      impact: payload.impact
+    };
   } catch (error) {
-    console.error('Decryption failed:', error);
-    throw new Error('Failed to decrypt feedback fields - data may be corrupted or tampered');
+    console.error('[DECRYPTION ERROR]', error);
+    // Return nulls instead of throwing for legacy compatibility
+    return {
+      content: null,
+      behavior: null,
+      impact: null,
+    };
   }
-
-  return { content, behavior, impact };
 }

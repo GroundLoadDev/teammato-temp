@@ -612,7 +612,7 @@ export class PgStorage implements IStorage {
   async createFeedbackItem(insertItem: InsertFeedbackItem): Promise<FeedbackItem> {
     let finalItem = { ...insertItem };
     
-    if (process.env.TM_MASTER_KEY_V1 && insertItem.threadId) {
+    if (insertItem.threadId && process.env.TM_MASTER_KEY_V1) {
       try {
         const { encryptFeedbackFields } = await import('./utils/encryptFeedback');
         const encrypted = await encryptFeedbackFields(
@@ -623,16 +623,18 @@ export class PgStorage implements IStorage {
           insertItem.impact || null
         );
         
-        finalItem = {
-          ...insertItem,
-          contentCt: encrypted.contentCt,
-          behaviorCt: encrypted.behaviorCt,
-          impactCt: encrypted.impactCt,
-          nonce: encrypted.nonce,
-          aadHash: encrypted.aadHash,
-        };
+        // Only set encrypted fields if encryption succeeded
+        if (encrypted.payloadCt && encrypted.nonce) {
+          finalItem = {
+            ...insertItem,
+            payloadCt: encrypted.payloadCt,
+            nonce: encrypted.nonce,
+            aadHash: encrypted.aadHash,
+          };
+        }
       } catch (error) {
-        console.error('Encryption error:', error);
+        console.error('[STORAGE] Encryption failed, storing plaintext:', error);
+        // Fall through to store plaintext (will be addressed in task #2)
       }
     }
     

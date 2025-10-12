@@ -145,9 +145,7 @@ export const feedbackItems = pgTable("feedback_items", {
   moderatorId: uuid("moderator_id").references(() => users.id, { onDelete: 'set null' }),
   moderatedAt: timestamp("moderated_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-  contentCt: bytea("content_ct"),
-  behaviorCt: bytea("behavior_ct"),
-  impactCt: bytea("impact_ct"),
+  payloadCt: bytea("payload_ct"),
   nonce: bytea("nonce"),
   aadHash: bytea("aad_hash"),
 }, (table) => ({
