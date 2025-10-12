@@ -436,6 +436,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Key rotation endpoints (owner only for rotation, owner/admin for viewing)
+  app.post('/api/admin/rotate-keys', requireRole('owner'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const userId = req.session.userId!;
+      const { rewrapOrgDEK } = await import('./utils/keys');
+      
+      // Check if TM_MASTER_KEY_V2 is configured
+      if (!process.env.TM_MASTER_KEY_V2) {
+        return res.status(400).json({ 
+          error: 'Key rotation not configured. TM_MASTER_KEY_V2 environment variable required.' 
+        });
+      }
+
+      await rewrapOrgDEK(orgId, userId);
+      
+      res.json({ 
+        success: true, 
+        message: 'Master key rotated successfully'
+      });
+    } catch (error) {
+      console.error('Key rotation error:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to rotate keys'
+      });
+    }
+  });
+
+  app.get('/api/admin/rotation-history', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const orgId = req.session.orgId!;
+      const { getOrgRotationHistory } = await import('./utils/keyRotationAudit');
+      const history = getOrgRotationHistory(orgId);
+      res.json(history);
+    } catch (error) {
+      console.error('Rotation history error:', error);
+      res.status(500).json({ error: 'Failed to fetch rotation history' });
+    }
+  });
+
+  app.get('/api/admin/rotation-stats', requireRole('owner', 'admin'), async (req, res) => {
+    try {
+      const { getRotationStats } = await import('./utils/keyRotationAudit');
+      const stats = getRotationStats();
+      res.json(stats);
+    } catch (error) {
+      console.error('Rotation stats error:', error);
+      res.status(500).json({ error: 'Failed to fetch rotation statistics' });
+    }
+  });
+
   // Stripe Webhook - Must use raw body for signature verification
   app.post('/api/stripe/webhook', async (req, res) => {
     if (!stripe) {

@@ -1,6 +1,7 @@
 import sodium from "libsodium-wrappers";
 import { cryptoReady, wrapDEK, unwrapDEK } from "./encryption";
 import { logEncryptionEvent } from "./encryptionMonitor";
+import { logKeyRotationEvent } from "./keyRotationAudit";
 import { db } from "../db";
 import { orgKeys } from "../../shared/schema";
 import { eq } from "drizzle-orm";
@@ -89,32 +90,74 @@ export async function loadOrgDEK(orgId: string): Promise<Uint8Array> {
   }
 }
 
-export async function rewrapOrgDEK(orgId: string) {
-  await cryptoReady();
-  const MK2 = process.env.TM_MASTER_KEY_V2;
-  if (!MK2) throw new Error("TM_MASTER_KEY_V2 not set");
-  
-  const row = await db.query.orgKeys.findFirst({
-    where: eq(orgKeys.orgId, orgId)
+export async function rewrapOrgDEK(orgId: string, userId?: string) {
+  logKeyRotationEvent({
+    type: 'MASTER_KEY_ROTATION_INITIATED',
+    orgId,
+    userId,
+    details: { operation: 'rewrap_dek' }
   });
-  
-  if (!row) throw new Error("org not found");
-  
-  const wrapped: Buffer = row.wrappedDek as Buffer;
-  
-  const bak = process.env.TM_MASTER_KEY_V1!;
-  (process.env as any).TM_MASTER_KEY_V1 = MK2;
-  const dek = unwrapDEK(new Uint8Array(wrapped), orgId);
-  const newWrapped = wrapDEK(dek, orgId);
-  (process.env as any).TM_MASTER_KEY_V1 = bak;
-  
-  await db.update(orgKeys)
-    .set({ 
-      wrappedDek: Buffer.from(newWrapped),
-      rotatedAt: new Date()
-    })
-    .where(eq(orgKeys.orgId, orgId));
-  
-  cache.delete(orgId);
-  return true;
+
+  try {
+    await cryptoReady();
+    const MK2 = process.env.TM_MASTER_KEY_V2;
+    if (!MK2) {
+      logKeyRotationEvent({
+        type: 'MASTER_KEY_ROTATION_FAILED',
+        orgId,
+        userId,
+        error: 'TM_MASTER_KEY_V2 not configured'
+      });
+      throw new Error("TM_MASTER_KEY_V2 not set");
+    }
+    
+    const row = await db.query.orgKeys.findFirst({
+      where: eq(orgKeys.orgId, orgId)
+    });
+    
+    if (!row) {
+      logKeyRotationEvent({
+        type: 'MASTER_KEY_ROTATION_FAILED',
+        orgId,
+        userId,
+        error: 'Organization not found'
+      });
+      throw new Error("org not found");
+    }
+    
+    const wrapped: Buffer = row.wrappedDek as Buffer;
+    
+    const bak = process.env.TM_MASTER_KEY_V1!;
+    (process.env as any).TM_MASTER_KEY_V1 = MK2;
+    const dek = unwrapDEK(new Uint8Array(wrapped), orgId);
+    const newWrapped = wrapDEK(dek, orgId);
+    (process.env as any).TM_MASTER_KEY_V1 = bak;
+    
+    await db.update(orgKeys)
+      .set({ 
+        wrappedDek: Buffer.from(newWrapped),
+        rotatedAt: new Date()
+      })
+      .where(eq(orgKeys.orgId, orgId));
+    
+    cache.delete(orgId);
+
+    logKeyRotationEvent({
+      type: 'MASTER_KEY_ROTATION_SUCCESS',
+      orgId,
+      userId,
+      details: { operation: 'rewrap_dek' }
+    });
+
+    console.log(`[KEY ROTATION] Successfully rotated master key for org ${orgId}`);
+    return true;
+  } catch (error) {
+    logKeyRotationEvent({
+      type: 'MASTER_KEY_ROTATION_FAILED',
+      orgId,
+      userId,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+    throw error;
+  }
 }
