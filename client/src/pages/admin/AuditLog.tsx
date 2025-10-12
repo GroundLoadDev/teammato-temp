@@ -1,10 +1,14 @@
 import { useState } from "react";
-import { Search, Filter, Calendar, User, FileText } from "lucide-react";
+import { Search, Filter, Calendar, User, FileText, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { DateRange } from "react-day-picker";
+import { format } from "date-fns";
 
 interface AuditEntry {
   id: string;
@@ -49,13 +53,32 @@ const mockAuditLog: AuditEntry[] = [
 export default function AuditLog() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterAction, setFilterAction] = useState('all');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const filteredLog = mockAuditLog.filter(entry => {
     const matchesSearch = entry.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          entry.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          entry.resource.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = filterAction === 'all' || entry.action.startsWith(filterAction);
-    return matchesSearch && matchesFilter;
+    
+    // Date range filter
+    let matchesDate = true;
+    if (dateRange?.from) {
+      const entryDate = new Date(entry.timestamp);
+      const fromDate = new Date(dateRange.from);
+      fromDate.setHours(0, 0, 0, 0);
+      
+      if (dateRange.to) {
+        const toDate = new Date(dateRange.to);
+        toDate.setHours(23, 59, 59, 999);
+        matchesDate = entryDate >= fromDate && entryDate <= toDate;
+      } else {
+        matchesDate = entryDate >= fromDate;
+      }
+    }
+    
+    return matchesSearch && matchesFilter && matchesDate;
   });
 
   const getSeverityColor = (severity: string) => {
@@ -103,9 +126,48 @@ export default function AuditLog() {
                 <SelectItem value="settings">Settings</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" size="icon" data-testid="button-calendar">
-              <Calendar className="w-4 h-4" />
-            </Button>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button 
+                  variant={dateRange?.from ? "default" : "outline"} 
+                  size="icon" 
+                  data-testid="button-calendar"
+                >
+                  <Calendar className="w-4 h-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <CalendarComponent
+                  mode="range"
+                  selected={dateRange}
+                  onSelect={setDateRange}
+                  numberOfMonths={2}
+                  data-testid="calendar-picker"
+                />
+                {dateRange?.from && (
+                  <div className="p-3 border-t">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm text-muted-foreground">
+                        {dateRange.from && format(dateRange.from, "MMM dd, yyyy")}
+                        {dateRange.to && ` - ${format(dateRange.to, "MMM dd, yyyy")}`}
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setDateRange(undefined);
+                          setCalendarOpen(false);
+                        }}
+                        data-testid="button-clear-date"
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        Clear
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
           </div>
         </CardContent>
       </Card>
