@@ -64,19 +64,6 @@ export default function Retention() {
           </div>
         </div>
 
-        <div className="p-4 rounded-md bg-destructive/10 border border-destructive/50">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0" />
-            <div className="text-sm">
-              <p className="font-semibold mb-1">Warning</p>
-              <p className="text-muted-foreground">
-                Enabling legal hold will prevent all automatic data deletion until manually disabled. 
-                This may result in increased storage costs.
-              </p>
-            </div>
-          </div>
-        </div>
-
         <Button data-testid="button-save-retention">Save Settings</Button>
       </div>
     </div>
