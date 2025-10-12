@@ -6,6 +6,17 @@ Teammato is an enterprise-grade, Slack-first SaaS platform for anonymous feedbac
 ### User Preferences
 I prefer iterative development and clear, concise explanations. Ask before making major changes to the architecture or core functionalities. Ensure all new features align with the privacy-first principle.
 
+### Recent Changes (October 12, 2025)
+
+#### Retention Page Updates
+- **Removed Storage Cost Warning**: Eliminated misleading warning about storage costs (users don't pay for storage)
+- **Updated Retention Periods**: Removed "Never (retain forever)" option, added 3-year maximum (1095 days)
+- **Contact Link**: Added "Need something longer than 3 years? Contact us." with link to /contact page opening in new tab
+
+#### Dashboard Stats Fix
+- **Accurate Topic Count**: Dashboard now excludes parent/template topics from count to match Topics Management display
+- **Status Correction**: Fixed "Team Communication Feedback" topic status from 'active' to 'collecting' to display in Active tab
+
 ### Recent Changes (October 11, 2025)
 
 #### Billing Plan Selector Redesign
