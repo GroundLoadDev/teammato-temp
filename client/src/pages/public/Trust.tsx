@@ -138,23 +138,24 @@ function DataFlow() {
 
 function KAnon() {
   const rows = [
-    { label: "UI views", rule: "Topics with count < k are hidden across all dashboards." },
-    { label: "Exports", rule: "Database views calculate renderState; only k-safe data (threads, comments, audit logs) can be exported." },
-    { label: "Search", rule: "Autocomplete and filters exclude topics below k." },
-    { label: "Config", rule: "Admins can set k based on risk tolerance (org-level)." },
+    { label: "K+2 Buffer", rule: "Topics visible only when participant count ≥ k+2 (not just k) to prevent exact-k attribution in small teams." },
+    { label: "Differential Privacy", rule: "Statistical noise (Laplace, ε=0.5) added to all participant counts to prevent exact inference." },
+    { label: "Population Floor", rule: "Minimum 10 active users required before feedback submission to prevent small-org re-identification." },
+    { label: "UI views", rule: "Topics with count < k+2 are hidden across all dashboards." },
+    { label: "Exports", rule: "Database views calculate renderState; only k-safe data (threads, comments, audit logs) can be exported. Timestamps rounded to day-level." },
+    { label: "Timing Protection", rule: "All notifications delayed 5-30s random jitter to prevent timing-based correlation attacks." },
   ];
   return (
     <section className="mx-auto max-w-6xl px-6 py-10">
       <div className="grid gap-6 md:grid-cols-12">
         <div className="md:col-span-6">
-          <h2 className="text-xl font-semibold" data-testid="text-kanon-title">K-anonymity enforced everywhere (default k=5)</h2>
+          <h2 className="text-xl font-semibold" data-testid="text-kanon-title">Multi-Layered Anonymity Protection (k=5 minimum, k+2 visibility)</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            The long tail is where re-identification risk lives. We apply a minimum topic count (<em>k</em>) across UI and exports to prevent
-            small-n inference. Small-n cohorts suppressed. Users should avoid self-identifying details in submissions.
+            We use multiple privacy techniques to protect anonymity. Beyond k-anonymity, we apply a k+2 buffer threshold, differential privacy noise, timing jitter, and per-thread hashing to prevent re-identification attacks. Users should still avoid self-identifying details in submissions.
           </p>
           <ul className="mt-4 space-y-2 text-sm">
             {rows.map((r) => (
-              <li key={r.label} className="rounded-2xl border bg-background p-3" data-testid={`rule-${r.label.toLowerCase()}`}>
+              <li key={r.label} className="rounded-2xl border bg-background p-3" data-testid={`rule-${r.label.toLowerCase().replace(/\s+/g, '-')}`}>
                 <div className="font-medium">{r.label}</div>
                 <div className="text-muted-foreground">{r.rule}</div>
               </li>
