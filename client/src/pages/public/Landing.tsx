@@ -114,23 +114,23 @@ type QA = {
 
 const FAQ_DATA: QA[] = [
   {
-    id: "scopes",
-    q: "What Slack scopes are required?",
-    a: "We use commands and chat:write. No channel history or user identity scopes are requested.",
-    topics: ["slack", "privacy"],
-    icon: Plug,
+    id: "encryption",
+    q: "How is feedback encrypted?",
+    a: "All feedback is encrypted using XChaCha20-Poly1305 AEAD with per-organization keys. Message content is never stored in plaintext.",
+    topics: ["privacy"],
+    icon: Lock,
   },
   {
-    id: "uninstall",
-    q: "What happens if we uninstall?",
-    a: "Tokens are revoked immediately, scheduled digests are paused, and admin export remains available for 7 days unless disabled.",
-    topics: ["slack", "admin"],
-    icon: Trash2,
+    id: "pricing",
+    q: "How does pricing work?",
+    a: "Seat-based pricing starts at $2/user/month with a 14-day free trial. Plans scale from 50 to 100,000+ seats with volume discounts.",
+    topics: ["admin"],
+    icon: Settings2,
   },
   {
     id: "kthreshold",
     q: "How does the k-threshold protect people?",
-    a: "Any topic with fewer than k posts is suppressed across UI, analytics, and exports. Small-n views never render.",
+    a: "Any topic with fewer than k participants is suppressed across UI, analytics, and exports. Small-n views never render.",
     topics: ["threshold", "privacy"],
     icon: ShieldCheck,
   },
@@ -151,14 +151,14 @@ const FAQ_DATA: QA[] = [
   {
     id: "retention",
     q: "How do retention and legal hold work?",
-    a: "Admins can set 30/90/365 or custom; legal hold freezes deletion. Threshold rules still apply during hold.",
+    a: "Admins can set 90, 180, 365, 730, or 1095 days (up to 3 years); legal hold freezes deletion. Threshold rules still apply during hold.",
     topics: ["retention", "admin"],
     icon: Database,
   },
   {
     id: "roles",
     q: "Who can see what?",
-    a: "Owner/Admin manage settings and exports; Analysts view themes; no role can access identities.",
+    a: "Owners manage billing and settings; Admins handle moderation and exports; Moderators resolve flags; Viewers submit feedback. No role can access identities.",
     topics: ["admin", "privacy"],
     icon: Users,
   },
@@ -320,10 +320,6 @@ export default function Landing() {
 
               <p className="mt-4 text-sm text-muted-foreground">
                 Start free for 14 days — card added after install. You won't be charged today.
-              </p>
-
-              <p className="mt-6 text-sm text-muted-foreground">
-                Scopes: <span className="font-mono">commands, chat:write</span>
               </p>
             </div>
 
