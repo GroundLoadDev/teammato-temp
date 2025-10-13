@@ -2,6 +2,18 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
 
 type Term = "monthly" | "annual";
 
@@ -65,8 +77,7 @@ export default function PricingPage() {
       <main id="main">
         <PricingHero term={term} onTermChange={setTerm} />
         <SeatSizer seats={seats} setSeats={setSeats} recommended={recommended} term={term} />
-        <PlansChooser term={term} />
-        <FeatureParity />
+        <FeaturesAccordion />
         <AudienceSegmentation />
         <BillingExplainer />
         <PricingFAQ />
@@ -128,7 +139,6 @@ function SeatSizer({
 }) {
   const price = term === "annual" ? recommended.annual : recommended.monthly;
 
-  // R1: Check auth state to avoid re-OAuth for logged-in users
   const { data: authData } = useQuery<{ user: { id: string; email: string; role: string } }>({
     queryKey: ['/api/auth/me'],
     retry: false,
@@ -138,13 +148,11 @@ function SeatSizer({
 
   const handleStartTrial = () => {
     if (isLoggedIn) {
-      // R4: Deep link to billing with plan selection
       const priceLookupKey = term === 'annual' 
         ? `cap_${recommended.cap}_a` 
         : `cap_${recommended.cap}_m`;
       window.location.href = `/admin/billing?action=start_trial&price=${priceLookupKey}`;
     } else {
-      // Not logged in - go through OAuth
       window.location.href = `/api/slack/install?plan=${recommended.key}`;
     }
   };
@@ -179,7 +187,7 @@ function SeatSizer({
 
         <div className="md:col-span-5">
           <div className="rounded-2xl border p-5" data-testid="card-recommended-plan">
-            <div className="text-sm text-muted-foreground">Recommended</div>
+            <div className="text-sm text-muted-foreground">Your Plan</div>
             <div className="mt-2 flex items-baseline justify-between">
               <div>
                 <div className="text-lg font-medium" data-testid="text-recommended-name">{recommended.name}</div>
@@ -197,23 +205,9 @@ function SeatSizer({
             >
               Start free trial
             </button>
-            <p className="mt-3 text-xs text-muted-foreground" data-testid="text-trial-info">
+            <p className="mt-3 text-xs text-center text-muted-foreground" data-testid="text-trial-info">
               14-day trial. Card added after install. You won't be charged until trial ends.
             </p>
-            <div className="mt-4 space-y-1.5 text-xs text-muted-foreground" data-testid="section-trust-bullets">
-              <div className="flex items-start gap-2">
-                <span className="text-emerald-600 shrink-0">✓</span>
-                <span>K-anonymity enforced: 5+ participants required before visibility</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-emerald-600 shrink-0">✓</span>
-                <span>End-to-end encrypted per-org with isolated data</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-emerald-600 shrink-0">✓</span>
-                <span>Anti-retaliation policy protection built-in</span>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -221,216 +215,142 @@ function SeatSizer({
   );
 }
 
-function PlansChooser({ term }: { term: Term }) {
-  const PRO = { key: "pro_250", cap: 250, monthly: 99, annual: 999 };
-
-  type ScaleBand = {
-    key: string;
-    cap: number;
-    monthly: number;
-    annual: number;
-    label: string;
-  };
-
-  const SCALE: ScaleBand[] = [
-    { key: "scale_500",    cap: 500,    monthly: 149,  annual: 1490,  label: "Up to 500" },
-    { key: "scale_1000",   cap: 1000,   monthly: 199,  annual: 1990,  label: "Up to 1k" },
-    { key: "scale_2500",   cap: 2500,   monthly: 299,  annual: 2990,  label: "Up to 2.5k" },
-    { key: "scale_5000",   cap: 5000,   monthly: 399,  annual: 3990,  label: "Up to 5k" },
-    { key: "scale_10000",  cap: 10000,  monthly: 599,  annual: 5990,  label: "Up to 10k" },
-    { key: "scale_25000",  cap: 25000,  monthly: 999,  annual: 9990,  label: "Up to 25k" },
-    { key: "scale_50000",  cap: 50000,  monthly: 1499, annual: 14990, label: "Up to 50k" },
-    { key: "scale_100000", cap: 100000, monthly: 2499, annual: 24990, label: "Up to 100k" },
+function FeaturesAccordion() {
+  const features = [
+    {
+      category: "Anonymous Feedback",
+      items: [
+        { name: "K-anonymity enforcement", tooltip: "Minimum 5 participants required before any feedback becomes visible. Prevents single-person identification." },
+        { name: "Per-organization encryption", tooltip: "XChaCha20-Poly1305 AEAD encryption with isolated keys per workspace. We store ciphertext only." },
+        { name: "Anonymous posts & comments", tooltip: "Submit feedback and engage in discussions without revealing your identity." },
+        { name: "PII filtering", tooltip: "Automatic removal of personally identifiable information and @mentions from submissions." },
+        { name: "Timing jitter (5-30s)", tooltip: "Randomized delivery delays prevent timing-based correlation attacks." },
+        { name: "Differential privacy", tooltip: "Laplace noise (ε=0.5) added to analytics to protect individual contributions." },
+      ]
+    },
+    {
+      category: "Slack Integration",
+      items: [
+        { name: "Slash command feedback", tooltip: "Use /teammato [topic] in any channel to submit anonymous feedback instantly." },
+        { name: "Interactive modals", tooltip: "Guided submission experience with real-time character counts and validation." },
+        { name: "Daily digest notifications", tooltip: "Automated summaries delivered to designated channels with engagement metrics." },
+        { name: "Thread invitations", tooltip: "Smart notifications when new feedback arrives on topics you care about." },
+        { name: "OAuth v2 authentication", tooltip: "Secure, token-based authentication with automatic token refresh and revocation support." },
+      ]
+    },
+    {
+      category: "Topic Management",
+      items: [
+        { name: "Time-boxed campaigns", tooltip: "Create feedback windows with defined start/end dates. Auto-lock prevents late submissions." },
+        { name: "K-threshold progress", tooltip: "Visual indicators show how close topics are to meeting anonymity requirements." },
+        { name: "User-suggested topics", tooltip: "Team members can propose new feedback topics with built-in voting and approval workflow." },
+        { name: "You Said / We Did loops", tooltip: "Document actions taken based on feedback to close the loop with your team." },
+        { name: "Anti-gaming safeguards", tooltip: "Locked thresholds and collection windows prevent manipulation after creation." },
+      ]
+    },
+    {
+      category: "Moderation & Compliance",
+      items: [
+        { name: "Flag queue & bulk actions", tooltip: "Efficient moderation workflow with batch operations for flagged content." },
+        { name: "Immutable audit trails", tooltip: "Every moderation action is logged with timestamps, actors, and reasons for compliance." },
+        { name: "Role-based access control", tooltip: "Owner, Admin, Moderator, and Viewer roles with granular permissions." },
+        { name: "Data retention policies", tooltip: "Configure retention periods up to 3 years with automated cleanup." },
+        { name: "GDPR-ready exports", tooltip: "Privacy-preserving data exports that maintain k-anonymity guarantees." },
+      ]
+    },
+    {
+      category: "Analytics & Insights",
+      items: [
+        { name: "Privacy-preserving metrics", tooltip: "Aggregated analytics that maintain k-anonymity even in small populations." },
+        { name: "AI theme detection", tooltip: "CPU-based ML pipeline identifies common themes using hierarchical clustering and c-TF-IDF." },
+        { name: "K-safe export capabilities", tooltip: "Database views ensure exports never violate anonymity thresholds." },
+        { name: "Engagement dashboards", tooltip: "Real-time statistics on participation, topics, and team health." },
+        { name: "Trend analysis", tooltip: "Track sentiment and engagement patterns over time while preserving anonymity." },
+      ]
+    },
+    {
+      category: "Billing & Subscription",
+      items: [
+        { name: "Stripe integration", tooltip: "Secure payment processing with PCI compliance and automatic invoice generation." },
+        { name: "7 pricing tiers", tooltip: "From 250 to 100k+ seats with transparent, predictable pricing." },
+        { name: "Seat-based capacity", tooltip: "Pay only for active workspace members with automatic seat counting." },
+        { name: "Flexible billing cycles", tooltip: "Choose monthly or annual billing with 2-month savings on annual plans." },
+        { name: "Customer portal access", tooltip: "Self-service subscription management, invoice history, and payment method updates." },
+        { name: "Audience segmentation", tooltip: "Control seat count by workspace, user groups, channels, or exclude guests." },
+      ]
+    },
+    {
+      category: "Security & Privacy",
+      items: [
+        { name: "Multi-tenant isolation", tooltip: "Row-level security ensures complete data isolation between organizations." },
+        { name: "Session management", tooltip: "Secure session handling with regeneration on login and CSRF protection." },
+        { name: "Encryption monitoring", tooltip: "Structured logging and metrics for all encryption operations with audit trails." },
+        { name: "Key rotation support", tooltip: "Manual master key rotation with full audit trail. Recommended every 90 days." },
+        { name: "10-user minimum population", tooltip: "Organizations must have at least 10 active users to prevent small-group de-anonymization." },
+        { name: "K+2 buffer protection", tooltip: "Extra safety margin beyond k-threshold to account for edge cases and timing attacks." },
+      ]
+    },
+    {
+      category: "Support",
+      items: [
+        { name: "Email support", tooltip: "Responsive support team available on all plans with typical response within 24 hours." },
+        { name: "Documentation", tooltip: "Comprehensive guides, API docs, and best practices for anonymous feedback programs." },
+        { name: "Onboarding assistance", tooltip: "Setup guidance and configuration help to get your team started quickly." },
+        { name: "Feature requests", tooltip: "Direct input into product roadmap with transparent prioritization." },
+      ]
+    },
   ];
 
-  const [sel, setSel] = useState<string>("scale_500");
-  const active = SCALE.find(b => b.key === sel)!;
-
-  const scalePrice = term === "annual" ? active.annual : active.monthly;
-  const scaleSuffix = term === "annual" ? "/yr" : "/mo";
-
-  const handleChoosePlan = (planKey: string) => {
-    // Redirect to Slack OAuth with plan parameter
-    window.location.href = `/api/slack/install?plan=${planKey}`;
-  };
-
   return (
-    <section className="mx-auto max-w-6xl px-6 py-8">
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* PRO */}
-        <article className="rounded-2xl border bg-background p-6 shadow-[0_1px_0_rgba(0,0,0,0.06)]" data-testid="card-plan-pro">
-          <header className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold" data-testid="text-plan-name-pro">Pro</h3>
-            <span className="rounded-full bg-foreground/5 px-2 py-1 text-xs text-foreground/70">For most teams</span>
-          </header>
-          <div className="mt-2 text-3xl font-semibold" data-testid="text-plan-price-pro">
-            {formatUSD(term === "annual" ? PRO.annual : PRO.monthly)}
-            <span className="ml-1 text-sm font-normal text-muted-foreground">{scaleSuffix}</span>
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Free today. Card added after install.
-          </p>
-          <ul className="mt-4 space-y-2 text-sm">
-            <li className="flex items-center justify-between">
-              <span>Max workspace users</span>
-              <span className="rounded-lg bg-foreground/5 px-2 py-0.5 text-xs text-foreground/70" data-testid="text-plan-cap-pro">{PRO.cap.toLocaleString()}</span>
-            </li>
-            <li className="text-muted-foreground">Anonymous posts & comments</li>
-            <li className="text-muted-foreground">Weekly digests & analytics</li>
-            <li className="text-muted-foreground">K-anonymity & retention controls</li>
-            <li className="text-muted-foreground">Email support</li>
-          </ul>
-          <button
-            onClick={() => handleChoosePlan(PRO.key)}
-            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-            data-testid="button-choose-pro"
-          >
-            Choose Pro
-          </button>
-          <p className="mt-2 text-xs text-center text-muted-foreground">Secure checkout via Stripe</p>
-          <div className="mt-4 pt-4 border-t space-y-1.5 text-xs text-muted-foreground" data-testid="section-trust-bullets-pro">
-            <div className="flex items-start gap-1.5">
-              <span className="text-emerald-600 shrink-0 text-xs">✓</span>
-              <span>K-anonymity: 5+ required</span>
-            </div>
-            <div className="flex items-start gap-1.5">
-              <span className="text-emerald-600 shrink-0 text-xs">✓</span>
-              <span>Per-org encryption</span>
-            </div>
-            <div className="flex items-start gap-1.5">
-              <span className="text-emerald-600 shrink-0 text-xs">✓</span>
-              <span>Anti-retaliation protection</span>
-            </div>
-          </div>
-        </article>
-
-        {/* SCALE with band rail */}
-        <article className="rounded-2xl border bg-background p-6 shadow-[0_1px_0_rgba(0,0,0,0.06)]" data-testid="card-plan-scale">
-          <header className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold" data-testid="text-plan-name-scale">Scale</h3>
-            <span className="rounded-full bg-foreground/5 px-2 py-1 text-xs text-foreground/70">Larger workspaces</span>
-          </header>
-
-          {/* Grid of band chips */}
-          <div className="mt-3">
-            <p className="text-sm text-muted-foreground">Pick your seat cap</p>
-            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-              {SCALE.map((b) => {
-                const activeChip = sel === b.key;
-                return (
-                  <button
-                    key={b.key}
-                    onClick={() => setSel(b.key)}
-                    aria-pressed={activeChip}
-                    className={[
-                      "w-full rounded-lg px-3 py-2 text-left text-sm ring-1 ring-black/5 transition",
-                      activeChip ? "bg-emerald-600 text-white" : "bg-muted hover:bg-muted/70",
-                    ].join(" ")}
-                    data-testid={`button-scale-${b.key}`}
-                  >
-                    {b.label}
-                  </button>
-                );
-              })}
-              <a
-                href="/contact"
-                className="w-full rounded-lg px-3 py-2 text-left text-sm ring-1 ring-black/5 hover:bg-muted"
-                data-testid="link-contact-enterprise"
-              >
-                100k+? Contact us
-              </a>
-            </div>
-          </div>
-
-          {/* Live price/cap */}
-          <div className="mt-4 flex items-baseline justify-between">
-            <div className="text-3xl font-semibold" data-testid="text-plan-price-scale">
-              {formatUSD(scalePrice)} <span className="ml-1 text-sm font-normal text-muted-foreground">{scaleSuffix}</span>
-            </div>
-            <div className="rounded-lg bg-foreground/5 px-2 py-1 text-xs text-foreground/70" data-testid="text-plan-cap-scale">
-              Max {active.cap.toLocaleString()} users
-            </div>
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Free today. Card added after install.
-          </p>
-
-          <ul className="mt-4 space-y-2 text-sm">
-            <li className="text-muted-foreground">Anonymous posts & comments</li>
-            <li className="text-muted-foreground">Weekly digests & analytics</li>
-            <li className="text-muted-foreground">K-anonymity & retention controls</li>
-            <li className="text-muted-foreground">Email support</li>
-          </ul>
-
-          <button
-            onClick={() => handleChoosePlan(active.key)}
-            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-            data-testid="button-choose-scale"
-          >
-            Choose Scale
-          </button>
-          <p className="mt-2 text-xs text-center text-muted-foreground">Secure checkout via Stripe</p>
-          <div className="mt-4 pt-4 border-t space-y-1.5 text-xs text-muted-foreground" data-testid="section-trust-bullets-scale">
-            <div className="flex items-start gap-1.5">
-              <span className="text-emerald-600 shrink-0 text-xs">✓</span>
-              <span>K-anonymity: 5+ required</span>
-            </div>
-            <div className="flex items-start gap-1.5">
-              <span className="text-emerald-600 shrink-0 text-xs">✓</span>
-              <span>Per-org encryption</span>
-            </div>
-            <div className="flex items-start gap-1.5">
-              <span className="text-emerald-600 shrink-0 text-xs">✓</span>
-              <span>Anti-retaliation protection</span>
-            </div>
-          </div>
-        </article>
+    <section className="mx-auto max-w-6xl px-6 py-10">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-semibold" data-testid="text-features-title">Complete Feature Set</h2>
+        <p className="mt-2 text-muted-foreground" data-testid="text-features-subtitle">
+          Every feature available on every plan. No upsells, no hidden tiers.
+        </p>
       </div>
 
-      <p className="mx-auto mt-4 max-w-3xl text-center text-sm text-muted-foreground">
+      <Accordion type="multiple" className="space-y-3" defaultValue={["Anonymous Feedback", "Slack Integration"]}>
+        {features.map((section) => (
+          <AccordionItem 
+            key={section.category} 
+            value={section.category}
+            className="rounded-2xl border bg-background px-6 data-[state=open]:bg-muted/20"
+            data-testid={`accordion-${section.category.toLowerCase().replace(/\s+/g, '-')}`}
+          >
+            <AccordionTrigger className="text-left font-medium hover:no-underline py-4">
+              {section.category}
+            </AccordionTrigger>
+            <AccordionContent className="pb-4">
+              <div className="grid gap-3 md:grid-cols-2">
+                {section.items.map((item) => (
+                  <div key={item.name} className="flex items-start gap-2 text-sm">
+                    <span className="text-emerald-600 shrink-0 mt-0.5">✓</span>
+                    <div className="flex items-center gap-1.5 flex-1">
+                      <span className="text-muted-foreground">{item.name}</span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button className="shrink-0" aria-label={`Info about ${item.name}`}>
+                            <Info className="h-3.5 w-3.5 text-muted-foreground/50 hover:text-muted-foreground" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs" data-testid={`tooltip-${item.name.toLowerCase().replace(/\s+/g, '-')}`}>
+                          <p className="text-xs">{item.tooltip}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+
+      <p className="mx-auto mt-8 max-w-3xl text-center text-sm text-muted-foreground" data-testid="text-pricing-footer">
         Same product on every plan. Choose a cap now—change size anytime in the Billing Portal.
         For 100k+ workspaces, <a href="/contact" className="underline underline-offset-4">contact us</a>.
       </p>
-
-      <details className="mx-auto mt-3 w-full max-w-md text-sm text-muted-foreground">
-        <summary className="cursor-pointer text-center underline underline-offset-4">See all published bands</summary>
-        <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl border bg-background p-4">
-          {[{cap:250, m:99, a:999},{cap:500,m:149,a:1490},{cap:1000,m:199,a:1990},
-            {cap:2500,m:299,a:2990},{cap:5000,m:399,a:3990},{cap:10000,m:599,a:5990},
-            {cap:25000,m:999,a:9990},{cap:50000,m:1499,a:14990},{cap:100000,m:2499,a:24990}]
-            .map(r => (
-              <li key={r.cap} className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
-                <span>{r.cap.toLocaleString()}</span>
-                <span>${r.m}/mo · ${r.a}/yr</span>
-              </li>
-            ))}
-        </ul>
-      </details>
-    </section>
-  );
-}
-
-function FeatureParity() {
-  return (
-    <section className="mx-auto max-w-6xl px-6 py-10">
-      <div className="rounded-3xl border bg-muted/40 p-6 md:p-8">
-        <h3 className="text-xl font-semibold" data-testid="text-parity-title">Same product on every plan</h3>
-        <p className="mt-1 text-sm text-muted-foreground" data-testid="text-parity-subtitle">
-          We scale price with workspace size—not with features or support tiers.
-        </p>
-        <div className="mt-5 grid gap-3 md:grid-cols-3">
-          {[
-            "Anonymous feedback in Slack",
-            "Weekly, k-anonymous digests",
-            "Moderation flags & analytics",
-            "Retention controls & exports",
-            "Org-scoped isolation & encryption",
-            "Email support on all plans",
-          ].map((item, i) => (
-            <div key={item} className="rounded-2xl border bg-background p-4 text-sm" data-testid={`text-feature-${i}`}>{item}</div>
-          ))}
-        </div>
-      </div>
     </section>
   );
 }
@@ -533,48 +453,40 @@ function AudienceSegmentation() {
                   <div className="flex items-center justify-between gap-2">
                     <div className="font-medium" data-testid={`text-audience-${mode.id}-title`}>{mode.title}</div>
                     {selectedMode === mode.id && (
-                      <div className="shrink-0 h-2 w-2 rounded-full bg-emerald-600" data-testid={`indicator-audience-${mode.id}`} />
+                      <span className="shrink-0 rounded-full bg-emerald-600 px-2 py-0.5 text-xs text-white">Selected</span>
                     )}
                   </div>
-                  <div className="mt-0.5 text-sm text-muted-foreground" data-testid={`text-audience-${mode.id}-subtitle`}>{mode.subtitle}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{mode.subtitle}</div>
                 </div>
               </div>
             </button>
           ))}
         </div>
 
-        <div className="rounded-3xl border bg-gradient-to-br from-emerald-50 to-background p-6 dark:from-emerald-950/20">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-emerald-600/10 px-3 py-1 text-sm text-emerald-600">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-            {currentMode.title}
+        <div className="rounded-2xl border bg-background p-6">
+          <div className="mb-4">
+            <h4 className="font-medium" data-testid="text-audience-example-title">{currentMode.title}</h4>
+            <p className="mt-1 text-sm text-muted-foreground" data-testid="text-audience-example-description">
+              {currentMode.description}
+            </p>
           </div>
           
-          <h4 className="text-lg font-semibold" data-testid="text-audience-example-title">{currentMode.description}</h4>
-          
-          <div className="mt-4 rounded-2xl bg-background/60 p-4 backdrop-blur-sm">
-            <div className="text-sm text-muted-foreground">Example calculation:</div>
-            <div className="mt-2 font-mono text-sm font-medium" data-testid="text-audience-example">{currentMode.example}</div>
+          <div className="rounded-xl bg-muted/40 p-4">
+            <div className="text-sm font-medium text-muted-foreground">Example</div>
+            <div className="mt-2 font-mono text-sm" data-testid="text-audience-example">
+              {currentMode.example}
+            </div>
           </div>
 
-          <div className="mt-6 space-y-2 text-sm text-muted-foreground">
+          <div className="mt-4 rounded-xl border border-emerald-600/20 bg-emerald-600/5 p-4">
             <div className="flex items-start gap-2">
-              <span className="text-emerald-600 shrink-0">✓</span>
-              <span>Configure anytime in admin settings</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-emerald-600 shrink-0">✓</span>
-              <span>Seat count updates automatically</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-emerald-600 shrink-0">✓</span>
-              <span>No manual tracking required</span>
+              <span className="text-emerald-600 shrink-0 mt-0.5">💡</span>
+              <p className="text-sm text-muted-foreground">
+                Configure this in your Billing Portal after installation. Switch modes anytime without downtime.
+              </p>
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="mt-6 rounded-2xl border bg-muted/40 p-4 text-center text-sm text-muted-foreground">
-        <span className="font-medium text-foreground">Pro tip:</span> Start with "Workspace" during your trial, then narrow your audience to optimize costs as you scale.
       </div>
     </section>
   );
@@ -582,81 +494,93 @@ function AudienceSegmentation() {
 
 function BillingExplainer() {
   return (
-    <section className="mx-auto max-w-6xl px-6 pb-16">
-      <h3 className="text-center text-2xl font-semibold" data-testid="text-billing-title">How billing works</h3>
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
-        {[
-          {
-            title: "Start 14-day trial",
-            desc: "Full features, card required. You won't be charged until the trial ends.",
-          },
-          {
-            title: "Upgrade in Checkout",
-            desc: "Pick your band and term. Stripe handles payment and we update your seat cap automatically.",
-          },
-          {
-            title: "Manage in Portal",
-            desc: "Change plan or term anytime. Downgrades apply caps; if you go over, you'll get a friendly prompt.",
-          },
-        ].map((c, i) => (
-          <div key={c.title} className="rounded-2xl border bg-background p-5" data-testid={`card-billing-step-${i}`}>
-            <div className="text-lg font-medium" data-testid={`text-billing-step-title-${i}`}>{c.title}</div>
-            <p className="mt-1 text-sm text-muted-foreground" data-testid={`text-billing-step-desc-${i}`}>{c.desc}</p>
+    <section className="mx-auto max-w-6xl px-6 py-10">
+      <div className="rounded-3xl border bg-muted/40 p-6 md:p-8">
+        <h3 className="text-xl font-semibold" data-testid="text-billing-title">How billing works</h3>
+        <div className="mt-5 grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border bg-background p-4">
+            <div className="text-sm font-medium">1. Install & Configure</div>
+            <p className="mt-1 text-sm text-muted-foreground" data-testid="text-billing-step1">
+              Add to Slack, pick your workspace cap, and start your 14-day free trial.
+            </p>
           </div>
-        ))}
+          <div className="rounded-2xl border bg-background p-4">
+            <div className="text-sm font-medium">2. Trial Period</div>
+            <p className="mt-1 text-sm text-muted-foreground" data-testid="text-billing-step2">
+              Full access to all features. Card required but not charged until trial ends.
+            </p>
+          </div>
+          <div className="rounded-2xl border bg-background p-4">
+            <div className="text-sm font-medium">3. Subscription Begins</div>
+            <p className="mt-1 text-sm text-muted-foreground" data-testid="text-billing-step3">
+              After 14 days, billing starts automatically. Change or cancel anytime.
+            </p>
+          </div>
+        </div>
+        <p className="mt-4 text-center text-xs text-muted-foreground" data-testid="text-billing-grace">
+          Grace period: 7 days after failed payment before service interruption.
+        </p>
       </div>
-
-      <p className="mt-4 text-center text-xs text-muted-foreground" data-testid="text-billing-grace">
-        If your workspace exceeds its cap we'll warn at 90%, allow a short grace window to 110% for 7 days, then pause new submissions until you upgrade. Reading digests and analytics remains available.
-      </p>
     </section>
   );
 }
 
 function PricingFAQ() {
-  const qas = [
+  const faqs = [
     {
-      q: "Do I need a card to start?",
-      a: "Yes — after you connect Slack, you'll add a card to begin your 14-day trial. You won't be charged until the trial ends.",
+      q: "What happens if I exceed my seat cap?",
+      a: "You'll receive automated alerts when approaching your cap. Access continues uninterrupted, but you'll need to upgrade within 7 days to stay compliant with your plan."
     },
     {
-      q: "Can I pay now?",
-      a: "Yes — choose 'Charge today' to start billing immediately and skip the trial.",
+      q: "Can I change my plan after subscribing?",
+      a: "Yes! Use the Billing Portal to upgrade or downgrade anytime. Changes are prorated automatically."
     },
     {
-      q: "Can I cancel before billing?",
-      a: "Any time during the trial. No questions asked.",
+      q: "How does the 14-day trial work?",
+      a: "Full access to all features with no restrictions. We require a payment method but won't charge until the trial ends. Cancel anytime during the trial with no charge."
     },
     {
-      q: "What if we exceed our seat cap?",
-      a: "You'll get a 7-day grace period with clear upgrade prompts.",
+      q: "What counts as a 'seat'?",
+      a: "By default, all active human members in your Slack workspace. You can configure audience segmentation to count only specific user groups, channels, or exclude guests."
     },
     {
-      q: "Do higher plans include better support?",
-      a: "No. All plans include email support. The product is fully self-serve and identical across plans.",
+      q: "Is there a setup fee or contract?",
+      a: "No setup fees, no contracts. Pay month-to-month or save with annual billing. Cancel anytime."
     },
     {
-      q: "Do you offer discounts?",
-      a: "Annual billing includes 2 months free. We don't offer custom discounts or contracts.",
-    },
-    {
-      q: "Do you support Slack Enterprise Grid?",
-      a: "Yes—choose a Scale band large enough for your workspace. Same product, just a higher seat cap.",
+      q: "What payment methods do you accept?",
+      a: "All major credit cards via Stripe. Annual plans also support ACH transfers and wire payments for invoices over $5,000."
     },
   ];
 
   return (
-    <section className="mx-auto max-w-4xl px-6 pb-24">
-      <h3 className="text-center text-2xl font-semibold" data-testid="text-faq-title">Pricing FAQ</h3>
-      <div className="mt-6 divide-y rounded-2xl border bg-background">
-        {qas.map((qa, i) => (
-          <details key={i} className="group" data-testid={`details-faq-${i}`}>
-            <summary className="cursor-pointer list-none px-5 py-4 text-left hover:bg-muted/50">
-              <span className="text-base font-medium" data-testid={`text-faq-question-${i}`}>{qa.q}</span>
-            </summary>
-            <div className="px-5 pb-5 text-sm text-muted-foreground" data-testid={`text-faq-answer-${i}`}>{qa.a}</div>
-          </details>
+    <section className="mx-auto max-w-4xl px-6 py-16">
+      <h2 className="text-center text-2xl font-semibold" data-testid="text-faq-title">Frequently Asked Questions</h2>
+      <Accordion type="single" collapsible className="mt-8 space-y-3">
+        {faqs.map((faq, i) => (
+          <AccordionItem 
+            key={i} 
+            value={`faq-${i}`}
+            className="rounded-2xl border bg-background px-6 data-[state=open]:bg-muted/20"
+            data-testid={`accordion-faq-${i}`}
+          >
+            <AccordionTrigger className="text-left font-medium hover:no-underline py-4" data-testid={`trigger-faq-${i}`}>
+              {faq.q}
+            </AccordionTrigger>
+            <AccordionContent className="pb-4 text-sm text-muted-foreground" data-testid={`content-faq-${i}`}>
+              {faq.a}
+            </AccordionContent>
+          </AccordionItem>
         ))}
+      </Accordion>
+      
+      <div className="mt-8 text-center">
+        <p className="text-sm text-muted-foreground">
+          Still have questions?{" "}
+          <a href="/contact" className="text-emerald-600 underline underline-offset-4" data-testid="link-contact">
+            Contact our team
+          </a>
+        </p>
       </div>
     </section>
   );
