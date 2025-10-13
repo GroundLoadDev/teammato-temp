@@ -1,0 +1,197 @@
+A) Repository & Build
+
+Project layout
+
+What’s your repo tree at the root? (run ls -la and ls -la src server public and paste output)
+
+Are the front-end files under src/ with an index.html at the root? (Y/N)
+
+Is the Node/Express entry still server/index.ts? (Y/N). If not, what is it?
+
+Build commands
+
+Run npm run build in Replit. Did it finish OK? (Y/N)
+
+After build, do you see:
+
+dist/index.html + assets (Vite build)? (Y/N)
+
+dist/index.js (bundled Express server)? (Y/N)
+
+Paste the last 30 lines of the build log.
+
+Node version
+
+What does node -v print in Replit?
+
+Do you have an .nvmrc or engines.node in package.json? If yes, paste it.
+
+TypeScript & module format
+
+Paste tsconfig.json (or confirm it doesn’t exist).
+
+Confirm your Express build target is ESM (we’re bundling with esbuild --format=esm). OK? (Y/N)
+
+B) Front-end (Vite) Behavior
+
+Routing
+
+Are you using a client-side router (e.g., wouter / React Router)? (Y/N)
+
+List all non-root routes that must work directly (e.g., /templates/..., /admin/mock, /simulator).
+
+Assets & size
+
+After build, run:
+du -sh dist and find dist -type f -size +2M -print | wc -l
+Paste the output.
+
+Do you ship WASM, WebWorkers, or very large model files to the browser? (Y/N). If yes, list file paths & sizes.
+
+Browser APIs
+
+Do your simulators/mock admin need WebSockets from the browser? (Y/N)
+
+Any camera/mic access or special permissions? (Y/N)
+
+Environment variables on the front-end
+
+List every import.meta.env.* or VITE_* variable used.
+
+Do you currently read any secret env vars in the front-end (should be NO)? (Y/N)
+
+C) Back-end (Express) Behavior
+
+HTTP surface
+
+List all Express routes (paths + methods), e.g., POST /api/slack/events, POST /api/stripe/webhook, GET /api/health.
+
+Any long-running requests (>10s)? (Y/N). If yes, which ones?
+
+WebSockets / SSE
+
+Do you use ws or Server-Sent Events on the server? (Y/N). Which paths?
+
+Cron / background jobs
+
+What scheduled jobs exist (e.g., weekly digest)? List the frequency and entry point (HTTP endpoint vs in-process timer).
+
+Are any jobs CPU-heavy or >30s runtime? (Y/N)
+
+External callbacks
+
+Slack: current Event Subscription URL(s) and Interactivity URL(s)?
+
+Stripe: do you have a webhook endpoint? (Y/N). Path?
+
+Any others (email webhooks, OAuth callbacks)?
+
+Env vars (server-only)
+
+Paste the names (not values) of all env vars the server reads (e.g., SLACK_SIGNING_SECRET, SLACK_BOT_TOKEN, DATABASE_URL, STRIPE_WEBHOOK_SECRET, …).
+
+Database & storage
+
+Which database (Neon/Supabase/etc)? Paste your driver & connection string format (redact secrets).
+
+Any file uploads or persistent storage (S3, Cloudflare R2, local disk)? (Y/N). If yes, where and max size?
+
+Auth
+
+Do you use sessions (express-session) or pure JWT? (Sessions/JWT/Other)
+
+If sessions: which session store (connect-pg-simple/memorystore/etc.)?
+
+CORS & same-origin
+
+Does your front-end call your back-end via relative paths (same origin) or absolute https://api… URLs?
+
+If absolute, what’s the expected API base URL?
+
+D) Slack-specific Constraints
+
+Retry behavior
+
+Are you handling Slack retries (same X-Slack-Retry-Num) idempotently? (Y/N)
+
+Timeouts
+
+Do you respond within 3 seconds to Slack Event/Interactivity requests (even if you process async)? (Y/N)
+
+OAuth
+
+Do you have a Slack OAuth install path? (Y/N). Path?
+
+E) Stripe / Payments (if applicable)
+
+Checkout / Customer Portal
+
+Are callbacks hitting the backend (e.g., /api/stripe/webhook)? (Y/N)
+
+Any CSP or webhook signature config we should note?
+
+F) Domains, DNS, and SSL
+
+Domains
+
+Do you plan to use a custom domain now? (Y/N). If yes, what for:
+
+Front-end (Vercel)
+
+Back-end (Railway/Render)
+
+Or OK to use default hostnames for now? (Y/N)
+
+G) Operational Guardrails
+
+Auto-deploy preference
+
+Should both front-end and back-end auto-deploy on every push to main? (Y/N)
+
+Or do you prefer manual promotion after previews? (Y/N)
+
+Error monitoring & logs
+
+Do you need external monitoring (Sentry/Logtail) now, or are platform logs enough? (External/Platform OK)
+
+Budget ceiling
+
+Hard monthly infra target (e.g., ≤ $15/month)? State it so I pick limits/features accordingly.
+
+H) Quick “tell Replit to run” commands (copy/paste)
+
+Ask Replit to run these and paste results:
+
+# Build both artifacts
+npm run build
+
+# Confirm front-end bundle exists
+ls -la dist | sed -n '1,80p'
+du -sh dist
+
+# Check Express bundle
+node -e "console.log('Has server bundle?', require('fs').existsSync('dist/index.js'))"
+
+# Node, npm, vite versions
+node -v && npm -v
+npm ls vite --depth=0 || true
+
+# Largest files in dist (to spot huge assets)
+printf \"\\n== Large files in dist (>2MB) ==\\n\"; find dist -type f -size +2M -print | xargs -I{} sh -c 'ls -lh {}'
+
+# Grep for env usage (front-end vs server)
+grep -R \"import.meta.env\\|VITE_\" -n src || true
+grep -R \"process.env\" -n server || true
+
+# List express routes (best-effort scan)
+grep -R \"app\\.get\\(|app\\.post\\(|router\\.\" -n server || true
+
+Why I’m asking all this
+
+To confirm your front-end can be hosted as static (Vercel) without breaking simulators/admin routes (we’ll use SPA rewrites if needed).
+
+To ensure your back-end fits a tiny always-on dyno (Railway/Render) or can be cron/HTTP driven, and that WebSockets (if any) are supported.
+
+To map env vars, domains, and Slack/Stripe callbacks so nothing 500s on go-live.
+
+To keep you under your pre-revenue budget (ideally $0–$12/mo).
