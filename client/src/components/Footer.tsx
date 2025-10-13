@@ -13,6 +13,7 @@ const nav = {
     { label: "Contact", href: "/contact" },
   ],
   resources: [
+    { label: "Admin Demo", href: "/api/demo/login" },
     { label: "Anonymous Simulator", href: "/simulator" },
     { label: "Trust & Security", href: "/trust" },
     { label: "Status", href: "/status" },
@@ -109,9 +110,18 @@ function Column({ title, items }: { title: string; items: { label: string; href:
       <ul className="mt-3 space-y-2">
         {items.map((i) => (
           <li key={i.label}>
-            <a href={i.href} className="text-sm text-muted-foreground hover:text-foreground">
-              {i.label}
-            </a>
+            {i.href.startsWith('/api/') ? (
+              <button
+                onClick={() => window.location.href = i.href}
+                className="text-sm text-muted-foreground hover:text-foreground text-left"
+              >
+                {i.label}
+              </button>
+            ) : (
+              <a href={i.href} className="text-sm text-muted-foreground hover:text-foreground">
+                {i.label}
+              </a>
+            )}
           </li>
         ))}
       </ul>
