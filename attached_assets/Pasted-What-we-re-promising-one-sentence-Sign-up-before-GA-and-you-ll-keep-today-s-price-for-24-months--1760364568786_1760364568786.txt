@@ -1,0 +1,164 @@
+What we’re promising (one sentence)
+
+“Sign up before GA and you’ll keep today’s price for 24 months.”
+
+Applies to the workspace (Price ID) activated before GA.
+
+Seat-cap changes during the 24 months keep the customer on the founding price for that cap (same price family).
+
+New workspaces or plan families created after GA use the new list pricing.
+
+We’ll raise list prices after GA, but founding customers renew at their current rate for 24 months.
+
+(We’ll implement this using the “leave existing subs on the current Price IDs” approach. No coupons needed now.)
+
+1) Site-wide banner (persistent until GA)
+
+Placement: top sticky banner, subtle but visible; also show again in the pricing page header.
+
+Copy (short):
+
+Founding pricing — lock in today’s rate for 24 months when you start before GA.
+[See pricing] [Details]
+
+“Details” modal (one-tap):
+
+“Founding pricing means your workspace keeps today’s rate for 24 months from signup. After that, you’ll renew at our then-current list price.”
+
+“Seat-cap changes? No problem—you’ll pay the founding price for the new cap within your 24-month window.”
+
+“Cancel anytime. Re-activations after GA follow current pricing.”
+
+Link to FAQ entry.
+
+2) Pricing page
+Header ribbon
+
+Founding pricing — available during early access. Price-protected for 24 months. No hidden fees.
+
+Each plan card label
+
+Add a small pill: “Founding price”.
+
+Under the price: “Price-protected 24 months when you start before GA.”
+
+Tooltip on the pill
+
+Your workspace keeps this rate for 24 months from signup—even if our list price increases after GA.
+
+Microcopy near the seat-cap selector
+
+Change caps anytime. During your 24-month window, you’ll pay the matching founding price for the cap you choose.
+
+3) CTA & landing pages
+
+Primary CTA (site-wide): Add to Slack
+Secondary CTA (for risk-averse buyers): See founding pricing details (anchors to pricing FAQ)
+
+Hero subline (optional A/B):
+
+Launch customers keep today’s price for 24 months.
+
+4) Checkout & confirmation
+
+Checkout line item note (under total):
+
+Founding pricing applied. Your workspace rate is protected for 24 months from today.
+
+Post-checkout success state:
+
+🎉 Welcome! Your founding price is locked in until {Month YYYY}. You can change seat caps anytime; your price protection still applies.
+
+(We’ll populate {Month YYYY} from a simple function: subscription start date + 24 months.)
+
+5) Email lifecycle (copy you can paste)
+
+A) Order confirmation (immediately)
+Subject: Your Teammato founding price is locked in until {Month YYYY}
+Body (snippet):
+
+You started on our founding price. Your rate is protected for 24 months (through {Month YYYY}).
+
+Change caps anytime; the founding price for that cap applies during your window.
+
+We’ll notify you 60 days before your protection ends.
+
+B) Onboarding day 3 (nudge to activate)
+Subject: Your founding price is locked—get value this week
+Body: Include “what to do next” plus reminder of protection end date.
+
+C) 60-day pre-expiry
+Subject: Price-protection for {workspace} ends on {Date}
+Body: On your next renewal after {Date}, your subscription will renew at the current list price for your seat cap. Change caps or billing term anytime.
+
+D) 14-day pre-expiry (reminder)
+Short reminder with link to pricing page and Admin portal.
+
+6) In-app/Admin portal
+
+Billing panel (top):
+
+Founding price active — protected until {Month YYYY}.
+Changing seat caps? You’ll pay the founding price for that cap during your protection window.
+
+Cap change dialog (footnote):
+
+Your 24-month founding price protection remains in effect.
+
+If protection has ended:
+
+Price protection ended on {Date}. Your next renewal will use the current list price.
+
+7) FAQ entries (Pricing page)
+
+Q: What is “founding pricing”?
+A: For teams that start before GA, we lock today’s rate for 24 months from signup. During that window, if you change your seat cap, you’ll pay the founding price for that cap. After 24 months, renewals follow our current list price.
+
+Q: Do I need a promo code?
+A: No. If you sign up before GA, price protection applies automatically.
+
+Q: What happens if we cancel and return later?
+A: Re-activations after GA follow the then-current list price.
+
+Q: Does this include Enterprise Grid and Governance features?
+A: Yes—founding customers keep their chosen plan’s founding price for 24 months.
+
+8) Legal/Terms (one short clause)
+
+Add to your pricing or terms page:
+
+Founding Pricing. Customers who begin a paid subscription prior to our general availability (“GA”) will be charged the then-current founding price for their selected seat cap for a period of twenty-four (24) months from the subscription start date (“Price Protection”). During Price Protection, if the customer changes to a different seat cap within the same product family, the founding price for that cap applies. After Price Protection ends, renewals are billed at our then-current list price. Price Protection does not apply to new workspaces created after GA.
+
+(Define GA on the same page: “GA is the date we publish removal of the ‘Founding Pricing’ banner on this site.”)
+
+9) Operational checklist (Stripe, no coupons)
+
+Do nothing now. Keep current Price IDs (these are your founding prices).
+
+Track eligibility: store grandfathered_until on the Customer or Subscription = start_date + 24 months (also show it in app).
+
+After GA:
+
+Create new Price IDs with higher list prices for each cap.
+
+Route new checkouts to new Price IDs.
+
+Do not migrate existing subscriptions; they keep paying founding pricing until their grandfathered_until.
+
+After 24 months for a customer: if you want the change to happen automatically, you can migrate that subscription to the new Price ID at the next renewal (or leave as-is if you decide to continue grandfathering).
+
+Upgrades/downgrades during protection: switch the subscription to the founding Price ID for the target cap (keep a simple mapping in code).
+
+Auditing: export a list of customers with grandfathered_until < today + 60d for the reminder email.
+
+(If later you prefer automatic expiry, we can switch to a coupon or subscription schedule approach—but you don’t need it to launch.)
+
+10) Visual components (quick spec)
+
+Founding pill: rounded badge, small, “Founding price.”
+
+Banner color: same brand green at 10–15% opacity; dismissible with localStorage; re-shown on pricing pages.
+
+Details modal: one column with three bullets + link to full FAQ.
+
+Icons: shield/check (protection), calendar (24 months), lightning (early access).

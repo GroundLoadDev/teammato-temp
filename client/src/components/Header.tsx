@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import logoImage from "@assets/teammato_logo_transparent_1759614481870.png";
+import FoundingPricingBanner from "./FoundingPricingBanner";
 
 type NavItem = { label: string; href: string };
 
@@ -42,19 +43,21 @@ export default function Header({
   }, [transparent]);
 
   return (
-    <header
-      className={[
-        "sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-background/60",
-        solid ? "bg-background/80 shadow-[0_1px_0_rgba(0,0,0,0.06)]" : "bg-transparent",
-      ].join(" ")}
-      role="banner"
-    >
-      <a
-        href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-emerald-600 focus:px-3 focus:py-2 focus:text-white"
+    <>
+      <FoundingPricingBanner />
+      <header
+        className={[
+          "sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+          solid ? "bg-background/80 shadow-[0_1px_0_rgba(0,0,0,0.06)]" : "bg-transparent",
+        ].join(" ")}
+        role="banner"
       >
-        Skip to content
-      </a>
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-emerald-600 focus:px-3 focus:py-2 focus:text-white"
+        >
+          Skip to content
+        </a>
 
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <a href="/" className="group inline-flex items-center gap-2" aria-label="Teammato home">
@@ -157,6 +160,7 @@ export default function Header({
         </div>
       </div>
     </header>
+    </>
   );
 }
 
