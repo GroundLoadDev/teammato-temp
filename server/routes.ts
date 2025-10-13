@@ -4250,8 +4250,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session.orgId = demoOrg.id;
       req.session.role = demoUser.role;
       
-      // Redirect to admin dashboard
-      res.redirect('/admin/dashboard');
+      // Save session before redirect
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.status(500).json({ error: 'Failed to save session' });
+        }
+        res.redirect('/admin/dashboard');
+      });
     } catch (error) {
       console.error('Demo login error:', error);
       res.status(500).json({ error: 'Failed to login to demo' });
