@@ -557,6 +557,22 @@ function BillingExplainer() {
 function PricingFAQ() {
   const faqs = [
     {
+      q: "What is \"founding pricing\"?",
+      a: "For teams that start before GA, we lock today's rate for 24 months from signup. During that window, if you change your seat cap, you'll pay the founding price for that cap. After 24 months, renewals follow our current list price."
+    },
+    {
+      q: "Do I need a promo code?",
+      a: "No. If you sign up before GA, price protection applies automatically."
+    },
+    {
+      q: "What happens if we cancel and return later?",
+      a: "Re-activations after GA follow the then-current list price."
+    },
+    {
+      q: "Does this include Enterprise Grid and Governance features?",
+      a: "Yes—founding customers keep their chosen plan's founding price for 24 months."
+    },
+    {
       q: "What happens if I exceed my seat cap?",
       a: "You'll receive automated alerts when approaching your cap. Access continues uninterrupted, but you'll need to upgrade within 7 days to stay compliant with your plan."
     },
