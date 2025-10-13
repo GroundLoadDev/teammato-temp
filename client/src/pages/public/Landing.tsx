@@ -299,6 +299,9 @@ export default function Landing() {
               <p className="mt-5 max-w-xl text-lg text-muted-foreground">
                 Collect signals, protect anonymity with k-anonymity, and ship weekly digests that leaders act on.
               </p>
+              <p className="mt-3 text-base text-emerald-600 font-medium">
+                Launch customers keep today's price for 24 months.
+              </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <a
