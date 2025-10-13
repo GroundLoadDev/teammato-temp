@@ -3618,7 +3618,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (slackTeam) {
           // Post to Slack with jitter but don't fail the update if Slack fails
           sendWithJitter(() => 
-            postActionNotesToChannel(slackTeam.accessToken, topic.slackChannelId, topic.name, actionNotes)
+            postActionNotesToChannel(slackTeam.accessToken, topic.slackChannelId!, topic.name, actionNotes)
           );
         }
       }
