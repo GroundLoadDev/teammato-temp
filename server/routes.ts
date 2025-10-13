@@ -586,6 +586,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         trialEnd,
         cancelsAt,
         graceEndsAt,
+        grandfatheredUntil: org.grandfatheredUntil?.toISOString() || null,
         eligibleCount,
         percent,
         customerEmail,

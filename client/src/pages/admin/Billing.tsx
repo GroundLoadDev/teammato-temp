@@ -22,6 +22,7 @@ interface BillingStatus {
   trialEnd: string | null;
   cancelsAt: string | null;
   graceEndsAt: string | null;
+  grandfatheredUntil: string | null;
   eligibleCount: number;
   percent: number;
   customerEmail: string | null;
@@ -496,6 +497,19 @@ export default function Billing() {
               )}
             </div>
           </div>
+          
+          {/* Founding Price Protection Status */}
+          {billing.grandfatheredUntil && new Date(billing.grandfatheredUntil) > new Date() && (
+            <div className="pt-4 border-t">
+              <div className="flex items-center gap-2 text-sm">
+                <Sparkles className="w-4 h-4 text-emerald-600" />
+                <span className="font-medium text-emerald-600">Founding Price Protection Active</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Your founding price is locked until {new Date(billing.grandfatheredUntil).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
