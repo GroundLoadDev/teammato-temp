@@ -96,7 +96,7 @@ export async function seedDemoData() {
     'Ava Jackson', 'Ethan Moore', 'Isabella Martin', 'Noah Garcia'
   ];
 
-  const demoUsers = await Promise.all(
+  const demoUsersArrays = await Promise.all(
     userNames.map((name, idx) => 
       db.insert(users).values({
         orgId: demoOrg.id,
@@ -113,6 +113,7 @@ export async function seedDemoData() {
       }).returning()
     )
   );
+  const demoUsers = demoUsersArrays.flat();
 
   console.log('Creating Slack connection...');
 
@@ -229,7 +230,7 @@ export async function seedDemoData() {
     },
   ];
 
-  const createdTopics = await Promise.all(
+  const createdTopicsArrays = await Promise.all(
     topicData.map(topic =>
       db.insert(topics).values({
         orgId: demoOrg.id,
@@ -246,6 +247,7 @@ export async function seedDemoData() {
       }).returning()
     )
   );
+  const createdTopics = createdTopicsArrays.flat();
 
   console.log('Creating feedback threads...');
 
@@ -445,7 +447,7 @@ export async function seedDemoData() {
     },
   ];
 
-  const createdThreads = await Promise.all(
+  const createdThreadsArrays = await Promise.all(
     feedbackData.map(thread =>
       db.insert(feedbackThreads).values({
         orgId: demoOrg.id,
@@ -461,11 +463,12 @@ export async function seedDemoData() {
       }).returning()
     )
   );
+  const createdThreads = createdThreadsArrays.flat();
 
   console.log('Creating feedback items (comments)...');
 
   // Create sample feedback items for the threads
-  const feedbackItems = [
+  const feedbackItemsData = [
     // Code review thread
     { threadId: createdThreads[0].id, content: 'Waiting 2-3 days for reviews blocks progress', createdAt: daysAgo(40) },
     { threadId: createdThreads[0].id, content: 'Agree, maybe we need more reviewers on rotation', createdAt: daysAgo(39) },
@@ -498,7 +501,7 @@ export async function seedDemoData() {
   ];
 
   await Promise.all(
-    feedbackItems.map(item =>
+    feedbackItemsData.map(item =>
       db.insert(feedbackItems).values({
         orgId: demoOrg.id,
         threadId: item.threadId,

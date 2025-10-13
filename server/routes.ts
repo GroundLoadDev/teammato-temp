@@ -22,6 +22,7 @@ import { handleStripeWebhook } from './webhooks/stripe';
 import { generateDigest, sendDigestToOrg } from "./cron/digestWeekly";
 import { enforceSeatCap, getSeatCapStatus } from "./middleware/seatCap";
 import { resolveOrgSubscriptionState } from './lib/billing';
+import { seedDemoData } from './utils/seedDemoData';
 
 // Slack OAuth configuration
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
@@ -4228,6 +4229,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get channels error:', error);
       res.status(500).json({ error: 'Failed to fetch channels' });
+    }
+  });
+
+  // Demo endpoints
+  app.get('/api/demo/login', async (req, res) => {
+    try {
+      // Check if demo org exists, if not create it
+      const demoOrg = await seedDemoData();
+      
+      // Find demo admin user
+      const demoUser = await storage.getUserByEmail('demo@teammato.app', demoOrg.id);
+      
+      if (!demoUser) {
+        return res.status(500).json({ error: 'Demo user not found' });
+      }
+      
+      // Set session
+      req.session.userId = demoUser.id;
+      req.session.orgId = demoOrg.id;
+      req.session.role = demoUser.role;
+      
+      // Redirect to admin dashboard
+      res.redirect('/admin/dashboard');
+    } catch (error) {
+      console.error('Demo login error:', error);
+      res.status(500).json({ error: 'Failed to login to demo' });
     }
   });
 
