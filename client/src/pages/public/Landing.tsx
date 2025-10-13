@@ -309,13 +309,13 @@ export default function Landing() {
                   <WhiteSlackLogo className="h-5 w-5" />
                   Add to Slack
                 </a>
-                <a
-                  href="/api/demo/login"
+                <button
+                  onClick={() => window.location.href = '/api/demo/login'}
                   className="inline-flex items-center justify-center rounded-xl border px-6 py-3 text-base hover:bg-muted"
                   data-testid="button-demo"
                 >
                   See admin demo
-                </a>
+                </button>
               </div>
 
               <p className="mt-4 text-sm text-muted-foreground">
