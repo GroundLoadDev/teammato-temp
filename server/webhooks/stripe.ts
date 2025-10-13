@@ -279,5 +279,21 @@ async function syncSubscriptionToOrg(
     updates.cancelsAt = null;
   }
   
+  // Founding pricing: Set grandfatheredUntil for first-time subscribers before GA
+  const GA_DATE = new Date('2026-04-13T00:00:00Z');
+  const org = await storage.getOrg(orgId);
+  
+  if (org && !org.grandfatheredUntil) {
+    const subscriptionStart = sub.start_date ? new Date(sub.start_date * 1000) : new Date();
+    
+    if (subscriptionStart < GA_DATE) {
+      const grandfatheredUntil = new Date(subscriptionStart);
+      grandfatheredUntil.setMonth(grandfatheredUntil.getMonth() + 24);
+      updates.grandfatheredUntil = grandfatheredUntil;
+      
+      console.log(`[Founding Pricing] Org ${orgId} grandfathered until ${grandfatheredUntil.toISOString()}`);
+    }
+  }
+  
   await storage.updateOrg(orgId, updates);
 }
