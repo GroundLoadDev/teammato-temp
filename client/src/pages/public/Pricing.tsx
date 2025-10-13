@@ -13,7 +13,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Info } from "lucide-react";
+import { Info, Shield } from "lucide-react";
 
 type Term = "monthly" | "annual";
 
@@ -97,7 +97,17 @@ function PricingHero({
   return (
     <section className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(1100px_360px_at_50%_-60px,rgba(16,185,129,0.10),transparent)]" />
-      <div className="mx-auto max-w-6xl px-6 pb-10 pt-16 text-center md:pt-20">
+      
+      {/* Founding Pricing Ribbon */}
+      <div className="mx-auto max-w-6xl px-6 pt-6">
+        <div className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-600/10 border border-emerald-600/20 px-4 py-2.5 text-sm">
+          <Shield className="h-4 w-4 text-emerald-600" />
+          <span className="font-medium text-foreground">Founding pricing</span>
+          <span className="text-muted-foreground">— available during early access. Price-protected for 24 months. No hidden fees.</span>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-6xl px-6 pb-10 pt-8 text-center md:pt-12">
         <h1 className="text-4xl font-semibold tracking-tight md:text-5xl" data-testid="text-pricing-title">
           Simple, self-serve pricing
         </h1>
@@ -183,11 +193,27 @@ function SeatSizer({
               <span data-testid="text-max-seats">100,000</span>
             </div>
           </div>
+          <p className="mt-3 text-xs text-muted-foreground italic" data-testid="text-cap-change-note">
+            Change caps anytime. During your 24-month window, you'll pay the matching founding price for the cap you choose.
+          </p>
         </div>
 
         <div className="md:col-span-5">
           <div className="rounded-2xl border p-5" data-testid="card-recommended-plan">
-            <div className="text-sm text-muted-foreground">Your Plan</div>
+            <div className="flex items-center gap-2">
+              <div className="text-sm text-muted-foreground">Your Plan</div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/10 px-2 py-0.5 text-xs font-medium text-emerald-700 cursor-help" data-testid="badge-founding-price">
+                    <Shield className="h-3 w-3" />
+                    Founding price
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs" data-testid="tooltip-founding-price">
+                  <p className="text-xs">Your workspace keeps this rate for 24 months from signup—even if our list price increases after GA.</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <div className="mt-2 flex items-baseline justify-between">
               <div>
                 <div className="text-lg font-medium" data-testid="text-recommended-name">{recommended.name}</div>
@@ -197,6 +223,9 @@ function SeatSizer({
                 {formatUSD(price)}
                 <span className="ml-1 text-sm font-normal text-muted-foreground">/{term === "annual" ? "yr" : "mo"}</span>
               </div>
+            </div>
+            <div className="mt-2 text-xs text-muted-foreground" data-testid="text-price-protection">
+              Price-protected 24 months when you start before GA
             </div>
             <button
               onClick={handleStartTrial}
