@@ -51,6 +51,8 @@ export const orgs = pgTable("orgs", {
   lastSeatCapNotif90: timestamp("last_seat_cap_notif_90"),
   lastSeatCapNotif100: timestamp("last_seat_cap_notif_100"),
   lastSeatCapNotif110: timestamp("last_seat_cap_notif_110"),
+  // Founding pricing protection
+  grandfatheredUntil: timestamp("grandfathered_until"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
