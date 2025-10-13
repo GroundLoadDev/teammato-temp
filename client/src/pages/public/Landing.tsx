@@ -310,7 +310,7 @@ export default function Landing() {
                   Add to Slack
                 </a>
                 <a
-                  href="/demo"
+                  href="/api/demo/login"
                   className="inline-flex items-center justify-center rounded-xl border px-6 py-3 text-base hover:bg-muted"
                   data-testid="button-demo"
                 >

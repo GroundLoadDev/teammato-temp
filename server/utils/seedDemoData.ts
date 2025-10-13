@@ -470,43 +470,44 @@ export async function seedDemoData() {
   // Create sample feedback items for the threads
   const feedbackItemsData = [
     // Code review thread
-    { threadId: createdThreads[0].id, content: 'Waiting 2-3 days for reviews blocks progress', createdAt: daysAgo(40) },
-    { threadId: createdThreads[0].id, content: 'Agree, maybe we need more reviewers on rotation', createdAt: daysAgo(39) },
-    { threadId: createdThreads[0].id, content: 'Could we set SLAs for review turnaround?', createdAt: daysAgo(39) },
-    { threadId: createdThreads[0].id, content: 'Sometimes PRs are just too big to review quickly', createdAt: daysAgo(38) },
-    { threadId: createdThreads[0].id, content: 'Smaller PRs would definitely help', createdAt: daysAgo(38) },
+    { threadId: createdThreads[0].id, topicId: createdTopics[0].id, content: 'Waiting 2-3 days for reviews blocks progress', createdAt: daysAgo(40) },
+    { threadId: createdThreads[0].id, topicId: createdTopics[0].id, content: 'Agree, maybe we need more reviewers on rotation', createdAt: daysAgo(39) },
+    { threadId: createdThreads[0].id, topicId: createdTopics[0].id, content: 'Could we set SLAs for review turnaround?', createdAt: daysAgo(39) },
+    { threadId: createdThreads[0].id, topicId: createdTopics[0].id, content: 'Sometimes PRs are just too big to review quickly', createdAt: daysAgo(38) },
+    { threadId: createdThreads[0].id, topicId: createdTopics[0].id, content: 'Smaller PRs would definitely help', createdAt: daysAgo(38) },
     
     // Deployment automation thread
-    { threadId: createdThreads[1].id, content: 'Manual deployment steps are error-prone', createdAt: daysAgo(38) },
-    { threadId: createdThreads[1].id, content: 'Would love to see one-click deployments', createdAt: daysAgo(37) },
-    { threadId: createdThreads[1].id, content: 'CI/CD pipeline needs major upgrade', createdAt: daysAgo(37) },
+    { threadId: createdThreads[1].id, topicId: createdTopics[0].id, content: 'Manual deployment steps are error-prone', createdAt: daysAgo(38) },
+    { threadId: createdThreads[1].id, topicId: createdTopics[0].id, content: 'Would love to see one-click deployments', createdAt: daysAgo(37) },
+    { threadId: createdThreads[1].id, topicId: createdTopics[0].id, content: 'CI/CD pipeline needs major upgrade', createdAt: daysAgo(37) },
     
     // Async communication thread
-    { threadId: createdThreads[3].id, content: 'Too many urgent DMs instead of using async channels', createdAt: daysAgo(28) },
-    { threadId: createdThreads[3].id, content: 'People expect immediate responses even for non-urgent items', createdAt: daysAgo(27) },
-    { threadId: createdThreads[3].id, content: 'Need better norms around response time expectations', createdAt: daysAgo(27) },
-    { threadId: createdThreads[3].id, content: 'Notion/wiki could help reduce Slack noise', createdAt: daysAgo(26) },
+    { threadId: createdThreads[3].id, topicId: createdTopics[1].id, content: 'Too many urgent DMs instead of using async channels', createdAt: daysAgo(28) },
+    { threadId: createdThreads[3].id, topicId: createdTopics[1].id, content: 'People expect immediate responses even for non-urgent items', createdAt: daysAgo(27) },
+    { threadId: createdThreads[3].id, topicId: createdTopics[1].id, content: 'Need better norms around response time expectations', createdAt: daysAgo(27) },
+    { threadId: createdThreads[3].id, topicId: createdTopics[1].id, content: 'Notion/wiki could help reduce Slack noise', createdAt: daysAgo(26) },
     
     // Mental health support thread
-    { threadId: createdThreads[6].id, content: 'Current EAP is not well advertised', createdAt: daysAgo(18) },
-    { threadId: createdThreads[6].id, content: 'Would love to see therapy/counseling stipend', createdAt: daysAgo(17) },
-    { threadId: createdThreads[6].id, content: 'Mental health days separate from PTO would be great', createdAt: daysAgo(17) },
-    { threadId: createdThreads[6].id, content: 'Meditation app subscriptions could be a simple win', createdAt: daysAgo(16) },
+    { threadId: createdThreads[6].id, topicId: createdTopics[2].id, content: 'Current EAP is not well advertised', createdAt: daysAgo(18) },
+    { threadId: createdThreads[6].id, topicId: createdTopics[2].id, content: 'Would love to see therapy/counseling stipend', createdAt: daysAgo(17) },
+    { threadId: createdThreads[6].id, topicId: createdTopics[2].id, content: 'Mental health days separate from PTO would be great', createdAt: daysAgo(17) },
+    { threadId: createdThreads[6].id, topicId: createdTopics[2].id, content: 'Meditation app subscriptions could be a simple win', createdAt: daysAgo(16) },
     
     // Too many meetings thread
-    { threadId: createdThreads[18].id, content: 'Back-to-back meetings leave no time for deep work', createdAt: daysAgo(10) },
-    { threadId: createdThreads[18].id, content: 'Many meetings could be a doc or async update', createdAt: daysAgo(9) },
-    { threadId: createdThreads[18].id, content: 'No-meeting Fridays would be amazing', createdAt: daysAgo(9) },
-    { threadId: createdThreads[18].id, content: 'Better meeting agendas would help efficiency', createdAt: daysAgo(8) },
+    { threadId: createdThreads[18].id, topicId: createdTopics[7].id, content: 'Back-to-back meetings leave no time for deep work', createdAt: daysAgo(10) },
+    { threadId: createdThreads[18].id, topicId: createdTopics[7].id, content: 'Many meetings could be a doc or async update', createdAt: daysAgo(9) },
+    { threadId: createdThreads[18].id, topicId: createdTopics[7].id, content: 'No-meeting Fridays would be amazing', createdAt: daysAgo(9) },
+    { threadId: createdThreads[18].id, topicId: createdTopics[7].id, content: 'Better meeting agendas would help efficiency', createdAt: daysAgo(8) },
   ];
 
   await Promise.all(
-    feedbackItemsData.map(item =>
+    feedbackItemsData.map((item, idx) =>
       db.insert(feedbackItems).values({
         orgId: demoOrg.id,
         threadId: item.threadId,
-        content: Buffer.from(item.content), // In production this would be encrypted
-        itemType: 'comment',
+        topicId: item.topicId,
+        slackUserId: `U_DEMO_${idx.toString().padStart(4, '0')}`,
+        content: item.content,
         status: 'approved',
         submitterHash: `hash_${Math.random().toString(36).substring(7)}`,
         createdAt: item.createdAt,
