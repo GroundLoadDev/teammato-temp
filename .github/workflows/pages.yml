@@ -27,6 +27,9 @@ jobs:
       - name: SPA fallback (index -> 404)
         run: cp dist/public/index.html dist/public/404.html
 
+      - name: Disable Jekyll
+        run: touch dist/public/.nojekyll
+
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
         with:
