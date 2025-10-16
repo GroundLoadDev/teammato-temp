@@ -32,14 +32,25 @@ jobs:
         working-directory: client
         run: npm run build
 
+      # Detect where Vite wrote the build (client/dist OR client/dist/public)
+      - name: Detect dist path
+        run: |
+          if [ -d "client/dist" ]; then
+            echo "DIST_DIR=client/dist" >> $GITHUB_ENV
+          elif [ -d "client/dist/public" ]; then
+            echo "DIST_DIR=client/dist/public" >> $GITHUB_ENV
+          else
+            echo "Build output not found"; ls -R
+            exit 1
+          fi
+
       - name: SPA fallback
-        working-directory: client/dist
-        run: cp index.html 404.html
+        run: cp "${{ env.DIST_DIR }}/index.html" "${{ env.DIST_DIR }}/404.html"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: client/dist
+          path: ${{ env.DIST_DIR }}
 
   deploy:
     needs: build
