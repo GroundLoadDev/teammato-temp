@@ -6,16 +6,10 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
+  contents: write   # needed to push to gh-pages
 
 jobs:
-  build:
+  build-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,66 +18,18 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install deps
-        working-directory: client
+      - name: Install deps (root)
         run: npm ci
 
-      - name: Build
-        working-directory: client
+      - name: Build (root)
         run: npm run build
 
-      # 🔎 Robust detection of the build output
-      - name: Detect dist path
-        id: detect
-        run: |
-          echo "Tree (top-level):"; ls -la
-          echo "Tree (client):"; ls -la client || true
-          echo "Tree (client/dist):"; ls -la client/dist || true
-          echo "Tree (dist):"; ls -la dist || true
-
-          # Try common locations
-          if [ -d "client/dist" ]; then
-            echo "DIST_DIR=client/dist" >> "$GITHUB_ENV"
-            exit 0
-          fi
-          if [ -d "client/dist/public" ]; then
-            echo "DIST_DIR=client/dist/public" >> "$GITHUB_ENV"
-            exit 0
-          fi
-          if [ -d "dist" ]; then
-            echo "DIST_DIR=dist" >> "$GITHUB_ENV"
-            exit 0
-          fi
-          if [ -d "dist/public" ]; then
-            echo "DIST_DIR=dist/public" >> "$GITHUB_ENV"
-            exit 0
-          fi
-
-          # Fallback: search for index.html inside any dist*
-          FOUND=$(find . -type f -path "*/dist*/index.html" | head -n 1 || true)
-          if [ -n "$FOUND" ]; then
-            echo "Found index.html at: $FOUND"
-            DIR=$(dirname "$FOUND")
-            echo "DIST_DIR=$DIR" >> "$GITHUB_ENV"
-            exit 0
-          fi
-
-          echo "❌ Build output not found. Check your Vite outDir."
-          exit 1
-
       - name: SPA fallback (index -> 404)
-        run: cp "${{ env.DIST_DIR }}/index.html" "${{ env.DIST_DIR }}/404.html"
+        run: cp dist/public/index.html dist/public/404.html
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          path: ${{ env.DIST_DIR }}
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./dist/public
