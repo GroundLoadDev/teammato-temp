@@ -1,30 +1,66 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
+import connectPg from "connect-pg-simple";
+import { Pool } from "@neondatabase/serverless";
 import { registerRoutes } from "./routes";
+import { setupVite, log } from "./vite";
 import { startTopicExpiryCron, startInstanceRotationCron } from "./cron/topicExpiry";
 import { startAudienceSyncCron } from "./cron/audienceSync";
 import { startWeeklyDigestCron } from "./cron/digestWeekly";
 
 const app = express();
 
+// CORS configuration for GitHub Pages frontend
+const ALLOWED_ORIGINS = [
+  'https://teammatodev.github.io',
+  'http://localhost:5173', // Local Vite dev
+  'http://localhost:5000', // Local dev
+];
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
+  
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
+  next();
+});
+
 // Trust proxy for secure cookies behind reverse proxy
 if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
 }
 
-// Session middleware
+// Session middleware with PostgreSQL store
 if (!process.env.SESSION_SECRET && process.env.NODE_ENV === 'production') {
   throw new Error('SESSION_SECRET environment variable is required in production');
 }
 
+const PgSession = connectPg(session);
+const sessionStore = process.env.NODE_ENV === 'production' 
+  ? new PgSession({
+      pool: new Pool({ connectionString: process.env.DATABASE_URL }),
+      tableName: 'session',
+      createTableIfMissing: true,
+    })
+  : undefined; // Use in-memory store in development for faster iteration
+
 app.use(session({
+  store: sessionStore,
   secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-origin in production
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
   }
 }));
@@ -79,6 +115,15 @@ app.use((req, res, next) => {
     throw err;
   });
 
+  // Health check endpoint for Railway
+  app.get("/health", (_req, res) => {
+    res.json({ 
+      status: "ok", 
+      service: "teammato-api",
+      timestamp: new Date().toISOString() 
+    });
+  });
+
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
@@ -103,10 +148,16 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
     
-    // Start cron jobs
-    startTopicExpiryCron();
-    startInstanceRotationCron();
-    startAudienceSyncCron();
-    startWeeklyDigestCron();
+    // Start cron jobs only if not disabled (e.g., on Railway with multiple instances)
+    // Set DISABLE_CRON_JOBS=true to disable in-process cron jobs
+    if (process.env.DISABLE_CRON_JOBS !== 'true') {
+      log('Starting in-process cron jobs...');
+      startTopicExpiryCron();
+      startInstanceRotationCron();
+      startAudienceSyncCron();
+      startWeeklyDigestCron();
+    } else {
+      log('Cron jobs disabled (DISABLE_CRON_JOBS=true). Use external cron service.');
+    }
   });
 })();
