@@ -664,7 +664,7 @@ export default function Landing() {
       </section>
 
       {/* EVIDENCE LAB */}
-      <section className="relative isolate">
+      <section className="relative isolate overflow-hidden">
         <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(1200px_400px_at_50%_-10%,rgba(16,185,129,0.10),transparent)]" />
 
         <div className="mx-auto max-w-6xl px-6 py-24 lg:py-28">
@@ -705,12 +705,12 @@ export default function Landing() {
                         </span>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-lg font-semibold leading-tight">{p.title}</h3>
-                            <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
+                            <h3 className="text-lg font-semibold leading-tight break-words">{p.title}</h3>
+                            <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200 shrink-0">
                               {p.badge}
                             </span>
                           </div>
-                          <p className="mt-1 text-sm text-muted-foreground">{p.blurb}</p>
+                          <p className="mt-1 text-sm text-muted-foreground break-words">{p.blurb}</p>
                         </div>
                       </div>
                     </button>
@@ -1081,9 +1081,9 @@ function EvidenceCard({ active }: { active: PrincipleKey }) {
 function Bar({ label, a, b, highlight = false }: { label: string; a: number; b: number; highlight?: boolean }) {
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between text-sm">
-        <span className={highlight ? "font-medium" : ""}>{label}</span>
-        <span className="text-muted-foreground">{a}% → {b}%</span>
+      <div className="mb-1 flex items-center justify-between gap-2 text-sm">
+        <span className={highlight ? "font-medium min-w-0 break-words" : "min-w-0 break-words"}>{label}</span>
+        <span className="text-muted-foreground shrink-0 whitespace-nowrap">{a}% → {b}%</span>
       </div>
       <div className="h-3 w-full rounded-full bg-foreground/10">
         <div className="h-3 rounded-full bg-foreground/20" style={{ width: `${a}%` }} />

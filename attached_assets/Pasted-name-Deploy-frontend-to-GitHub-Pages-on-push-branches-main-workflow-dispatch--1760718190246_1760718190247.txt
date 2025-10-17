@@ -1,0 +1,72 @@
+name: Deploy frontend to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to push to gh-pages
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    env:
+      # Inject your API base URL so the built site calls Railway in production
+      VITE_API_BASE_URL: https://teammato-production.up.railway.app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Try building from client/ if it exists; otherwise build from root
+      - name: Install & Build (client if present, else root)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f "client/package.json" ]; then
+            echo "client/package.json found — building client/"
+            pushd client >/dev/null
+            npm ci
+            npm run build
+            popd >/dev/null
+          else
+            echo "client/package.json not found — building from repo root"
+            npm ci
+            npm run build
+          fi
+
+      # Figure out where the build output landed
+      - name: Detect publish directory
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f "client/dist/index.html" ]; then
+            echo "publish_dir=client/dist" >> $GITHUB_OUTPUT
+          elif [ -f "dist/public/index.html" ]; then
+            echo "publish_dir=dist/public" >> $GITHUB_OUTPUT
+          elif [ -f "dist/index.html" ]; then
+            echo "publish_dir=dist" >> $GITHUB_OUTPUT
+          else
+            echo "ERROR: Could not find index.html in client/dist, dist/public, or dist" >&2
+            exit 1
+          fi
+          echo "Using publish_dir=$(cat $GITHUB_OUTPUT | sed -n 's/^publish_dir=//p')"
+
+      # SPA fallback for GitHub Pages (serves 404.html for unknown routes)
+      - name: SPA fallback (index -> 404)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp "${{ steps.detect.outputs.publish_dir }}/index.html" "${{ steps.detect.outputs.publish_dir }}/404.html"
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ${{ steps.detect.outputs.publish_dir }}

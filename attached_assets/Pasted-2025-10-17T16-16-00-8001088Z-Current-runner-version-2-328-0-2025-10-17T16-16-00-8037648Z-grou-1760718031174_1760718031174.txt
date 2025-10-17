@@ -1,0 +1,188 @@
+2025-10-17T16:16:00.8001088Z Current runner version: '2.328.0'
+2025-10-17T16:16:00.8037648Z ##[group]Runner Image Provisioner
+2025-10-17T16:16:00.8039299Z Hosted Compute Agent
+2025-10-17T16:16:00.8040220Z Version: 20251013.424
+2025-10-17T16:16:00.8041314Z Commit: cfdd8bfed34d71a55b72df4d2e82343c3fc2bab3
+2025-10-17T16:16:00.8042561Z Build Date: 2025-10-13T20:22:23Z
+2025-10-17T16:16:00.8043480Z ##[endgroup]
+2025-10-17T16:16:00.8044447Z ##[group]Operating System
+2025-10-17T16:16:00.8045326Z Ubuntu
+2025-10-17T16:16:00.8046077Z 24.04.3
+2025-10-17T16:16:00.8046832Z LTS
+2025-10-17T16:16:00.8047629Z ##[endgroup]
+2025-10-17T16:16:00.8048688Z ##[group]Runner Image
+2025-10-17T16:16:00.8049657Z Image: ubuntu-24.04
+2025-10-17T16:16:00.8050546Z Version: 20251014.76.1
+2025-10-17T16:16:00.8052379Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20251014.76/images/ubuntu/Ubuntu2404-Readme.md
+2025-10-17T16:16:00.8055331Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20251014.76
+2025-10-17T16:16:00.8057130Z ##[endgroup]
+2025-10-17T16:16:00.8059262Z ##[group]GITHUB_TOKEN Permissions
+2025-10-17T16:16:00.8062063Z Contents: write
+2025-10-17T16:16:00.8062840Z Metadata: read
+2025-10-17T16:16:00.8063812Z ##[endgroup]
+2025-10-17T16:16:00.8067041Z Secret source: Actions
+2025-10-17T16:16:00.8068364Z Prepare workflow directory
+2025-10-17T16:16:00.8682920Z Prepare all required actions
+2025-10-17T16:16:00.8742527Z Getting action download info
+2025-10-17T16:16:01.4582361Z Download action repository 'actions/checkout@v4' (SHA:08eba0b27e820071cde6df949e0beb9ba4906955)
+2025-10-17T16:16:01.6331571Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2025-10-17T16:16:01.7354372Z Download action repository 'peaceiris/actions-gh-pages@v3' (SHA:373f7f263a76c20808c831209c920827a82a2847)
+2025-10-17T16:16:02.3616994Z Complete job name: build-deploy
+2025-10-17T16:16:02.4307299Z ##[group]Run actions/checkout@v4
+2025-10-17T16:16:02.4308422Z with:
+2025-10-17T16:16:02.4308870Z   repository: teammatodev/Teammato
+2025-10-17T16:16:02.4309619Z   token: ***
+2025-10-17T16:16:02.4310028Z   ssh-strict: true
+2025-10-17T16:16:02.4310445Z   ssh-user: git
+2025-10-17T16:16:02.4310859Z   persist-credentials: true
+2025-10-17T16:16:02.4311337Z   clean: true
+2025-10-17T16:16:02.4311758Z   sparse-checkout-cone-mode: true
+2025-10-17T16:16:02.4312276Z   fetch-depth: 1
+2025-10-17T16:16:02.4312694Z   fetch-tags: false
+2025-10-17T16:16:02.4313117Z   show-progress: true
+2025-10-17T16:16:02.4313541Z   lfs: false
+2025-10-17T16:16:02.4313941Z   submodules: false
+2025-10-17T16:16:02.4314385Z   set-safe-directory: true
+2025-10-17T16:16:02.4315095Z ##[endgroup]
+2025-10-17T16:16:02.5490783Z Syncing repository: teammatodev/Teammato
+2025-10-17T16:16:02.5493756Z ##[group]Getting Git version info
+2025-10-17T16:16:02.5495115Z Working directory is '/home/runner/work/Teammato/Teammato'
+2025-10-17T16:16:02.5506872Z [command]/usr/bin/git version
+2025-10-17T16:16:02.7348191Z git version 2.51.0
+2025-10-17T16:16:02.7369645Z ##[endgroup]
+2025-10-17T16:16:02.7387247Z Temporarily overriding HOME='/home/runner/work/_temp/1d807e2b-1021-4bfd-8ec8-e58a673913c3' before making global git config changes
+2025-10-17T16:16:02.7391720Z Adding repository directory to the temporary git global config as a safe directory
+2025-10-17T16:16:02.7406500Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Teammato/Teammato
+2025-10-17T16:16:02.7764666Z Deleting the contents of '/home/runner/work/Teammato/Teammato'
+2025-10-17T16:16:02.7771025Z ##[group]Initializing the repository
+2025-10-17T16:16:02.7772326Z [command]/usr/bin/git init /home/runner/work/Teammato/Teammato
+2025-10-17T16:16:02.9231489Z hint: Using 'master' as the name for the initial branch. This default branch name
+2025-10-17T16:16:02.9235317Z hint: is subject to change. To configure the initial branch name to use in all
+2025-10-17T16:16:02.9237342Z hint: of your new repositories, which will suppress this warning, call:
+2025-10-17T16:16:02.9250087Z hint:
+2025-10-17T16:16:02.9251491Z hint: 	git config --global init.defaultBranch <name>
+2025-10-17T16:16:02.9252436Z hint:
+2025-10-17T16:16:02.9253334Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2025-10-17T16:16:02.9254843Z hint: 'development'. The just-created branch can be renamed via this command:
+2025-10-17T16:16:02.9258303Z hint:
+2025-10-17T16:16:02.9259018Z hint: 	git branch -m <name>
+2025-10-17T16:16:02.9259810Z hint:
+2025-10-17T16:16:02.9260840Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2025-10-17T16:16:02.9262520Z Initialized empty Git repository in /home/runner/work/Teammato/Teammato/.git/
+2025-10-17T16:16:02.9270620Z [command]/usr/bin/git remote add origin https://github.com/teammatodev/Teammato
+2025-10-17T16:16:02.9832045Z ##[endgroup]
+2025-10-17T16:16:02.9843721Z ##[group]Disabling automatic garbage collection
+2025-10-17T16:16:02.9846850Z [command]/usr/bin/git config --local gc.auto 0
+2025-10-17T16:16:03.0293377Z ##[endgroup]
+2025-10-17T16:16:03.0294826Z ##[group]Setting up auth
+2025-10-17T16:16:03.0300817Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2025-10-17T16:16:03.0349703Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2025-10-17T16:16:03.4239766Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2025-10-17T16:16:03.4291719Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2025-10-17T16:16:03.4579663Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2025-10-17T16:16:03.4701929Z ##[endgroup]
+2025-10-17T16:16:03.4704447Z ##[group]Fetching the repository
+2025-10-17T16:16:03.4728528Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +9a3d8b0d18f1460e4a9a0f8fd399913aa0b6b0c2:refs/remotes/origin/main
+2025-10-17T16:16:05.2050616Z From https://github.com/teammatodev/Teammato
+2025-10-17T16:16:05.2054094Z  * [new ref]         9a3d8b0d18f1460e4a9a0f8fd399913aa0b6b0c2 -> origin/main
+2025-10-17T16:16:05.2082658Z ##[endgroup]
+2025-10-17T16:16:05.2083450Z ##[group]Determining the checkout info
+2025-10-17T16:16:05.2085867Z ##[endgroup]
+2025-10-17T16:16:05.2090598Z [command]/usr/bin/git sparse-checkout disable
+2025-10-17T16:16:05.2132603Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2025-10-17T16:16:05.2164172Z ##[group]Checking out the ref
+2025-10-17T16:16:05.2167255Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2025-10-17T16:16:05.3573110Z Switched to a new branch 'main'
+2025-10-17T16:16:05.3576535Z branch 'main' set up to track 'origin/main'.
+2025-10-17T16:16:05.3590616Z ##[endgroup]
+2025-10-17T16:16:05.3630895Z [command]/usr/bin/git log -1 --format=%H
+2025-10-17T16:16:05.3654622Z 9a3d8b0d18f1460e4a9a0f8fd399913aa0b6b0c2
+2025-10-17T16:16:05.3897444Z ##[group]Run actions/setup-node@v4
+2025-10-17T16:16:05.3897795Z with:
+2025-10-17T16:16:05.3898197Z   node-version: 20
+2025-10-17T16:16:05.3898439Z   always-auth: false
+2025-10-17T16:16:05.3898683Z   check-latest: false
+2025-10-17T16:16:05.3899078Z   token: ***
+2025-10-17T16:16:05.3899301Z ##[endgroup]
+2025-10-17T16:16:05.5701264Z Found in cache @ /opt/hostedtoolcache/node/20.19.5/x64
+2025-10-17T16:16:05.5710280Z ##[group]Environment details
+2025-10-17T16:16:07.5569506Z node: v20.19.5
+2025-10-17T16:16:07.5570964Z npm: 10.8.2
+2025-10-17T16:16:07.5571333Z yarn: 1.22.22
+2025-10-17T16:16:07.5572172Z ##[endgroup]
+2025-10-17T16:16:07.5689990Z ##[group]Run npm ci
+2025-10-17T16:16:07.5690254Z [36;1mnpm ci[0m
+2025-10-17T16:16:07.5788144Z shell: /usr/bin/bash -e {0}
+2025-10-17T16:16:07.5788469Z ##[endgroup]
+2025-10-17T16:16:15.6850240Z npm warn deprecated boolean@3.2.0: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
+2025-10-17T16:16:16.5289321Z npm warn deprecated @esbuild-kit/esm-loader@2.6.5: Merged into tsx: https://tsx.is
+2025-10-17T16:16:16.5454346Z npm warn deprecated @esbuild-kit/core-utils@3.3.2: Merged into tsx: https://tsx.is
+2025-10-17T16:16:36.9463230Z 
+2025-10-17T16:16:36.9465978Z added 613 packages, and audited 614 packages in 29s
+2025-10-17T16:16:36.9471287Z 
+2025-10-17T16:16:36.9471589Z 83 packages are looking for funding
+2025-10-17T16:16:36.9474046Z   run `npm fund` for details
+2025-10-17T16:16:36.9812841Z 
+2025-10-17T16:16:36.9824548Z 8 vulnerabilities (3 low, 5 moderate)
+2025-10-17T16:16:36.9825230Z 
+2025-10-17T16:16:36.9826063Z To address issues that do not require attention, run:
+2025-10-17T16:16:36.9826868Z   npm audit fix
+2025-10-17T16:16:36.9832309Z 
+2025-10-17T16:16:36.9832740Z To address all issues (including breaking changes), run:
+2025-10-17T16:16:36.9833273Z   npm audit fix --force
+2025-10-17T16:16:36.9833510Z 
+2025-10-17T16:16:36.9833681Z Run `npm audit` for details.
+2025-10-17T16:16:37.0294895Z ##[group]Run npm run build
+2025-10-17T16:16:37.0295189Z [36;1mnpm run build[0m
+2025-10-17T16:16:37.0324444Z shell: /usr/bin/bash -e {0}
+2025-10-17T16:16:37.0324668Z env:
+2025-10-17T16:16:37.0324935Z   VITE_API_BASE_URL: https://teammato-production.up.railway.app
+2025-10-17T16:16:37.0325272Z ##[endgroup]
+2025-10-17T16:16:37.1971927Z 
+2025-10-17T16:16:37.1974065Z > rest-express@1.0.0 build
+2025-10-17T16:16:37.1975850Z > vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+2025-10-17T16:16:37.1977128Z 
+2025-10-17T16:16:37.4425517Z [36mvite v5.4.20 [32mbuilding for production...[36m[39m
+2025-10-17T16:16:37.4999385Z transforming...
+2025-10-17T16:16:37.8241830Z Browserslist: browsers data (caniuse-lite) is 12 months old. Please run:
+2025-10-17T16:16:37.8242733Z   npx update-browserslist-db@latest
+2025-10-17T16:16:37.8243718Z   Why you should do it regularly: https://github.com/browserslist/update-db#readme
+2025-10-17T16:16:39.3450449Z 
+2025-10-17T16:16:39.3456339Z A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+2025-10-17T16:16:45.6753343Z [32m✓[39m 2953 modules transformed.
+2025-10-17T16:16:46.2221072Z rendering chunks...
+2025-10-17T16:16:46.2362755Z computing gzip size...
+2025-10-17T16:16:46.2635731Z [2m../dist/public/[22m[32mindex.html                                                      [39m[1m[2m    0.67 kB[22m[1m[22m[2m │ gzip:   0.38 kB[22m
+2025-10-17T16:16:46.2649827Z [2m../dist/public/[22m[2massets/[22m[32mteammato_logo_transparent_1759614481870-P1d8swDX.png     [39m[1m[2m  344.19 kB[22m[1m[22m
+2025-10-17T16:16:46.2651600Z [2m../dist/public/[22m[2massets/[22m[32mgalaxyai-image-1759612930294_1759613447444-BxnjBfpA.png  [39m[1m[2m2,912.21 kB[22m[1m[22m
+2025-10-17T16:16:46.2653496Z [2m../dist/public/[22m[2massets/[22m[35mindex-BM_tzxum.css                                       [39m[1m[2m  129.66 kB[22m[1m[22m[2m │ gzip:  19.82 kB[22m
+2025-10-17T16:16:46.2655178Z [2m../dist/public/[22m[2massets/[22m[36mindex-CQtuuDoC.js                                        [39m[1m[33m1,046.34 kB[39m[22m[2m │ gzip: 286.13 kB[22m
+2025-10-17T16:16:46.2656070Z [32m✓ built in 8.80s[39m
+2025-10-17T16:16:46.2656474Z [33m
+2025-10-17T16:16:46.2657141Z (!) Some chunks are larger than 500 kB after minification. Consider:
+2025-10-17T16:16:46.2658090Z - Using dynamic import() to code-split the application
+2025-10-17T16:16:46.2659469Z - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+2025-10-17T16:16:46.2660803Z - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+2025-10-17T16:16:46.3659798Z 
+2025-10-17T16:16:46.3660579Z   dist/index.js  282.0kb
+2025-10-17T16:16:46.3660862Z 
+2025-10-17T16:16:46.3662691Z ⚡ Done in 30ms
+2025-10-17T16:16:46.3785019Z ##[group]Run cp client/dist/index.html client/dist/404.html
+2025-10-17T16:16:46.3785696Z [36;1mcp client/dist/index.html client/dist/404.html[0m
+2025-10-17T16:16:46.3833603Z shell: /usr/bin/bash -e {0}
+2025-10-17T16:16:46.3833845Z ##[endgroup]
+2025-10-17T16:16:46.3910391Z cp: cannot stat 'client/dist/index.html': No such file or directory
+2025-10-17T16:16:46.3927617Z ##[error]Process completed with exit code 1.
+2025-10-17T16:16:46.4034752Z Post job cleanup.
+2025-10-17T16:16:46.5142348Z [command]/usr/bin/git version
+2025-10-17T16:16:46.5185275Z git version 2.51.0
+2025-10-17T16:16:46.5234800Z Temporarily overriding HOME='/home/runner/work/_temp/8c27db2b-57d8-44e7-b22c-d3d853aae6e9' before making global git config changes
+2025-10-17T16:16:46.5237517Z Adding repository directory to the temporary git global config as a safe directory
+2025-10-17T16:16:46.5241836Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Teammato/Teammato
+2025-10-17T16:16:46.5289257Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2025-10-17T16:16:46.5325205Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2025-10-17T16:16:46.5596869Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2025-10-17T16:16:46.5622439Z http.https://github.com/.extraheader
+2025-10-17T16:16:46.5636801Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2025-10-17T16:16:46.5671666Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2025-10-17T16:16:46.6096326Z Cleaning up orphan processes
