@@ -692,7 +692,7 @@ export default function Landing() {
                       key={key}
                       onClick={() => setActivePrinciple(key)}
                       className={[
-                        "w-full rounded-2xl p-4 text-left transition-all ring-1 ring-black/5",
+                        "w-full rounded-2xl p-4 text-left whitespace-normal transition-all ring-1 ring-black/5",
                         isActive ? "bg-background shadow-[0_1px_0_rgba(0,0,0,0.06),0_24px_48px_-24px_rgba(0,0,0,0.25)]" : "bg-muted hover:bg-muted/70"
                       ].join(" ")}
                       aria-pressed={isActive}
