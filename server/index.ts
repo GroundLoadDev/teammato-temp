@@ -1,7 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
 import { startTopicExpiryCron, startInstanceRotationCron } from "./cron/topicExpiry";
 import { startAudienceSyncCron } from "./cron/audienceSync";
 import { startWeeklyDigestCron } from "./cron/digestWeekly";
@@ -86,7 +85,10 @@ app.use((req, res, next) => {
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    serveStatic(app);
+    // Frontend is hosted on GitHub Pages; API only here.
+    app.get("/", (_req, res) => {
+      res.json({ ok: true, service: "teammato-api" });
+    });
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
