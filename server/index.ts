@@ -1,7 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { Pool } from "@neondatabase/serverless";
+// NOTE: do NOT import "pg" here; we'll load it dynamically in production only.
+// import { Pool } from "pg";
+
 import { registerRoutes } from "./routes";
 import { setupVite, log } from "./vite";
 import { startTopicExpiryCron, startInstanceRotationCron } from "./cron/topicExpiry";
@@ -10,79 +12,114 @@ import { startWeeklyDigestCron } from "./cron/digestWeekly";
 
 const app = express();
 
-// CORS configuration for GitHub Pages frontend
-const ALLOWED_ORIGINS = [
-  'https://teammatodev.github.io',
-  'http://localhost:5173', // Local Vite dev
-  'http://localhost:5000', // Local dev
-];
+console.log("[BOOT] NODE_ENV=%s PORT=%s", process.env.NODE_ENV, process.env.PORT);
+
+// ---- CORS (allow Replit/Vite + your Pages origin via env) --------------------
+const ALLOWED_ORIGINS = new Set<string>([
+  "https://teammatodev.github.io",
+  "http://localhost:5173",
+  "http://localhost:5000",
+]);
+if (process.env.FRONTEND_ORIGIN) ALLOWED_ORIGINS.add(process.env.FRONTEND_ORIGIN);
 
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  const origin = req.headers.origin as string | undefined;
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, x-admin-token, Stripe-Signature, X-Slack-Signature, X-Slack-Request-Timestamp"
+    );
   }
-  
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  
+  if (req.method === "OPTIONS") return res.sendStatus(200);
   next();
 });
 
-// Trust proxy for secure cookies behind reverse proxy
-if (process.env.NODE_ENV === 'production') {
-  app.set('trust proxy', 1);
+// ---- Trust proxy for secure cookies in prod ----------------------------------
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
 }
 
-// Session middleware with PostgreSQL store
-if (!process.env.SESSION_SECRET && process.env.NODE_ENV === 'production') {
-  throw new Error('SESSION_SECRET environment variable is required in production');
-}
+// ---- Very early health route (DB-free) ---------------------------------------
+app.get("/health", (_req, res) => {
+  res.status(200).json({ ok: true, service: "teammato-api", ts: Date.now() });
+});
 
+// ---- Sessions: Postgres store in prod (dynamic import), memory in dev --------
 const PgSession = connectPg(session);
-const sessionStore = process.env.NODE_ENV === 'production' 
-  ? new PgSession({
-      pool: new Pool({ connectionString: process.env.DATABASE_URL }),
-      tableName: 'session',
-      createTableIfMissing: true,
-    })
-  : undefined; // Use in-memory store in development for faster iteration
 
-app.use(session({
-  store: sessionStore,
-  secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-origin in production
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+if (!process.env.SESSION_SECRET && process.env.NODE_ENV === "production") {
+  throw new Error("SESSION_SECRET environment variable is required in production");
+}
+
+async function attachSessionMiddleware() {
+  // DEV: use in-memory store for fast Replit iteration
+  if (process.env.NODE_ENV !== "production") {
+    app.use(
+      session({
+        secret: process.env.SESSION_SECRET || "dev-secret-change-in-production",
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+          secure: false,
+          httpOnly: true,
+          sameSite: "lax",
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+        },
+        name: "tm.sid",
+      })
+    );
+    return;
   }
-}));
 
-// Capture raw body for Slack signature verification
-app.use('/api/slack/command', express.raw({ type: 'application/x-www-form-urlencoded' }));
-app.use('/api/slack/modal', express.raw({ type: 'application/x-www-form-urlencoded' }));
-// Capture raw body for Stripe webhook signature verification
-app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
+  // PROD: connect-pg-simple with pg.Pool (dynamic import to avoid dev breakage)
+  const { Pool } = await import("pg");
+  const DATABASE_URL = process.env.DATABASE_URL;
+  if (!DATABASE_URL) throw new Error("DATABASE_URL is required in production");
+
+  const store = new PgSession({
+    pool: new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false } }),
+    tableName: "user_sessions",
+    createTableIfMissing: true,
+  });
+
+  app.use(
+    session({
+      store,
+      secret: process.env.SESSION_SECRET as string,
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        secure: true,
+        httpOnly: true,
+        sameSite: "none",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      },
+      name: "tm.sid",
+    })
+  );
+}
+
+// ---- Raw bodies for Slack/Stripe signatures, then normal parsers -------------
+app.use("/api/slack/command", express.raw({ type: "application/x-www-form-urlencoded" }));
+app.use("/api/slack/modal", express.raw({ type: "application/x-www-form-urlencoded" }));
+app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// ---- Request logging for API routes ------------------------------------------
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
+  const originalResJson = res.json.bind(res);
+  (res as any).json = (bodyJson: any, ...args: any[]) => {
     capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
+    return originalResJson(bodyJson, ...args);
   };
 
   res.on("finish", () => {
@@ -90,13 +127,9 @@ app.use((req, res, next) => {
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        try { logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`; } catch {}
       }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
+      if (logLine.length > 120) logLine = logLine.slice(0, 119) + "…";
       log(logLine);
     }
   });
@@ -104,60 +137,45 @@ app.use((req, res, next) => {
   next();
 });
 
+// ---- Main bootstrap -----------------------------------------------------------
 (async () => {
+  await attachSessionMiddleware();
+
   const server = await registerRoutes(app);
 
+  // Error handler (after routes)
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
     res.status(status).json({ message });
     throw err;
   });
 
-  // Health check endpoint for Railway
-  app.get("/health", (_req, res) => {
-    res.json({ 
-      status: "ok", 
-      service: "teammato-api",
-      timestamp: new Date().toISOString() 
-    });
-  });
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    // Frontend is hosted on GitHub Pages; API only here.
     app.get("/", (_req, res) => {
       res.json({ ok: true, service: "teammato-api" });
     });
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-    
-    // Start cron jobs only if not disabled (e.g., on Railway with multiple instances)
-    // Set DISABLE_CRON_JOBS=true to disable in-process cron jobs
-    if (process.env.DISABLE_CRON_JOBS !== 'true') {
-      log('Starting in-process cron jobs...');
-      startTopicExpiryCron();
-      startInstanceRotationCron();
-      startAudienceSyncCron();
-      startWeeklyDigestCron();
-    } else {
-      log('Cron jobs disabled (DISABLE_CRON_JOBS=true). Use external cron service.');
+  const port = parseInt(process.env.PORT || "5000", 10);
+  server.listen(
+    { port, host: "0.0.0.0", reusePort: true },
+    () => {
+      log(`serving on port ${port}`);
+
+      if (process.env.DISABLE_CRON_JOBS !== "true") {
+        log("Starting in-process cron jobs...");
+        startTopicExpiryCron();
+        startInstanceRotationCron();
+        startAudienceSyncCron();
+        startWeeklyDigestCron();
+      } else {
+        log("Cron jobs disabled (DISABLE_CRON_JOBS=true). Use external cron service.");
+      }
     }
-  });
+  );
 })();
+
+export { app };

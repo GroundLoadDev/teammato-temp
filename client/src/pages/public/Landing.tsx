@@ -664,7 +664,7 @@ export default function Landing() {
       </section>
 
       {/* EVIDENCE LAB */}
-      <section className="relative isolate overflow-hidden">
+      <section className="relative isolate">
         <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(1200px_400px_at_50%_-10%,rgba(16,185,129,0.10),transparent)]" />
 
         <div className="mx-auto max-w-6xl px-6 py-24 lg:py-28">
@@ -680,8 +680,8 @@ export default function Landing() {
             </div>
           </header>
 
-          <div className="grid gap-8 md:grid-cols-12">
-            <aside className="md:col-span-5 space-y-2">
+          <div className="grid gap-8 lg:grid-cols-12">
+            <aside className="lg:col-span-5 space-y-2">
               <div className="space-y-2">
                 {(Object.keys(PRINCIPLES) as PrincipleKey[]).map((key) => {
                   const p = PRINCIPLES[key];
@@ -719,7 +719,7 @@ export default function Landing() {
               </div>
             </aside>
 
-            <div className="md:col-span-7">
+            <div className="lg:col-span-7">
               <div className="relative overflow-hidden rounded-3xl border bg-background p-6 shadow-[0_1px_0_rgba(0,0,0,0.06),0_28px_60px_-28px_rgba(0,0,0,0.25)]">
                 <EvidenceCard active={activePrinciple} />
                 <div className="pointer-events-none absolute -inset-8 -z-10 rounded-[2rem] bg-gradient-to-tr from-emerald-200/30 via-transparent to-transparent blur-2xl" />
