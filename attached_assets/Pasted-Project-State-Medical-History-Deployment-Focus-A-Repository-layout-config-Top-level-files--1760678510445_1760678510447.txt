@@ -1,0 +1,219 @@
+Project State “Medical History” – Deployment Focus
+A) Repository layout & config
+
+Top-level files & folders
+
+Run and paste:
+
+ls -la
+
+
+Confirm presence/absence of: package.json, server/, client/, shared/, dist/, vercel.json, .github/workflows/pages.yml, server/vite.ts, server/index.ts.
+
+Root package.json (scripts only)
+
+Paste the entire "scripts" section.
+
+Root package.json (engines & type)
+
+Paste name, version, "type", and any "engines" field if present.
+
+Client package.json exists?
+
+If client/package.json exists, paste its "name", "scripts", and "devDependencies.vite" version.
+
+Vite config(s)
+
+List all vite config files found and show first 40 lines of each:
+
+ls -la | grep -i vite.config || true
+ls -la client | grep -i vite.config || true
+sed -n '1,120p' vite.config.* 2>/dev/null || true
+sed -n '1,120p' client/vite.config.* 2>/dev/null || true
+
+B) Backend entry & static serving behavior
+
+Express entrypoint
+
+Show the first 120 lines of server/index.ts and the bottom 80 lines:
+
+sed -n '1,120p' server/index.ts
+sed -n '$-80,$p' server/index.ts
+
+
+Where static files are served
+
+Show all exports from server/vite.ts and any express.static / catch-all:
+
+sed -n '1,200p' server/vite.ts
+grep -RIn "express.static\\|sendFile\\|app\\.get\\(\\\"\\*\\\"" server | sed -n '1,200p'
+
+
+Also search for static serving in other files:
+
+grep -RIn "express.static\\|sendFile\\|serveStatic" server | sed -n '1,200p'
+
+
+Routes registered
+
+Show the file that defines routes:
+
+sed -n '1,200p' server/routes.ts 2>/dev/null || sed -n '1,200p' server/routes/index.ts 2>/dev/null || echo "routes file not found at default locations"
+
+
+If there’s a catch-all app.get('*', …) anywhere, paste it.
+
+C) Sessions, CORS, and webhooks
+
+Session store & cookie settings
+
+From server/index.ts (or wherever configured), paste the session middleware block and any MemoryStore or connect-pg-simple usage.
+
+Paste any app.set('trust proxy', …) lines.
+
+CORS configuration
+
+Search and paste:
+
+grep -RIn "cors\\(|Access-Control-Allow-Origin" server | sed -n '1,200p'
+
+
+Stripe raw-body handling
+
+Paste the Stripe webhook route and body parser lines (already partially shown, include full route handler if in separate file).
+
+Slack endpoints & 3s handling
+
+Search and paste Slack routes and any retry/idempotency logic (e.g., reading X-Slack-Retry-Num):
+
+grep -RIn "api/slack" server | sed -n '1,200p'
+sed -n '1,200p' server/slack/*.ts 2>/dev/null || true
+
+D) Cron jobs & background work
+
+In-process timers
+
+Paste definitions of:
+
+startTopicExpiryCron
+
+startInstanceRotationCron
+
+startAudienceSyncCron
+
+startWeeklyDigestCron
+
+Commands:
+
+sed -n '1,200p' server/cron/topicExpiry.ts
+sed -n '1,200p' server/cron/audienceSync.ts
+sed -n '1,200p' server/cron/digestWeekly.ts
+
+
+Note whether these are setInterval/setTimeout or HTTP endpoints.
+
+Long-running route(s)
+
+Paste the handler for /api/admin/themes/generate (or wherever the ML work happens):
+
+grep -RIn "themes/generate" server | sed -n '1,200p'
+
+E) Database client usage (Neon/Postgres)
+
+DB initialization
+
+Paste the entire db client init file (likely server/db.ts):
+
+sed -n '1,200p' server/db.ts
+
+
+Confirm which library is used: @neondatabase/serverless or pg etc., and how it reads DATABASE_URL.
+
+Migrations/Drizzle
+
+Paste drizzle.config.* if present (or drizzle-kit references):
+
+grep -RIn "drizzle" .
+sed -n '1,200p' drizzle.config.* 2>/dev/null || true
+
+F) Build outputs (optional build, safe)
+
+Clean build (server-only)
+
+Run:
+
+rm -rf dist
+npm run build
+
+
+Then list results:
+
+tree -a -L 3 dist || ls -la dist && ls -la dist/public || true
+
+
+Does the bundle still reference static serving?
+
+Run:
+
+grep -n "express.static\\|sendFile\\|index.html" dist/index.js || true
+
+
+Also show any root route handler compiled:
+
+grep -n "app\\.get\\(\\\"/\\\"" dist/index.js || true
+
+G) Environment variables (read only from code)
+
+List all env var names the server expects
+
+Search and paste:
+
+grep -RIn "process\\.env\\." server | sed -E 's/.*process\\.env\\.([A-Z0-9_]+).*/\\1/' | sort -u
+
+
+And paste any custom configuration/validation that throws if missing.
+
+H) Health endpoints & diagnostics in code
+
+Health/status routes
+
+Search for health/status endpoints:
+
+grep -RIn "api/health\\|api/status" server | sed -n '1,200p'
+
+
+If none exist, confirm.
+
+Root route behavior in production
+
+Paste the exact if (app.get("env") === "development") { ... } else { ... } block from server/index.ts so we can see what production does at /.
+
+I) Frontend build artifacts (context only)
+
+Where frontend build goes
+
+From your Vite config(s), confirm the build.outDir. Paste the actual line/value (e.g., outDir: 'dist' or ../dist/public).
+
+Show any app.use(express.static(...)) usage that matches that path (if any).
+
+J) Git state (context only)
+
+Commit hash & branch
+
+Paste:
+
+git rev-parse --short HEAD
+git branch --show-current
+
+
+Confirm whether there are uncommitted changes:
+
+git status --porcelain
+
+How Replit should return answers
+
+For each item, include the command (if any) and its output, or the exact code snippet requested.
+
+Do not modify files; just read and report.
+
+If a file doesn’t exist, say “not found”.
