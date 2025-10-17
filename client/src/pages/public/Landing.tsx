@@ -719,20 +719,22 @@ export default function Landing() {
               </div>
             </aside>
 
-            <div className="lg:col-span-7">
-              <div className="relative overflow-hidden rounded-3xl border bg-background p-6 shadow-[0_1px_0_rgba(0,0,0,0.06),0_28px_60px_-28px_rgba(0,0,0,0.25)]">
-                <EvidenceCard active={activePrinciple} />
+            <div className="lg:col-span-7 min-w-0">
+              <div className="relative overflow-hidden rounded-3xl border bg-background p-4 sm:p-6 shadow-[0_1px_0_rgba(0,0,0,0.06),0_28px_60px_-28px_rgba(0,0,0,0.25)]">
+                <div className="min-w-0">
+                  <EvidenceCard active={activePrinciple} />
+                </div>
                 <div className="pointer-events-none absolute -inset-8 -z-10 rounded-[2rem] bg-gradient-to-tr from-emerald-200/30 via-transparent to-transparent blur-2xl" />
               </div>
 
               <div className="mt-6 overflow-hidden">
                 <div className="flex animate-[marquee_24s_linear_infinite] gap-6">
                   {EVIDENCE_QUOTES.concat(EVIDENCE_QUOTES).map((q, i) => (
-                    <figure key={i} className="flex min-w-[320px] items-start gap-3 rounded-2xl border bg-muted/60 p-4">
-                      <Quote className="h-5 w-5 text-muted-foreground" />
-                      <figcaption>
-                        <div className="text-sm leading-snug text-foreground/90">"{q.quote}"</div>
-                        <div className="mt-1 text-xs text-muted-foreground">{q.who}</div>
+                    <figure key={i} className="flex min-w-[280px] items-start gap-3 rounded-2xl border bg-muted/60 p-4">
+                      <Quote className="h-5 w-5 shrink-0 text-muted-foreground" />
+                      <figcaption className="min-w-0">
+                        <div className="text-sm leading-snug text-foreground/90 break-words">"{q.quote}"</div>
+                        <div className="mt-1 text-xs text-muted-foreground break-words">{q.who}</div>
                       </figcaption>
                     </figure>
                   ))}
@@ -959,10 +961,10 @@ function Pill({ children }: { children: React.ReactNode }) {
 function EvidenceCard({ active }: { active: PrincipleKey }) {
   if (active === "psychSafety") {
     return (
-      <div>
-        <header className="mb-3 flex items-center justify-between">
+      <div className="min-w-0">
+        <header className="mb-3 flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Users2 className="h-4 w-4" /> Participation
+            <Users2 className="h-4 w-4 shrink-0" /> <span className="break-words">Participation</span>
           </div>
           <Pill>with anonymity</Pill>
         </header>
