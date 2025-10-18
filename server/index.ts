@@ -2,7 +2,6 @@ import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 // NOTE: do NOT import "pg" here; we'll load it dynamically in production only.
-// import { Pool } from "pg";
 
 import { registerRoutes } from "./routes";
 import { setupVite, log } from "./vite";
@@ -12,7 +11,8 @@ import { startWeeklyDigestCron } from "./cron/digestWeekly";
 
 const app = express();
 
-console.log("[BOOT] NODE_ENV=%s PORT=%s", process.env.NODE_ENV, process.env.PORT);
+// ===== BOOT MARKER (watch for this in Railway logs) =====
+console.log("[BOOTMARK v2] NODE_ENV=%s PORT=%s", process.env.NODE_ENV, process.env.PORT);
 
 // ---- CORS (allow Replit/Vite + your Pages origin via env) --------------------
 const ALLOWED_ORIGINS = new Set<string>([
@@ -42,9 +42,12 @@ if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
 
-// ---- Very early health route (DB-free) ---------------------------------------
+// ---- Early health + version routes (DB-free) ---------------------------------
 app.get("/health", (_req, res) => {
   res.status(200).json({ ok: true, service: "teammato-api", ts: Date.now() });
+});
+app.get("/__version", (_req, res) => {
+  res.status(200).json({ bootmark: "v2", env: process.env.NODE_ENV, port: process.env.PORT || "5000" });
 });
 
 // ---- Sessions: Postgres store in prod (dynamic import), memory in dev --------
@@ -55,26 +58,19 @@ if (!process.env.SESSION_SECRET && process.env.NODE_ENV === "production") {
 }
 
 async function attachSessionMiddleware() {
-  // DEV: use in-memory store for fast Replit iteration
   if (process.env.NODE_ENV !== "production") {
     app.use(
       session({
         secret: process.env.SESSION_SECRET || "dev-secret-change-in-production",
         resave: false,
         saveUninitialized: false,
-        cookie: {
-          secure: false,
-          httpOnly: true,
-          sameSite: "lax",
-          maxAge: 7 * 24 * 60 * 60 * 1000,
-        },
+        cookie: { secure: false, httpOnly: true, sameSite: "lax", maxAge: 7 * 24 * 60 * 60 * 1000 },
         name: "tm.sid",
       })
     );
     return;
   }
 
-  // PROD: connect-pg-simple with pg.Pool (dynamic import to avoid dev breakage)
   const { Pool } = await import("pg");
   const DATABASE_URL = process.env.DATABASE_URL;
   if (!DATABASE_URL) throw new Error("DATABASE_URL is required in production");
@@ -91,12 +87,7 @@ async function attachSessionMiddleware() {
       secret: process.env.SESSION_SECRET as string,
       resave: false,
       saveUninitialized: false,
-      cookie: {
-        secure: true,
-        httpOnly: true,
-        sameSite: "none",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      },
+      cookie: { secure: true, httpOnly: true, sameSite: "none", maxAge: 7 * 24 * 60 * 60 * 1000 },
       name: "tm.sid",
     })
   );
@@ -115,25 +106,20 @@ app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
   const originalResJson = res.json.bind(res);
   (res as any).json = (bodyJson: any, ...args: any[]) => {
     capturedJsonResponse = bodyJson;
     return originalResJson(bodyJson, ...args);
   };
-
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        try { logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`; } catch {}
-      }
+      if (capturedJsonResponse) { try { logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`; } catch {} }
       if (logLine.length > 120) logLine = logLine.slice(0, 119) + "…";
       log(logLine);
     }
   });
-
   next();
 });
 
@@ -159,30 +145,25 @@ app.use((req, res, next) => {
     });
   }
 
-  // --- Listening strategy: dev uses the Node server, prod uses app.listen -----
+  // --- Listening: dev uses Node server; prod uses app.listen ------------------
   const port = parseInt(process.env.PORT || "5000", 10);
 
   if (app.get("env") === "development") {
-    server.listen(
-      { port, host: "0.0.0.0", reusePort: true },
-      () => {
-        log(`serving (dev) on port ${port}`);
-
-        if (process.env.DISABLE_CRON_JOBS !== "true") {
-          log("Starting in-process cron jobs...");
-          startTopicExpiryCron();
-          startInstanceRotationCron();
-          startAudienceSyncCron();
-          startWeeklyDigestCron();
-        } else {
-          log("Cron jobs disabled (DISABLE_CRON_JOBS=true). Use external cron service.");
-        }
+    server.listen({ port, host: "0.0.0.0" }, () => {
+      log(`serving (dev) on port ${port}`);
+      if (process.env.DISABLE_CRON_JOBS !== "true") {
+        log("Starting in-process cron jobs...");
+        startTopicExpiryCron();
+        startInstanceRotationCron();
+        startAudienceSyncCron();
+        startWeeklyDigestCron();
+      } else {
+        log("Cron jobs disabled (DISABLE_CRON_JOBS=true). Use external cron service.");
       }
-    );
+    });
   } else {
     app.listen(port, "0.0.0.0", () => {
       log(`serving (prod) on port ${port}`);
-
       if (process.env.DISABLE_CRON_JOBS !== "true") {
         log("Starting in-process cron jobs...");
         startTopicExpiryCron();
