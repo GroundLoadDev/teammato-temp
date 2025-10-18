@@ -159,11 +159,29 @@ app.use((req, res, next) => {
     });
   }
 
+  // --- Listening strategy: dev uses the Node server, prod uses app.listen -----
   const port = parseInt(process.env.PORT || "5000", 10);
-  server.listen(
-    { port, host: "0.0.0.0", reusePort: true },
-    () => {
-      log(`serving on port ${port}`);
+
+  if (app.get("env") === "development") {
+    server.listen(
+      { port, host: "0.0.0.0", reusePort: true },
+      () => {
+        log(`serving (dev) on port ${port}`);
+
+        if (process.env.DISABLE_CRON_JOBS !== "true") {
+          log("Starting in-process cron jobs...");
+          startTopicExpiryCron();
+          startInstanceRotationCron();
+          startAudienceSyncCron();
+          startWeeklyDigestCron();
+        } else {
+          log("Cron jobs disabled (DISABLE_CRON_JOBS=true). Use external cron service.");
+        }
+      }
+    );
+  } else {
+    app.listen(port, "0.0.0.0", () => {
+      log(`serving (prod) on port ${port}`);
 
       if (process.env.DISABLE_CRON_JOBS !== "true") {
         log("Starting in-process cron jobs...");
@@ -174,8 +192,8 @@ app.use((req, res, next) => {
       } else {
         log("Cron jobs disabled (DISABLE_CRON_JOBS=true). Use external cron service.");
       }
-    }
-  );
+    });
+  }
 })();
 
 export { app };
