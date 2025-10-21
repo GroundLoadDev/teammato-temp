@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { statusBadge, type CanonicalStatus } from "@/lib/billingStatus";
 
 interface DashboardStats {
   totalThreads: number;
@@ -34,14 +35,21 @@ interface SlackSettings {
   digestEnabled: boolean;
 }
 
-interface BillingUsage {
-  detectedMembers: number;
+interface BillingStatus {
+  orgId: string;
+  status: CanonicalStatus;
   seatCap: number;
-  plan: string;
-  trialDaysLeft: number | null;
-  usagePercent: number;
-  isOverCap: boolean;
-  isNearCap: boolean;
+  period: 'monthly' | 'annual';
+  price: number;
+  trialEnd: string | null;
+  cancelsAt: string | null;
+  graceEndsAt: string | null;
+  grandfatheredUntil: string | null;
+  eligibleCount: number;
+  percent: number;
+  customerEmail: string | null;
+  hasSubscription: boolean;
+  subscriptionId: string | null;
 }
 
 interface FeedbackThread {
@@ -73,8 +81,8 @@ export default function Dashboard() {
     queryKey: ['/api/slack-settings'],
   });
 
-  const { data: billingUsage, isLoading: billingLoading } = useQuery<BillingUsage>({
-    queryKey: ['/api/billing/usage'],
+  const { data: billing, isLoading: billingLoading } = useQuery<BillingStatus>({
+    queryKey: ['/api/billing/status'],
   });
 
   const { data: recentThreads, isLoading: threadsLoading } = useQuery<FeedbackThread[]>({
@@ -137,41 +145,22 @@ export default function Dashboard() {
     localStorage.setItem('teammato_welcomed', 'true');
   };
 
-  // Get plan display name
-  const getPlanName = (plan: string) => {
-    if (plan === 'trial') return 'Trial';
-    if (plan === 'pro_250') return 'Pro';
-    if (plan.startsWith('scale_')) return 'Scale';
-    return 'Trial';
-  };
-
-  // Get plan badge variant
-  const getPlanBadge = (plan: string, trialDaysLeft: number | null) => {
-    if (plan === 'trial') {
-      if (trialDaysLeft !== null && trialDaysLeft <= 3) {
-        return { variant: 'destructive' as const, text: `Trial: ${trialDaysLeft}d left` };
-      }
-      return { variant: 'secondary' as const, text: trialDaysLeft ? `Trial: ${trialDaysLeft}d left` : 'Trial' };
-    }
-    return { variant: 'default' as const, text: getPlanName(plan) };
-  };
-
   return (
     <div className="p-8 space-y-6">
       {/* Top Ribbon - Plan Status & Usage */}
-      {!billingLoading && billingUsage && (
+      {!billingLoading && billing && (
         <div className="rounded-2xl border bg-gradient-to-r from-emerald-50 to-background dark:from-emerald-950/20 p-4">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-4">
-              <Badge {...getPlanBadge(billingUsage.plan, billingUsage.trialDaysLeft)} data-testid="badge-plan-status">
-                {getPlanBadge(billingUsage.plan, billingUsage.trialDaysLeft).text}
+              <Badge {...statusBadge(billing.status, billing.trialEnd)} data-testid="badge-plan-status">
+                {statusBadge(billing.status, billing.trialEnd).text}
               </Badge>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Workspace members:</span>
                 <span className="font-semibold" data-testid="text-member-count">
-                  {billingUsage.detectedMembers} / {billingUsage.seatCap}
+                  {billing.eligibleCount} / {billing.seatCap}
                 </span>
-                {billingUsage.isOverCap && (
+                {billing.eligibleCount > billing.seatCap && (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
@@ -184,27 +173,27 @@ export default function Dashboard() {
               </div>
               <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
                 <div 
-                  className={`h-full ${billingUsage.isOverCap ? 'bg-destructive' : billingUsage.isNearCap ? 'bg-yellow-500' : 'bg-emerald-600'}`}
-                  style={{ width: `${Math.min(billingUsage.usagePercent, 100)}%` }}
+                  className={`h-full ${billing.eligibleCount > billing.seatCap ? 'bg-destructive' : billing.percent >= 90 ? 'bg-yellow-500' : 'bg-emerald-600'}`}
+                  style={{ width: `${Math.min(billing.percent, 100)}%` }}
                   data-testid="meter-usage"
                 />
               </div>
             </div>
-            {billingUsage.plan === 'trial' && (
+            {(billing.status === 'trialing' || !billing.hasSubscription) && (
               <Link href="/admin/billing">
                 <Button size="sm" data-testid="button-upgrade">
-                  Upgrade Plan
+                  {billing.status === 'trialing' ? 'Manage Plan' : 'Start Free Trial'}
                 </Button>
               </Link>
             )}
           </div>
-          {billingUsage.isOverCap && (
+          {billing.eligibleCount > billing.seatCap && (
             <div className="mt-3 text-sm text-destructive flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" />
               You've exceeded your seat limit. Upgrade to continue.
             </div>
           )}
-          {billingUsage.isNearCap && !billingUsage.isOverCap && (
+          {billing.percent >= 90 && billing.eligibleCount <= billing.seatCap && (
             <div className="mt-3 text-sm text-yellow-700 dark:text-yellow-500 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" />
               Approaching seat limit. Consider upgrading soon.
