@@ -1109,12 +1109,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const status = org.billingStatus || 'installed_no_checkout';
       
       // Derive plan label from canonical state
-      function planFromStatus(status: string, hasSubscription: boolean): 'trial' | 'paid' | 'none' {
+      const getPlanLabel = (status: string, hasSubscription: boolean): 'trial' | 'paid' | 'none' => {
         if (status === 'trialing') return 'trial';
         if (hasSubscription) return 'paid';
         return 'none';
-      }
-      const plan = planFromStatus(status, hasSubscription);
+      };
+      const plan = getPlanLabel(status, hasSubscription);
       
       let detectedMembers = 0;
       if (slackTeam && slackTeam.accessToken) {
