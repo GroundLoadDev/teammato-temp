@@ -1104,9 +1104,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Organization not found' });
       }
 
-      const settings = org.settings as any || {};
-      const plan = settings.plan || 'trial';
-      const trialEndsAt = settings.trialEndsAt;
+      // Use canonical billing state from org.billingStatus + Stripe subscription check
+      const { hasSubscription } = await resolveOrgSubscriptionState(stripe, storage, org);
+      const status = org.billingStatus || 'installed_no_checkout';
+      
+      // Derive plan label from canonical state
+      function planFromStatus(status: string, hasSubscription: boolean): 'trial' | 'paid' | 'none' {
+        if (status === 'trialing') return 'trial';
+        if (hasSubscription) return 'paid';
+        return 'none';
+      }
+      const plan = planFromStatus(status, hasSubscription);
       
       let detectedMembers = 0;
       if (slackTeam && slackTeam.accessToken) {
@@ -1134,11 +1142,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const seatCap = org.seatCap || 250;
+      
+      // Only calculate trialDaysLeft when actually trialing
       let trialDaysLeft = null;
-      if (org.trialEnd) {
+      if (status === 'trialing' && org.trialEnd) {
         const now = new Date();
         const diff = org.trialEnd.getTime() - now.getTime();
-        trialDaysLeft = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+        trialDaysLeft = diff > 0 ? Math.ceil(diff / (1000 * 60 * 60 * 24)) : 0;
       }
       
       const usagePercent = seatCap > 0 ? Math.round((detectedMembers / seatCap) * 100) : 0;
@@ -1146,11 +1156,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         detectedMembers,
         seatCap,
-        plan,
-        trialDaysLeft,
+        plan, // 'trial' | 'paid' | 'none' (canonical)
+        trialDaysLeft, // null unless status === 'trialing'
         usagePercent,
         isOverCap: detectedMembers > seatCap,
         isNearCap: usagePercent >= 90,
+        status, // Include canonical status for clarity
+        hasSubscription, // Include subscription flag
       });
     } catch (error) {
       console.error('Billing usage error:', error);

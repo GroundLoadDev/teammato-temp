@@ -1,0 +1,215 @@
+Context (do not skip):
+
+Org created today shows mixed UI states: “Trial” badge on dashboard, “Current 250” on Billing, and “Start Free Trial” CTA.
+
+DB truth (dev): billing_status='installed_no_checkout', seat_cap=250, no Stripe customer/subscription.
+
+API truth:
+
+/api/billing/status → correct (derives from org.billingStatus + resolveOrgSubscriptionState)
+
+/api/billing/usage → incorrect (uses org.settings.plan || 'trial')
+
+UI truth:
+
+Dashboard reads /api/billing/usage → displays “Trial” incorrectly
+
+Billing uses /api/billing/status but shows “Current” when cap===250 even with no subscription
+
+Goal:
+
+Single source of truth = org.billingStatus (+ hasSubscription from resolveOrgSubscriptionState).
+
+Make /api/billing/usage mirror the canonical state (status, trial, seat cap).
+
+Dashboard should use canonical status (not a made-up plan).
+
+Billing’s “Current” only when there is an active subscription for that cap/period.
+
+✅ Tasks (make these exact changes)
+1) Fix /api/billing/usage to reflect canonical billing state
+
+File: server/routes.ts (handler for GET /api/billing/usage)
+
+Change:
+
+Stop reading settings.plan || 'trial'.
+
+Read org.billingStatus and hasSubscription (via resolveOrgSubscriptionState), and compute:
+
+// PSEUDO: inside /api/billing/usage handler
+const org = await storage.getOrg(orgId);
+const { hasSubscription } = await resolveOrgSubscriptionState(stripe, storage, org);
+
+// canonical "status" comes from org.billingStatus
+const status = org.billingStatus; // 'installed_no_checkout' | 'trialing' | 'active' | etc.
+
+// canonical "planLabel" for dashboard display only:
+function planFromStatus(status: string, hasSubscription: boolean): 'trial'|'paid'|'none' {
+  if (status === 'trialing') return 'trial';
+  if (hasSubscription) return 'paid';
+  return 'none';
+}
+const plan = planFromStatus(status, hasSubscription);
+
+// trialDaysLeft: derive from org.trialEnd (if set)
+let trialDaysLeft: number | null = null;
+if (org.trialEnd && status === 'trialing') {
+  const msLeft = org.trialEnd.getTime() - Date.now();
+  trialDaysLeft = msLeft > 0 ? Math.ceil(msLeft / (24*60*60*1000)) : 0;
+}
+
+// Return usage with canonical truth
+return res.json({
+  detectedMembers,                 // keep existing usage fields
+  seatCap: org.seatCap ?? 250,     // keep
+  plan,                            // 'trial'|'paid'|'none'  (no default to 'trial')
+  trialDaysLeft,                   // null unless trialing
+  usagePercent, isOverCap, isNearCap
+});
+
+
+Acceptance:
+
+For installed_no_checkout with no sub: plan:'none', trialDaysLeft:null.
+
+For trialing: plan:'trial', trialDaysLeft > 0.
+
+For active: plan:'paid'.
+
+Keep /api/billing/usage path and shape (add fields is fine). This prevents breaking existing callers but corrects the data.
+
+2) Dashboard should use canonical status (not fake “trial”)
+
+File: client/src/pages/admin/Dashboard.tsx (where badge is rendered)
+
+Change:
+
+Switch the query from ['/api/billing/usage'] to ['/api/billing/status'].
+
+Map status to a user-facing badge, not the string “trial” from usage:
+
+// BEFORE (conceptually)
+const { data: billingUsage } = useQuery({ queryKey: ['/api/billing/usage'] });
+// getPlanBadge(billingUsage.plan, billingUsage.trialDaysLeft)
+
+// AFTER
+const { data: billing } = useQuery({ queryKey: ['/api/billing/status'] });
+
+function badgeFromStatus(status: string, trialEnd: string | null) {
+  if (status === 'trialing') {
+    const daysLeft = trialEnd ? Math.max(0, Math.ceil((new Date(trialEnd).getTime() - Date.now())/86400000)) : null;
+    if (daysLeft !== null && daysLeft <= 3) return { variant: 'destructive', text: `Trial: ${daysLeft}d left` };
+    return { variant: 'secondary', text: daysLeft ? `Trial: ${daysLeft}d left` : 'Trial' };
+  }
+  if (status === 'active' || status === 'past_due') return { variant: 'default', text: 'Active' };
+  return { variant: 'outline', text: 'No subscription' }; // installed_no_checkout / trial_expired_unpaid / canceled
+}
+
+// usage:
+<Badge {...badgeFromStatus(billing.status, billing.trialEnd)} />
+
+
+Acceptance:
+
+Dashboard no longer shows “Trial” for installs with no checkout.
+
+Trialing shows “Trial” (with days left), Active shows “Active”, otherwise “No subscription”.
+
+3) Fix Billing page “Current” logic to require real subscription
+
+File: client/src/pages/public/Billing.tsx
+
+Change:
+
+Current logic:
+
+const isTrialing = billing.status === 'trialing';
+const isCurrentPlan = !isTrialing && plan.cap === billing.seatCap && billing.period === billingPeriod;
+
+
+Replace with:
+
+const hasSubscription = billing.hasSubscription === true;
+const isCurrentPlan = hasSubscription && plan.cap === billing.seatCap && billing.period === billingPeriod;
+
+
+Button label logic must reflect this:
+
+let buttonText = 'Select Plan';
+if (isCurrentPlan) buttonText = 'Current';
+else if (isTrialPlan) buttonText = 'Subscribe';
+else if (plan.cap > billing.seatCap) buttonText = 'Upgrade';
+// For installed_no_checkout (no sub): 'Select Plan' and show "Start Free Trial" banner/CTA (already present)
+
+
+Acceptance:
+
+“Current” never appears unless there’s an active subscription for that plan.
+
+“Start Free Trial” remains visible when !billing.hasSubscription.
+
+4) (Optional but recommended) Provide a single helper to map status → UI
+
+Add a tiny utility so you don’t repeat the mapping:
+
+File: client/src/lib/billingStatus.ts (new)
+
+export type CanonicalStatus = 'installed_no_checkout'|'trialing'|'active'|'past_due'|'canceled'|'trial_expired_unpaid';
+
+export function statusBadge(status: CanonicalStatus, trialEnd?: string | null) {
+  if (status === 'trialing') {
+    const daysLeft = trialEnd ? Math.max(0, Math.ceil((new Date(trialEnd).getTime() - Date.now())/86400000)) : null;
+    if (daysLeft !== null && daysLeft <= 3) return { variant: 'destructive', text: `Trial: ${daysLeft}d left` };
+    return { variant: 'secondary', text: daysLeft ? `Trial: ${daysLeft}d left` : 'Trial' };
+  }
+  if (status === 'active' || status === 'past_due') return { variant: 'default', text: 'Active' };
+  return { variant: 'outline', text: 'No subscription' };
+}
+
+
+Then import into Dashboard and use statusBadge(billing.status, billing.trialEnd).
+
+5) (Non-breaking) keep /api/billing/usage but align it
+
+Do not remove the endpoint.
+
+After change #1, its plan field becomes a derived label ('trial'|'paid'|'none') consistent with /status.
+
+Consider adding status and hasSubscription fields to /usage for clarity (optional).
+
+🧪 Local tests (dev, Replit)
+
+Sign in with Slack on dev; ensure DB shows:
+
+billing_status = installed_no_checkout
+
+no Stripe IDs.
+
+Dashboard badge should show “No subscription”.
+
+Billing page shows:
+
+“Start Free Trial” CTA
+
+No “Current” badge on 250-seat plan (until an actual subscription exists).
+
+Start a test Stripe Checkout (dev). If you complete it:
+
+Webhook should update org (status to trialing or active, cap from price metadata).
+
+Dashboard shows “Trial” or “Active”.
+
+Billing marks the matching plan as “Current”.
+
+✅ Acceptance criteria (what “done” looks like)
+
+/api/billing/usage no longer reports plan:'trial' for a fresh install without checkout.
+
+Dashboard shows “No subscription” for installed_no_checkout.
+
+Billing never shows “Current” unless hasSubscription === true and cap/period match.
+
+Trial displays correctly only when status === 'trialing'.
+
+No DB schema changes required.

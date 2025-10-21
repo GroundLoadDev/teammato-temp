@@ -1,0 +1,123 @@
+Replit: investigate billing state inconsistencies (single org)
+0) Identify the org you just signed in as
+
+Print the active org_id, slack_team_id, and the signed-in user_id after OAuth (from logs or session).
+
+If easier, paste the org slug from the Admin URL.
+
+1) Database truth (ground source)
+
+Run these SQL queries against the dev DB (use the org id from step 0):
+
+-- A) Core org billing fields
+SELECT id, slug, seat_cap, billing_status, trial_starts_at, trial_ends_at, created_at
+FROM orgs
+WHERE id = '<ORG_ID>';
+
+-- B) Any Stripe linkage
+SELECT * FROM stripe_customers WHERE org_id = '<ORG_ID>';
+SELECT * FROM stripe_subscriptions WHERE org_id = '<ORG_ID>';
+SELECT * FROM stripe_prices WHERE org_id = '<ORG_ID>';
+
+-- C) Audit what set billing status recently
+SELECT * FROM org_billing_events
+WHERE org_id = '<ORG_ID>'
+ORDER BY created_at DESC
+LIMIT 25;
+
+-- D) Is there a trial record?
+SELECT * FROM trials WHERE org_id = '<ORG_ID>' ORDER BY created_at DESC LIMIT 5;
+
+-- E) What plan label is the UI using?
+SELECT * FROM plans WHERE is_active = true;
+
+
+Return the rows (redact emails if present).
+
+2) Stripe reality check (test mode is fine)
+
+From Stripe Test dashboard:
+
+Does a Customer exist for this org? Paste customer id (e.g., cus_...).
+
+Any active subscription? Paste sub id (sub_...) + status (active, trialing, incomplete, canceled).
+
+Any recent checkout session? Paste its status + mode + price id.
+
+Webhook logs for the last 24h: list events received for this Customer (names + status).
+
+3) Webhook + API plumbing (dev)
+
+Confirm dev webhook endpoint in Stripe points to your Replit domain /api/stripe/webhook.
+
+Check dev server logs for the last webhook deliveries (event type + 2–3 log lines of handler result).
+
+Verify the success/cancel URLs used when creating Checkout sessions (copy the exact strings from code or logs).
+
+4) Server logic: where UI labels come from
+
+Search these in the repo and paste code snippets (function heads + key conditionals):
+
+Pricing page: where it decides to show “Start free trial” vs “Upgrade Plan” vs “Current”.
+
+Likely in client/src/pages/public/Pricing.tsx (and any useOrg()/selector feeding it).
+
+Admin panel header/cards: where it renders “Current plan 250 seats” and the “Trial” banner.
+
+Likely in client/src/components/Header.tsx and client/src/pages/admin/*.
+
+Backend getters that feed those UIs:
+
+getOrgForSession / getOrgBillingStatus / getBillingSummary (often in server/storage.ts or server/routes.ts).
+
+Paste the exact conditional that maps DB fields to labels:
+
+When do we set billingStatus = installed_no_checkout | incomplete | active | trialing | canceled?
+
+How is seat_cap chosen (default 250?) and when is it overridden?
+
+What does “Current” compare against (org.seat_cap vs plan cap?).
+
+5) Post-install path (Slack OAuth)
+
+Paste the POST /api/slack/oauth (or callback) code path that creates the org and sets initial billing_status & seat_cap.
+
+After OAuth completes, is there any code that starts a trial automatically or sets installed_no_checkout? Paste that block.
+
+6) Known edge states to check for this org
+
+For the org from step 0, answer yes/no and where it’s set:
+
+A) billing_status = 'installed_no_checkout'
+
+B) billing_status = 'incomplete' (post-checkout but unpaid)
+
+C) trial_starts_at/trial_ends_at are non-null (dates?)
+
+D) seat_cap = 250 by default without a subscription
+
+E) Any feature flag or query param like ?plan=pro_250 overwriting UI state
+
+7) Expected vs Actual (help us pinpoint the bug)
+
+Given the findings above, fill this table:
+
+Source	Field	Value	Expected	Notes
+DB (orgs)	billing_status		trialing / active / installed_no_checkout	
+DB (orgs)	seat_cap		from subscription plan or default	
+Stripe	subscription.status		active/trialing or none	
+UI (Pricing)	CTA shown		Start trial / Upgrade / Current	
+UI (Admin)	Plan label		“Current 250” only if seat_cap==250 and status active	
+8) Hypothesis + one-line fix proposal
+
+Based on the diff above, propose:
+
+The most likely cause (e.g., org stuck in installed_no_checkout but UI assumes seat_cap=250 implies “Current”).
+
+The single conditional to change (file + line), e.g.:
+
+“Pricing CTA should be Start trial iff billing_status IN ('installed_no_checkout','trialing') AND no active subscription.”
+
+“Only show Current if there is an active subscription matching that plan cap.”
+
+Whether we need a data backfill for existing orgs (one SQL UPDATE), and the exact statement if yes.

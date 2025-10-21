@@ -1,0 +1,70 @@
+Investigation goals (what “correct” means)
+
+One source of truth for billing state (no UI guessing).
+
+Clear lifecycle: installed_no_checkout → (trial?) → subscription active/canceled.
+
+Buttons/labels reflect reality (never “Current” without a sub).
+
+Stripe events & webhooks keep DB in sync.
+
+What I need Replit to answer (copy-paste to them)
+1) Canonical billing model (truth in DB)
+
+Show org billing fields for your current org (IDs you tested with):
+
+select id, slug, billing_status, seat_cap, billing_period,
+       trial_starts_at, trial_ends_at,
+       stripe_customer_id, stripe_subscription_id, stripe_price_id,
+       created_at, updated_at
+from orgs where id = '<ORG_ID>';
+
+
+If present, show org_billing_events (most recent first):
+
+select * from org_billing_events where org_id = '<ORG_ID>' order by created_at desc limit 50;
+
+2) Stripe reality (test mode)
+
+In Stripe Test: is there a Customer? a Subscription? last Checkout Session? (IDs + status)
+
+Paste your webhook endpoint URL (dev) and list events received for this org in the last 24h (names + delivered/ok).
+
+3) API contracts (what endpoints promise)
+
+For /api/billing/status: paste the handler function signature and the exact JSON it returns (keys + example).
+
+For /api/billing/usage: same—handler and example JSON.
+
+Note: call both endpoints now for this org and paste the live JSON (redact IDs if needed).
+
+4) UI mapping (who reads what)
+
+Point me to the exact lines that choose each UI label/CTA:
+
+Dashboard badge (e.g., “Trial”, “Active”, “No subscription”).
+
+Billing “Current” badge logic.
+
+Billing CTA (“Start trial”, “Checkout”, “Upgrade”).
+Paste the 5–10 relevant lines for each.
+
+5) Lifecycle rules (intended behavior)
+
+Where is the post-install state set after Slack OAuth? Paste that snippet (sets installed_no_checkout, trial flags, seat_cap).
+
+Where (if anywhere) is a trial started? What condition starts it? How long (14 days)? Where is the end computed?
+
+Where is hasSubscription determined? Is it strictly “active Stripe sub exists,” or anything else?
+
+6) Seat cap logic (so “Current” makes sense)
+
+Where is seat_cap set initially (250?) and updated from Stripe price? Paste that code.
+
+Where does the Billing UI decide “Current”? Paste the exact conditional.
+
+7) Failure & edge handling
+
+What happens if Checkout is canceled (Stripe “canceled” or incomplete)? Which status is stored?
+
+What happens if a trial ends with no subscription—what status should it become, and where is that enforced (cron/webhook)?
